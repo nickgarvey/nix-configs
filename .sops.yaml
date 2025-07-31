@@ -1,0 +1,9 @@
+keys:
+  - &ngarvey age1g3f4hlynwd3m7ahwjadzd6evxswpv69x4fjqf76xyhem7vtj2gts7k47qt
+  - &k3s age12dsw8c59tv758nkkk8j7gwenk4wcc9h6mcl509egn85pk2qvlsys7v8zc5
+creation_rules:
+  - path_regex: secrets/k3s.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *k3s
