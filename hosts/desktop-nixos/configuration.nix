@@ -177,20 +177,15 @@ in
   services.ollama.enable = true;
 
   services.udev.packages = [
-    pkgs.platformio-core
+    # Disabled due to long tests during builds
+    # pkgs.platformio-core
     pkgs.openocd
   ];
 
   services.kanata = {
     enable = true;
     keyboards.keyboard = {
-      config = ''
-        	(defsrc caps)
-                (deflayer default @cap)
-        	(defalias
-        	  cap (tap-hold-press 200 200 esc lctl)
-        	)
-      '';
+      configFile = ../../configs/kanata-linux.cfg;
       extraDefCfg = "process-unmapped-keys yes";
     };
   };
