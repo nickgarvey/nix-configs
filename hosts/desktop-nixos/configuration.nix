@@ -83,6 +83,7 @@ in
       dig
       dmidecode
       efibootmgr
+      gh
       google-chrome-no-gpu
       htop
       insync
@@ -120,7 +121,7 @@ in
 
   virtualisation = {
     docker = {
-      enable = false;
+      enable = true;
       autoPrune.enable = true;
       enableOnBoot = true;
     };
