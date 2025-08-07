@@ -25,5 +25,16 @@
 
     services.qemuGuest.enable = true;
 
+    # Longhorn settings
+    # https://github.com/longhorn/longhorn/issues/2166#issuecomment-2994323945
+    services.openiscsi = {
+      enable = true;
+      name = "${config.networking.hostName}-initiatorhost";
+    };
+    systemd.services.iscsid.serviceConfig = {
+      PrivateMounts = "yes";
+      BindPaths = "/run/current-system/sw/bin:/bin";
+    };
+
     system.stateVersion = "25.11"; # Do not change!
 }
