@@ -20,6 +20,7 @@ in
   imports = [
     ./hardware-configuration.nix
     ../../modules/nixos-common.nix
+    ../../modules/qmk.nix
   ];
 
   nixpkgs.overlays = [
