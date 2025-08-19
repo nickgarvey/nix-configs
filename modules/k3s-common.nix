@@ -12,10 +12,12 @@
     sops.age.keyFile = "/root/.config/sops/age/keys.txt";
     sops.secrets.cluster_token = { };
 
+    environment.variables.KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
     services.k3s = {
       enable = true;
       tokenFile = "/run/secrets/cluster_token";
       role = "server";
+      extraFlags = [ "--write-kubeconfig-mode=644" ];
     };
 
     networking.firewall = {
