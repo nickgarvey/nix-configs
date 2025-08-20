@@ -5,7 +5,8 @@
       atop
     ] ++ config.commonConfig.commonPackages;
 
-    boot.loader.grub.enable = true;
+    boot.loader.systemd-boot.enable = true;
+    boot.loader.efi.canTouchEfiVariables = true;
 
     sops.defaultSopsFile = ../secrets/k3s.yaml;
     sops.defaultSopsFormat = "yaml";

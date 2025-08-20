@@ -14,7 +14,7 @@ Command references:
 mkdir -p .extra-files/k3s/root/.config/sops/age
 cp ~/.config/sops/age/k3s-keys.txt .extra-files/k3s/root/.config/sops/age
 
-nix run github:nix-community/nixos-anywhere -- --flake ~/nixos-config#k3s-node-1 --generate-hardware-config nixos-generate-config hosts/k3s-node-1/hardware-configuration.nix --target-host root@10.28.9.174 --extra-files .extra-files/k3s
+nix run github:nix-community/nixos-anywhere -- --flake ~/nix-configs#k3s-node-1 --generate-hardware-config nixos-generate-config hosts/k3s-node-1/hardware-configuration.nix --target-host root@10.28.9.174 --extra-files .extra-files/k3s
 
-nixos-rebuild switch --target-host 10.28.9.175 --flake .#k3s-node-1 --fast --build-host 10.28.9.175  --use-remote-sudo
+nixos-rebuild switch --target-host k3s-node-1.home.arpa --flake .#k3s-node-1 --no-reexec --build-host k3s-node-1.home.arpa  --sudo
 ```
