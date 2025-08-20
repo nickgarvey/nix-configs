@@ -34,16 +34,6 @@
         specialArgs = { inherit inputs; };
         modules = [ ./hosts/desktop-nixos/configuration.nix ];
       };
-
-      # VM for building Nix packages
-      nix-builder = nixpkgs.lib.nixosSystem {
-        specialArgs = { inherit inputs; };
-        modules = [
-          disko.nixosModules.disko
-          ./hosts/nix-builder/configuration.nix
-          ./hosts/nix-builder/disk-config.nix
-        ];
-      };
     }
     # K3s nodes
     // k3sNodes;
