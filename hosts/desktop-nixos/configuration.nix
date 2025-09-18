@@ -230,7 +230,7 @@ in
   };
 
   programs.mosh.enable = true;
-  services.tailscale.enable = true;
+  services.tailscale.enable = false;
 
   # Most users should NEVER change this value after the initial install, for any reason,
   # even if you've upgraded your system to a new NixOS release.
