@@ -78,25 +78,24 @@ in
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "media" "render" "docker" "dialout" "tty"];
     packages = with pkgs; [
-      alacritty
       atop
-      bottles
       dig
       dmidecode
       efibootmgr
       gh
+      ghostty
       google-chrome-no-gpu
       htop
       insync
       keymapp
-      prismlauncher
       mpv
       nvidia-container-toolkit
       obsidian-no-gpu
+      prismlauncher
+      qemu
       spotify
       vscode.fhs
       wl-clipboard
-      whisper-cpp
       xca
 
       gnomeExtensions.clipboard-history
