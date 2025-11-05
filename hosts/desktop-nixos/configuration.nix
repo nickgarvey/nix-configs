@@ -106,6 +106,7 @@ in
 
   programs.firefox = {
     enable = true;
+    package = pkgs.firefox-bin;
     preferences = {
       "media.hardware-video-decoding.force-enabled" = true;
     };
