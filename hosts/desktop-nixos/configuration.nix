@@ -79,6 +79,7 @@ in
     extraGroups = [ "wheel" "networkmanager" "media" "render" "docker" "dialout" "tty"];
     packages = with pkgs; [
       atop
+      code-cursor
       dig
       dmidecode
       efibootmgr
