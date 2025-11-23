@@ -51,7 +51,10 @@ in
 
     extraModulePackages = with config.boot.kernelPackages; [ r8125 ];
     kernelModules = [ "vfio_pci" "vfio" "vfio_iommu_type1" "r8125" "nvidia" "nvidia_drm" "nvidia_uvm" "nvidia_modeset" ];
-    kernelParams = [ "iommu=pt" "vfio-pci.ids=1002:13c0,1002:1640,1022:1649,1022:15b6,1022:15b7,1022:15e3" ];
+    kernelParams = [
+      "iommu=pt"
+      "vfio-pci.ids=1002:13c0,1002:1640,1022:1649,1022:15b6,1022:15b7,1022:15e3"
+    ];
 
     kernel.sysctl = {
       "net.ipv6.conf.all.forwarding" = 1;
