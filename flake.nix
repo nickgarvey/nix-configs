@@ -11,8 +11,12 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    cursor-remote-node = {
+      url = "path:./modules/cursor-remote-node";
+    };
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, cursor-remote-node, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes for 1 - 3
@@ -32,7 +36,10 @@
       # Desktop
       desktop-nixos = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
-        modules = [ ./hosts/desktop-nixos/configuration.nix ];
+        modules = [
+	  ./hosts/desktop-nixos/configuration.nix
+          cursor-remote-node.nixosModules.cursor-remote-node
+	];
       };
     }
     # K3s nodes

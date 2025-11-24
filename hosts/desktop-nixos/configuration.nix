@@ -27,6 +27,8 @@ in
     (import ../../overlays/whisper-cpp.nix)
   ];
 
+  cursorRemoteNode.enable = true;
+
   networking = {
     hostName = "desktop-nixos";
     networkmanager.enable = true;
