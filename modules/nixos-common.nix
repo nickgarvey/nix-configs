@@ -14,9 +14,11 @@
       file
       neovim
       parallel
+      pciutils
       ripgrep
       tmux
       unzip
+      usbutils
       wget
     ];
     nix.settings.experimental-features = [ "nix-command" "flakes" ];

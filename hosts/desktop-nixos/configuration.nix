@@ -135,7 +135,6 @@ in
   };
 
   environment.systemPackages = with pkgs; [
-    pciutils
   ] ++ config.commonConfig.commonPackages;
 
   services.displayManager = {
