@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -ex
 
 nixos-rebuild switch --target-host k3s-node-1.home.arpa --flake .#k3s-node-1 --no-reexec --build-host k3s-node-1.home.arpa  --sudo

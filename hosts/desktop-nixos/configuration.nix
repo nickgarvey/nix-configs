@@ -95,6 +95,8 @@ in
       htop
       insync
       keymapp
+      kubectl
+      k9s
       mpv
       nvidia-container-toolkit
       obsidian-no-gpu
