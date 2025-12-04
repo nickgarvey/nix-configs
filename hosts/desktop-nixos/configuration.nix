@@ -85,6 +85,7 @@ in
     packages = with pkgs; [
       atop
       code-cursor
+      cursor-cli
       dig
       dmidecode
       efibootmgr
