@@ -107,8 +107,6 @@ in
       wl-clipboard
       xca
 
-      gnomeExtensions.clipboard-history
-      gnomeExtensions.tiling-shell
     ];
   };
 
@@ -151,19 +149,11 @@ in
       # on first load, so relogin
       autoLogin.relogin = true;
     };
-    defaultSession = "gnome";
+    defaultSession = "cosmic";
   };
 
-  services.desktopManager.gnome = {
+  services.desktopManager.cosmic = {
     enable = true;
-    extraGSettingsOverridePackages = [ pkgs.mutter ];
-    extraGSettingsOverrides = ''
-      [org.gnome.mutter]
-      experimental-features=['scale-monitor-framebuffer']
-
-      [org.gnome.mutter.keybindings]
-      switch-monitor=['XF86Display']
-    '';
   };
 
   services.xserver = {
