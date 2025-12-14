@@ -30,6 +30,12 @@ in
 
   cursorRemoteNode.enable = true;
 
+  services.vllm = {
+    enable = true;
+    model = "Qwen/Qwen3-14B-AWQ";
+    gpuMemoryUtilization = "0.65";
+  };
+
   networking = {
     hostName = "desktop-nixos";
     networkmanager.enable = true;
