@@ -25,6 +25,7 @@ in
 
   nixpkgs.overlays = [
     (import ../../overlays/whisper-cpp.nix)
+    (import ../../overlays/outlines-no-check.nix)
   ];
 
   cursorRemoteNode.enable = true;
@@ -106,7 +107,7 @@ in
       vscode.fhs
       wl-clipboard
       xca
-
+      python3Packages.vllm
     ];
   };
 
@@ -175,6 +176,14 @@ in
   };
 
   services.ollama.enable = true;
+
+  services.open-webui = {
+    enable = true;
+    port = 8080;
+    environment = {
+      OPENAI_API_BASE_URL = "http://localhost:8000/v1";
+    };
+  };
 
   services.udev.packages = [
     # Disabled due to long tests during builds
