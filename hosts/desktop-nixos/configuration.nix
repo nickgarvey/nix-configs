@@ -21,11 +21,11 @@ in
     ./hardware-configuration.nix
     ../../modules/nixos-common.nix
     ../../modules/qmk.nix
+    ../../modules/llm-services.nix
   ];
 
   nixpkgs.overlays = [
     (import ../../overlays/whisper-cpp.nix)
-    (import ../../overlays/outlines-no-check.nix)
   ];
 
   cursorRemoteNode.enable = true;
@@ -107,7 +107,6 @@ in
       vscode.fhs
       wl-clipboard
       xca
-      python3Packages.vllm
     ];
   };
 
@@ -122,9 +121,6 @@ in
   networking.firewall = {
     allowedUDPPorts = [
       5353 # Spotify Connect
-    ];
-    allowedTCPPorts = [
-      8000
     ];
   };
 
@@ -173,16 +169,6 @@ in
     };
     nvidia-container-toolkit.enable = true;
     keyboard.zsa.enable = true;
-  };
-
-  services.ollama.enable = true;
-
-  services.open-webui = {
-    enable = true;
-    port = 8080;
-    environment = {
-      OPENAI_API_BASE_URL = "http://localhost:8000/v1";
-    };
   };
 
   services.udev.packages = [
