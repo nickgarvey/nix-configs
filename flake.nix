@@ -37,9 +37,10 @@
       desktop-nixos = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
-	  ./hosts/desktop-nixos/configuration.nix
+          ./hosts/desktop-nixos/configuration.nix
           cursor-remote-node.nixosModules.cursor-remote-node
-	];
+          sops-nix.nixosModules.sops
+        ];
       };
     }
     # K3s nodes

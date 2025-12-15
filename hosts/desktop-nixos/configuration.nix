@@ -22,6 +22,7 @@ in
     ../../modules/nixos-common.nix
     ../../modules/qmk.nix
     ../../modules/llm-services.nix
+    ../../modules/nixpkgs-tracker.nix
   ];
 
   nixpkgs.overlays = [
@@ -35,6 +36,8 @@ in
     model = "Qwen/Qwen3-14B-AWQ";
     gpuMemoryUtilization = "0.65";
   };
+
+  services.nixpkgs-tracker.enable = true;
 
   networking = {
     hostName = "desktop-nixos";
