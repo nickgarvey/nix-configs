@@ -75,8 +75,9 @@ in
       users.users.vllm = {
         isSystemUser = true;
         group = "vllm";
+        # Set home but don't use createHome - StateDirectory handles directory creation
+        # This ensures ~ resolves to somewhere writable (for flashinfer, triton, etc.)
         home = "/var/lib/vllm";
-        createHome = true;
         extraGroups = [ "render" ];  # GPU access
       };
 
@@ -105,9 +106,14 @@ in
           User = "vllm";
           Group = "vllm";
 
+          # Use StateDirectory for proper permissions - systemd will create /var/lib/vllm
+          # with correct ownership and the service can access it
+          StateDirectory = "vllm";
+          StateDirectoryMode = "0750";
+
           # Environment for HuggingFace cache and PyTorch CUDA memory management
           Environment = [
-            "HF_HOME=/var/lib/vllm/.cache/huggingface"
+            "HF_HOME=%S/vllm/.cache/huggingface"
             "PYTORCH_ALLOC_CONF=expandable_segments:True"
           ];
         };
