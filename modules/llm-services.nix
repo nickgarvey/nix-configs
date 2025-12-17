@@ -49,6 +49,8 @@ in
       default = pkgs.python3Packages.vllm;
       description = "The vLLM package to use";
     };
+
+    openFirewall = lib.mkEnableOption "opening the firewall port for vLLM";
   };
 
   config = lib.mkMerge [
@@ -61,7 +63,7 @@ in
         enable = true;
         port = 8080;
         environment = {
-          OPENAI_API_BASE_URL = "http://localhost:8000/v1";
+          OPENAI_API_BASE_URL = "http://localhost:${toString cfg.port}/v1";
         };
       };
 
@@ -71,6 +73,9 @@ in
     }
 
     (lib.mkIf cfg.enable {
+      # Open firewall port if requested
+      networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [ cfg.port ];
+
       # Create dedicated vLLM user
       users.users.vllm = {
         isSystemUser = true;

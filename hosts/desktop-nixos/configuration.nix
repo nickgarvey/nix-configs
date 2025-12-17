@@ -35,6 +35,8 @@ in
     enable = true;
     model = "Qwen/Qwen3-14B-AWQ";
     gpuMemoryUtilization = "0.65";
+    port = 28600;
+    openFirewall = true;
   };
 
   services.nixpkgs-tracker.enable = true;
