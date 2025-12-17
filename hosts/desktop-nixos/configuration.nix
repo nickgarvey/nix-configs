@@ -83,17 +83,12 @@ in
   # Enable Wayland for Chrome and VSCode
   environment.variables.NIXOS_OZONE_WL = "1";
 
-  # For NFS share
-  users.groups.media = {
-    gid = 3001;
-    members = [ "ngarvey" ];
-  };
 
   time.timeZone = "America/Los_Angeles";
 
   users.users.ngarvey = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "media" "render" "docker" "dialout" "tty"];
+    extraGroups = [ "wheel" "networkmanager" "render" "docker" "dialout" "tty" ];
     packages = with pkgs; [
       atop
       code-cursor
@@ -204,21 +199,7 @@ in
     AllowSuspendThenHibernate=no
   '';
 
-  boot.supportedFilesystems = [ "nfs" "zfs" ];
-
-  services.autofs = {
-    enable = true;
-    debug = true;
-    autoMaster = let
-      mapConf = pkgs.writeText "auto" ''
-        # Key (subdirectory)   Mount Options                 Location (NFS Server/Export)
-        # -------------------- ---------------------------   -----------------------------
-        media  -rw,soft,noatime,nfsvers=4.2,timeo=600,retrans=2 truenas.home.arpa:/mnt/tank/media
-      '';
-    in ''
-      /auto file:${mapConf} --ghost
-    '';
-  };
+  boot.supportedFilesystems = [ "zfs" ];
 
   programs.steam = {
     enable = true;
