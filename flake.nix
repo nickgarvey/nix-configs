@@ -31,6 +31,11 @@
       triplea = pkgs.callPackage ./pkgs/triplea.nix { };
     };
 
+    # Development shells
+    devShells.x86_64-linux = {
+      makernexus = import ./devshells/makernexus.nix { inherit pkgs; };
+    };
+
     # These are all NixOS configurations
     nixosConfigurations = {
       # Desktop
