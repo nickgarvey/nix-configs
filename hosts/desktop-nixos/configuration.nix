@@ -23,6 +23,7 @@ in
     ../../modules/qmk.nix
     ../../modules/llm-services.nix
     ../../modules/nixpkgs-tracker.nix
+    ../../modules/k3s-hosts.nix
   ];
 
   nixpkgs.overlays = [
