@@ -2,19 +2,6 @@
 
 let
   personal-nixpkgs = inputs.personal-nixpkgs.packages.${pkgs.system};
-
-  disableGpu = import "${inputs.self}/lib/disable-gpu-overlay.nix" { inherit lib; };
-  google-chrome-no-gpu = disableGpu {
-    pkg = pkgs.google-chrome;
-    desktopFilePath = "share/applications/google-chrome.desktop";
-    execPath = "bin/google-chrome-stable";
-  };
-
-  obsidian-no-gpu = disableGpu {
-    pkg = pkgs.obsidian;
-    desktopFilePath = "share/applications/obsidian.desktop";
-    execPath = "obsidian";
-  };
 in
 {
   imports = [
@@ -84,7 +71,6 @@ in
   # Enable Wayland for Chrome and VSCode
   environment.variables.NIXOS_OZONE_WL = "1";
 
-
   time.timeZone = "America/Los_Angeles";
 
   users.users.ngarvey = {
@@ -99,19 +85,16 @@ in
       efibootmgr
       gh
       ghostty
-      google-chrome-no-gpu
+      google-chrome
       htop
       insync
-      keymapp
       kubectl
       k9s
       mpv
       nvidia-container-toolkit
-      obsidian-no-gpu
-      prismlauncher
+      obsidian
       qemu
       spotify
-      vscode.fhs
       wl-clipboard
       xca
     ];
@@ -214,8 +197,6 @@ in
       ];
     };
   };
-
-  services.tailscale.enable = false;
 
     # Flatpak
   services.flatpak.enable = true;
