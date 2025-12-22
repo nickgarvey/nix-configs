@@ -13,7 +13,7 @@ let
     version = "20251127";
     src = trackerSrc;
 
-    pnpmDeps = pkgs.pnpm.fetchDeps {
+    pnpmDeps = pkgs.fetchPnpmDeps {
       inherit pname version src;
       fetcherVersion = 2;
       hash = "sha256-2k1fWeU8VL6IHwReRbP40y/Q8JELl/2JefL8kjlENqc=";
@@ -21,7 +21,8 @@ let
 
     nativeBuildInputs = with pkgs; [
       nodejs
-      pnpm.configHook
+      pnpm
+      pnpmConfigHook
     ];
 
     buildPhase = "pnpm build";
