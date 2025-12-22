@@ -215,9 +215,7 @@ in
     };
   };
 
-  programs.mosh.enable = true;
   services.tailscale.enable = false;
-
 
     # Flatpak
   services.flatpak.enable = true;
