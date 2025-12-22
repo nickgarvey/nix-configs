@@ -218,6 +218,25 @@ in
   programs.mosh.enable = true;
   services.tailscale.enable = false;
 
+
+    # Flatpak
+  services.flatpak.enable = true;
+
+  # Portals (important for Flatpak desktop integration)
+  xdg.portal = {
+    enable = true;
+
+    # COSMIC portal backend + GTK fallback (useful for OpenURI/FileChooser coverage)
+    extraPortals = [
+      pkgs.xdg-desktop-portal-cosmic
+      pkgs.xdg-desktop-portal-gtk
+    ];
+
+    # Prefer COSMIC when available, fall back to gtk
+    config.common.default = [ "cosmic" "gtk" ];
+
+  };
+
   # Most users should NEVER change this value after the initial install, for any reason,
   # even if you've upgraded your system to a new NixOS release.
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
