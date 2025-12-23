@@ -3,6 +3,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ./audio-mirroring.nix
     ../../modules/common-workstation.nix
     ../../modules/steam.nix
   ];
