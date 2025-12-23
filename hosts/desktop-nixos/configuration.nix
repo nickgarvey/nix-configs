@@ -1,13 +1,11 @@
 { config, lib, pkgs, inputs, ... }:
 
-let
-  personal-nixpkgs = inputs.personal-nixpkgs.packages.${pkgs.system};
-in
 {
   imports = [
     ./hardware-configuration.nix
-    ../../modules/nixos-common.nix
+    ../../modules/common-workstation.nix
     ../../modules/qmk.nix
+    ../../modules/steam.nix
     ../../modules/llm-services.nix
     ../../modules/nixpkgs-tracker.nix
     ../../modules/k3s-hosts.nix
@@ -31,7 +29,6 @@ in
 
   networking = {
     hostName = "desktop-nixos";
-    networkmanager.enable = true;
     hostId = "a4c946db";
   };
 
@@ -41,7 +38,6 @@ in
     cores = 6;
   };
 
-  nixpkgs.config.allowUnfree = true;
   nixpkgs.config.cudaSupport = true;
 
   boot = {
@@ -61,44 +57,29 @@ in
     kernel.sysctl = {
       "net.ipv6.conf.all.forwarding" = 1;
     };
+
+    supportedFilesystems = [ "zfs" ];
   };
 
-  services.pipewire = {
-    enable = true;
-    pulse.enable = true;
+  # Docker virtualization
+  virtualisation = {
+    docker = {
+      enable = true;
+      autoPrune.enable = true;
+      enableOnBoot = true;
+    };
   };
 
-  # Enable Wayland for Chrome and VSCode
-  environment.variables.NIXOS_OZONE_WL = "1";
+  # Add docker group
+  users.users.ngarvey.extraGroups = [ "docker" ];
 
-  time.timeZone = "America/Los_Angeles";
-
-  users.users.ngarvey = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "render" "docker" "dialout" "tty" ];
-    packages = with pkgs; [
-      atop
-      code-cursor
-      cursor-cli
-      dig
-      dmidecode
-      efibootmgr
-      gh
-      ghostty
-      google-chrome
-      htop
-      insync
-      kubectl
-      k9s
-      mpv
-      nvidia-container-toolkit
-      obsidian
-      qemu
-      spotify
-      wl-clipboard
-      xca
-    ];
-  };
+  # Desktop-specific user packages
+  users.users.ngarvey.packages = with pkgs; [
+    nvidia-container-toolkit
+    qemu
+    rsync
+    xca
+  ];
 
   programs.firefox = {
     enable = true;
@@ -108,45 +89,7 @@ in
     };
   };
 
-  networking.firewall = {
-    allowedUDPPorts = [
-      5353 # Spotify Connect
-    ];
-  };
-
-  virtualisation = {
-    docker = {
-      enable = true;
-      autoPrune.enable = true;
-      enableOnBoot = true;
-    };
-  };
-
-  environment.systemPackages = with pkgs; [
-  ] ++ config.commonConfig.commonPackages;
-
-  services.displayManager = {
-    autoLogin = {
-      enable = true;
-      user = "ngarvey";
-    };
-    sddm = {
-      enable = true;
-      # There is an nVidia driver race that causes the desktop to crash
-      # on first load, so relogin
-      autoLogin.relogin = true;
-    };
-    defaultSession = "cosmic";
-  };
-
-  services.desktopManager.cosmic = {
-    enable = true;
-  };
-
-  services.xserver = {
-    enable = true;
-    videoDrivers = [ "nvidia" ];
-  };
+  services.xserver.videoDrivers = [ "nvidia" ];
 
   hardware = {
     nvidia = {
@@ -158,22 +101,14 @@ in
       package = config.boot.kernelPackages.nvidiaPackages.latest;
     };
     nvidia-container-toolkit.enable = true;
-    keyboard.zsa.enable = true;
   };
 
   services.udev.packages = [
-    # Disabled due to long tests during builds
-    # pkgs.platformio-core
     pkgs.openocd
   ];
 
-  services.kanata = {
-    enable = true;
-    keyboards.keyboard = {
-      configFile = ../../configs/kanata-linux.cfg;
-      extraDefCfg = "process-unmapped-keys yes";
-    };
-  };
+  # There is an nVidia driver race that causes the desktop to crash on first load
+  services.displayManager.sddm.autoLogin.relogin = true;
 
   # Disable due to graphical glitches (nvidia?)
   systemd.sleep.extraConfig = ''
@@ -183,37 +118,17 @@ in
     AllowSuspendThenHibernate=no
   '';
 
-  boot.supportedFilesystems = [ "zfs" ];
-
-  programs.steam = {
-    enable = true;
-    gamescopeSession.enable = true;
-    remotePlay.openFirewall = true; # Open ports in the firewall for Steam Remote Play
-    dedicatedServer.openFirewall = true; # Open ports in the firewall for Source Dedicated Server
-    localNetworkGameTransfers.openFirewall = true; # Open ports in the firewall for Steam Local Network Game Transfers
-    package = pkgs.steam.override {
-      extraPkgs = pkgs: with pkgs; [
-        python3
-      ];
-    };
-  };
-
-    # Flatpak
+  # Flatpak
   services.flatpak.enable = true;
 
-  # Portals (important for Flatpak desktop integration)
+  # XDG Portals for Flatpak desktop integration
   xdg.portal = {
     enable = true;
-
-    # COSMIC portal backend + GTK fallback (useful for OpenURI/FileChooser coverage)
     extraPortals = [
       pkgs.xdg-desktop-portal-cosmic
       pkgs.xdg-desktop-portal-gtk
     ];
-
-    # Prefer COSMIC when available, fall back to gtk
     config.common.default = [ "cosmic" "gtk" ];
-
   };
 
   # Most users should NEVER change this value after the initial install, for any reason,
