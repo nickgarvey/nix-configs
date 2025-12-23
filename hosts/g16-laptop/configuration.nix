@@ -11,6 +11,10 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  # Kernel parameters for brightness control on NVIDIA hybrid graphics laptops
+  # Enable Intel DPCD backlight for proper brightness control
+  boot.kernelParams = [ "i915.enable_dpcd_backlight=1" ];
+
   # Load NVIDIA kernel modules
   boot.kernelModules = [ "nvidia" "nvidia_drm" "nvidia_uvm" "nvidia_modeset" ];
 
