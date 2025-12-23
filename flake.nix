@@ -44,7 +44,6 @@
         modules = [
           ./hosts/desktop-nixos/configuration.nix
           cursor-remote-node.nixosModules.cursor-remote-node
-          sops-nix.nixosModules.sops
         ];
       };
 

@@ -13,3 +13,8 @@ creation_rules:
     - age:
       - *ngarvey
       - *desktop
+  - path_regex: secrets/smb-credentials.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *desktop

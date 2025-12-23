@@ -3,6 +3,8 @@
 {
   imports = [
     ./nixos-common.nix
+    ./smb-automount.nix
+    inputs.sops-nix.nixosModules.sops
   ];
 
   nixpkgs.config.allowUnfree = true;
@@ -19,6 +21,7 @@
   time.timeZone = "America/Los_Angeles";
 
   users.users.ngarvey = {
+    uid = 1000;
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" ];
     packages = with pkgs; [
