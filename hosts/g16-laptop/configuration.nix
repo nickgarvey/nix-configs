@@ -51,6 +51,9 @@
     config.hardware.nvidia.package
   ];
 
+  # GDM display manager
+  services.displayManager.gdm.enable = true;
+
   # Disable sleep and hibernate
   systemd.sleep.extraConfig = ''
     AllowSuspend=no

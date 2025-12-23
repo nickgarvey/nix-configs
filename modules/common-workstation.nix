@@ -57,10 +57,10 @@
       enable = true;
       user = "ngarvey";
     };
-    sddm.enable = true;
     defaultSession = "cosmic";
   };
 
+  # COSMIC desktop
   services.desktopManager.cosmic = {
     enable = true;
   };
