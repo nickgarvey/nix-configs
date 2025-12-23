@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Show current GPU status
+
+echo "GPU Status:"
+echo "==========="
+echo "Current mode: $(supergfxctl -g)"
+echo "Supported modes: $(supergfxctl -s)"
+echo "Power status: $(supergfxctl -S)"
+echo "Vendor: $(supergfxctl -V)"
+
+PENDING_MODE=$(supergfxctl -P)
+PENDING_ACTION=$(supergfxctl -p)
+
+if [ -n "$PENDING_MODE" ] && [ "$PENDING_MODE" != "Unknown" ]; then
+    echo "Pending mode: $PENDING_MODE"
+fi
+
+if [ -n "$PENDING_ACTION" ] && [ "$PENDING_ACTION" != "Unknown" ]; then
+    echo "⚠️  $PENDING_ACTION"
+fi

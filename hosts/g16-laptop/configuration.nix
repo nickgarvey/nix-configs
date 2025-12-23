@@ -40,6 +40,10 @@
 
   services.xserver.videoDrivers = [ "nvidia" ];
 
+  # ASUS GPU switching service - allows switching between GPU modes
+  # Use 'supergfxctl -m integrated' to switch to integrated-only mode
+  # Use 'supergfxctl -m hybrid' to switch back to hybrid mode
+  # You may need to log out and back in after switching
   services.supergfxd.enable = true;
 
   services.asusd = {
@@ -53,6 +57,19 @@
     supergfxctl
     asusctl
     config.hardware.nvidia.package
+    # GPU switching scripts
+    (pkgs.writeShellApplication {
+      name = "gpu-integrated";
+      text = builtins.readFile ./bin/gpu-integrated;
+    })
+    (pkgs.writeShellApplication {
+      name = "gpu-hybrid";
+      text = builtins.readFile ./bin/gpu-hybrid;
+    })
+    (pkgs.writeShellApplication {
+      name = "gpu-status";
+      text = builtins.readFile ./bin/gpu-status;
+    })
   ];
 
   users.users.ngarvey.packages = with pkgs; [

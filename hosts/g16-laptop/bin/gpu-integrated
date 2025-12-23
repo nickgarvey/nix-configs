@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Switch GPU to integrated-only mode
+
+set -e
+
+echo "Switching GPU to Integrated mode..."
+
+if supergfxctl -m Integrated; then
+    CURRENT_MODE=$(supergfxctl -g)
+    PENDING_ACTION=$(supergfxctl -p)
+    
+    echo "GPU mode changed to: $CURRENT_MODE"
+    
+    if [ -n "$PENDING_ACTION" ] && [ "$PENDING_ACTION" != "Unknown" ]; then
+        echo ""
+        echo "⚠️  $PENDING_ACTION"
+        echo ""
+        read -p "Log out now to complete the switch? (y/N) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo "Logging out..."
+            SESSION_ID=$(loginctl list-sessions --no-legend | grep seat0 | awk '{print $1}' | head -n1)
+            if [ -n "$SESSION_ID" ]; then
+                loginctl terminate-session "$SESSION_ID"
+            else
+                echo "Warning: Could not find graphical session to terminate" >&2
+            fi
+        else
+            echo "Please log out manually when ready."
+        fi
+    else
+        echo "Mode switch completed successfully."
+    fi
+else
+    echo "Error: Failed to switch GPU mode" >&2
+    exit 1
+fi
