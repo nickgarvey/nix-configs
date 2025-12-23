@@ -46,6 +46,8 @@
     allowedUDPPorts = [
       5353 # Spotify Connect
     ];
+    # Disable firewall logging to prevent dmesg spam from port scans
+    logRefusedConnections = false;
   };
 
   environment.systemPackages = with pkgs; [
