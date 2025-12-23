@@ -55,6 +55,10 @@
     config.hardware.nvidia.package
   ];
 
+  users.users.ngarvey.packages = with pkgs; [
+    vlc
+  ];
+
   services.displayManager.gdm.enable = true;
 
   systemd.sleep.extraConfig = ''
