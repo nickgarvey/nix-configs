@@ -7,7 +7,7 @@
     inputs.sops-nix.nixosModules.sops
   ];
 
-  sops.age.keyFile = "/home/ngarvey/.config/sops/age/keys.txt";
+  sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
   nixpkgs.config.allowUnfree = true;
 
