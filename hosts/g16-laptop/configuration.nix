@@ -21,6 +21,10 @@
   nixpkgs.config.cudaSupport = true;
 
   hardware = {
+    bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+    };
     nvidia = {
       modesetting.enable = true;
       powerManagement.enable = true;
