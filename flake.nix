@@ -47,6 +47,14 @@
           sops-nix.nixosModules.sops
         ];
       };
+
+      # G16 Laptop
+      g16-laptop = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [
+          ./hosts/g16-laptop/configuration.nix
+        ];
+      };
     }
     # K3s nodes
     // k3sNodes;
