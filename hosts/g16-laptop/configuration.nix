@@ -21,6 +21,16 @@
 
   networking.hostName = "g16-laptop";
 
+  services.tailscale = {
+    enable = true;
+    # Enable loose reverse path filtering for accepting routes
+    useRoutingFeatures = "client";
+    extraSetFlags = [
+      "--accept-routes"
+      "--exit-node=homeassistant"
+    ];
+  };
+
   nixpkgs.config.cudaSupport = true;
 
   hardware = {
