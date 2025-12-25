@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Disable Tailscale exit node
+
+set -e
+
+echo "Disabling exit node..."
+
+if tailscale set --exit-node=; then
+    echo "✓ Exit node disabled"
+else
+    echo "Error: Failed to disable exit node" >&2
+    exit 1
+fi

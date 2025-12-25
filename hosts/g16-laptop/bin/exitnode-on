@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Enable Tailscale exit node
+
+set -e
+
+EXIT_NODE="100.105.122.108"  # homeassistant
+
+echo "Enabling exit node ($EXIT_NODE)..."
+
+if tailscale set --exit-node="$EXIT_NODE"; then
+    echo "✓ Exit node enabled"
+    echo ""
+    tailscale status | head -1
+else
+    echo "Error: Failed to enable exit node" >&2
+    exit 1
+fi

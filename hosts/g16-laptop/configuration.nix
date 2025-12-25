@@ -27,7 +27,7 @@
     useRoutingFeatures = "client";
     extraSetFlags = [
       "--accept-routes"
-      "--exit-node=homeassistant"
+      "--operator=ngarvey"
     ];
   };
 
@@ -79,6 +79,22 @@
     (pkgs.writeShellApplication {
       name = "gpu-status";
       text = builtins.readFile ./bin/gpu-status;
+    })
+    # Exit node switching scripts
+    (pkgs.writeShellApplication {
+      name = "exitnode-on";
+      runtimeInputs = [ pkgs.tailscale ];
+      text = builtins.readFile ./bin/exitnode-on;
+    })
+    (pkgs.writeShellApplication {
+      name = "exitnode-off";
+      runtimeInputs = [ pkgs.tailscale ];
+      text = builtins.readFile ./bin/exitnode-off;
+    })
+    (pkgs.writeShellApplication {
+      name = "exitnode-status";
+      runtimeInputs = [ pkgs.tailscale pkgs.jq ];
+      text = builtins.readFile ./bin/exitnode-status;
     })
   ];
 

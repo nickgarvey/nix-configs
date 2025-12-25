@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Show Tailscale exit node status
+
+echo "Exit Node Status:"
+echo "================="
+
+# Get current exit node ID from tailscale status
+EXIT_NODE_ID=$(tailscale status --json | jq -r '.ExitNodeStatus.ID // empty')
+
+if [ -n "$EXIT_NODE_ID" ] && [ "$EXIT_NODE_ID" != "null" ]; then
+    # Find the peer with matching ID in the Peer object
+    JSON=$(tailscale status --json)
+    EXIT_NODE_NAME=$(echo "$JSON" | jq -r --arg id "$EXIT_NODE_ID" '.Peer | to_entries | map(select(.value.ID == $id)) | .[0].value.HostName // "unknown"')
+    EXIT_NODE_IP=$(echo "$JSON" | jq -r --arg id "$EXIT_NODE_ID" '.Peer | to_entries | map(select(.value.ID == $id)) | .[0].value.TailscaleIPs[0] // "unknown"')
+    echo "Status: enabled"
+    echo "Exit node: $EXIT_NODE_NAME ($EXIT_NODE_IP)"
+else
+    echo "Status: disabled"
+fi
