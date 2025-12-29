@@ -38,8 +38,9 @@
       google-chrome
       htop
       insync
-      kubectl
       k9s
+      kubectl
+      libnotify
       mpv
       obsidian
       spotify
