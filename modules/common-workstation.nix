@@ -11,6 +11,15 @@
 
   nixpkgs.config.allowUnfree = true;
 
+  # Wrap Chrome to always pass --hide-crash-restore-bubble
+  nixpkgs.overlays = [
+    (self: super: {
+      google-chrome = super.google-chrome.override {
+        commandLineArgs = "--hide-crash-restore-bubble";
+      };
+    })
+  ];
+
   # Audio
   services.pipewire = {
     enable = true;
