@@ -96,6 +96,7 @@
       runtimeInputs = [ pkgs.tailscale pkgs.jq ];
       text = builtins.readFile ./bin/exitnode-status;
     })
+    upower
   ];
 
   users.users.ngarvey.packages = with pkgs; [
