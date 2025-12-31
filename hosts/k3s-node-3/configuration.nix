@@ -7,5 +7,4 @@
   ];
 
   networking.hostName = "k3s-node-3";
-  services.k3s.serverAddr = "https://k3s-node-1.home.arpa:6443";
 }

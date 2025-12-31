@@ -7,5 +7,5 @@
   ];
 
   networking.hostName = "k3s-node-1";
-  services.k3s.clusterInit = true;
+  k3sConfig.isFirstNode = true;
 }
