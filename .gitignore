@@ -1,3 +1,4 @@
 result/
 .extra-files
 result
+scripts/__pycache__

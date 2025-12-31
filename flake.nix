@@ -33,6 +33,12 @@
 
     # Development shells
     devShells.x86_64-linux = {
+      default = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          python312
+        ];
+      };
+
       makernexus = import ./devshells/makernexus.nix { inherit pkgs; };
     };
 
