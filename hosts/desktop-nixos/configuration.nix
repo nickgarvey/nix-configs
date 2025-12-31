@@ -76,10 +76,17 @@
   # Desktop-specific user packages
   users.users.ngarvey.packages = with pkgs; [
     nvidia-container-toolkit
+    python3Packages.llm
     qemu
     rsync
     xca
   ];
+
+  # Configure llm to use llama.home.arpa:8080
+  environment.sessionVariables = {
+    OPENAI_BASE_URL = "http://llama.home.arpa:8080/v1";
+    OPENAI_API_KEY = "dummy";  # llama.cpp doesn't require auth but llm needs a key set
+  };
 
   services.xserver.videoDrivers = [ "nvidia" ];
 
