@@ -39,6 +39,9 @@ in
         "10.28.15.206:5000":
           endpoint:
             - "http://10.28.15.206:5000"
+        "zot.home.arpa:5000":
+          endpoint:
+            - "http://zot.home.arpa:5000"
     '';
 
     systemd.services.k3s.restartTriggers = [
