@@ -5,7 +5,7 @@ Deploy NixOS updates to k3s nodes with verification and automatic reboots.
 This script:
 1. Pushes updates to each host using nixos-rebuild
 2. Verifies the update succeeded
-3. Reboots if a kernel update occurred
+3. Reboots if a kernel update or kernel parameter change occurred
 4. Waits for the host to come back online
 5. Verifies the node is healthy in kubernetes
 6. Only then proceeds to the next host
@@ -134,16 +134,55 @@ def get_new_kernel(host: Host) -> str | None:
     return None
 
 
+def get_current_kernel_params(host: Host) -> set[str] | None:
+    """Get the kernel parameters used at boot time."""
+    try:
+        result = ssh_cmd(host, "cat /proc/cmdline")
+        if result.returncode == 0:
+            # Parse cmdline into a set of parameters for comparison
+            return set(result.stdout.strip().split())
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+        pass
+    return None
+
+
+def get_new_kernel_params(host: Host) -> set[str] | None:
+    """Get the kernel parameters that will be used after reboot."""
+    try:
+        result = ssh_cmd(host, "cat /run/current-system/kernel-params")
+        if result.returncode == 0:
+            # Parse kernel-params into a set of parameters for comparison
+            return set(result.stdout.strip().split())
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+        pass
+    return None
+
+
 def needs_reboot(host: Host) -> bool:
-    """Check if a host needs a reboot (kernel version changed)."""
+    """Check if a host needs a reboot (kernel version or parameters changed)."""
+    needs = False
+
+    # Check kernel version
     running_kernel = get_running_kernel(host)
     new_kernel = get_new_kernel(host)
-    if running_kernel and new_kernel:
-        needs = running_kernel != new_kernel
-        if needs:
-            print(f"  Reboot needed: running kernel={running_kernel} != new kernel={new_kernel}")
-        return needs
-    return False
+    if running_kernel and new_kernel and running_kernel != new_kernel:
+        print(f"  Reboot needed: running kernel={running_kernel} != new kernel={new_kernel}")
+        needs = True
+
+    # Check kernel parameters
+    current_params = get_current_kernel_params(host)
+    new_params = get_new_kernel_params(host)
+    if current_params and new_params and current_params != new_params:
+        added = new_params - current_params
+        removed = current_params - new_params
+        print(f"  Reboot needed: kernel parameters changed")
+        if added:
+            print(f"    Added: {added}")
+        if removed:
+            print(f"    Removed: {removed}")
+        needs = True
+
+    return needs
 
 
 def get_node_status(hostname: str) -> tuple[bool, str]:
