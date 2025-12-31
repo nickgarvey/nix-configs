@@ -33,6 +33,18 @@ in
       KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
     };
 
+    # Configure Zot registry (HTTP) for k3s
+    environment.etc."rancher/k3s/registries.yaml".text = ''
+      mirrors:
+        "10.28.15.206:5000":
+          endpoint:
+            - "http://10.28.15.206:5000"
+    '';
+
+    systemd.services.k3s.restartTriggers = [
+      config.environment.etc."rancher/k3s/registries.yaml".source
+    ];
+
     services.k3s = {
       enable = true;
       tokenFile = "/run/secrets/cluster_token";
