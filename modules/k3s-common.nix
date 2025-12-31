@@ -56,7 +56,10 @@ in
       clusterInit = lib.mkIf isFirstNode true;
       serverAddr = lib.mkIf (!isFirstNode) "https://k3s-node-1.home.arpa:6443";
       # Server-specific flags
-      extraFlags = lib.mkIf isServer [ "--write-kubeconfig-mode=644" ];
+      extraFlags = lib.mkIf isServer [
+        "--write-kubeconfig-mode=644"
+        "--disable=servicelb"  # Using MetalLB instead
+      ];
     };
 
     networking.firewall = {
