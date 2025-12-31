@@ -26,7 +26,7 @@
           environment.systemPackages = [ cfg.nodePackage ];
 
           # Allow the CURSOR_REMOTE env var to be passed in via SSH
-	  services.openssh.settings.AcceptEnv = "CURSOR_REMOTE";
+          services.openssh.settings.AcceptEnv = [ "CURSOR_REMOTE" ];
 
           # Only add Node to PATH if CURSOR_REMOTE=1
           environment.loginShellInit = ''
