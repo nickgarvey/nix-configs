@@ -54,6 +54,18 @@
           ./hosts/g16-laptop/configuration.nix
         ];
       };
+
+      # Framework Desktop (k3s worker node)
+      framework = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [
+          disko.nixosModules.disko
+          sops-nix.nixosModules.sops
+          ./modules/k3s-hosts.nix
+          ./hosts/framework/configuration.nix
+          ./hosts/framework/disk-config.nix
+        ];
+      };
     }
     # K3s nodes
     // k3sNodes;
