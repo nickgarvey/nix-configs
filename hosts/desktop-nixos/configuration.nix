@@ -6,7 +6,6 @@
     ../../modules/common-workstation.nix
     ../../modules/qmk.nix
     ../../modules/steam.nix
-    ../../modules/llm-services.nix
     ../../modules/nixpkgs-tracker.nix
     ../../modules/k3s-hosts.nix
   ];
@@ -16,14 +15,6 @@
   ];
 
   cursorRemoteNode.enable = true;
-
-  services.vllm = {
-    enable = true;
-    model = "Qwen/Qwen3-14B-AWQ";
-    gpuMemoryUtilization = "0.65";
-    port = 28600;
-    openFirewall = true;
-  };
 
   services.nixpkgs-tracker.enable = true;
 
