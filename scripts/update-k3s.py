@@ -134,12 +134,11 @@ def get_new_kernel(host: Host) -> str | None:
     return None
 
 
-def get_current_kernel_params(host: Host) -> set[str] | None:
-    """Get the kernel parameters used at boot time."""
+def get_booted_kernel_params(host: Host) -> set[str] | None:
+    """Get the kernel parameters from the booted system."""
     try:
-        result = ssh_cmd(host, "cat /proc/cmdline")
+        result = ssh_cmd(host, "cat /run/booted-system/kernel-params")
         if result.returncode == 0:
-            # Parse cmdline into a set of parameters for comparison
             return set(result.stdout.strip().split())
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
         pass
@@ -151,7 +150,6 @@ def get_new_kernel_params(host: Host) -> set[str] | None:
     try:
         result = ssh_cmd(host, "cat /run/current-system/kernel-params")
         if result.returncode == 0:
-            # Parse kernel-params into a set of parameters for comparison
             return set(result.stdout.strip().split())
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
         pass
@@ -170,11 +168,11 @@ def needs_reboot(host: Host) -> bool:
         needs = True
 
     # Check kernel parameters
-    current_params = get_current_kernel_params(host)
+    booted_params = get_booted_kernel_params(host)
     new_params = get_new_kernel_params(host)
-    if current_params and new_params and current_params != new_params:
-        added = new_params - current_params
-        removed = current_params - new_params
+    if booted_params and new_params and booted_params != new_params:
+        added = new_params - booted_params
+        removed = booted_params - new_params
         print(f"  Reboot needed: kernel parameters changed")
         if added:
             print(f"    Added: {added}")
