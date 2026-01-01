@@ -73,10 +73,9 @@
     xca
   ];
 
-  # Configure llm to use llama.home.arpa:8080
   environment.sessionVariables = {
-    OPENAI_BASE_URL = "http://llama.home.arpa:8080/v1";
-    OPENAI_API_KEY = "dummy";  # llama.cpp doesn't require auth but llm needs a key set
+    OPENAI_BASE_URL = "http://llm.home.arpa:8000/v1";
+    OPENAI_API_KEY = "dummy";  # llm needs a key even with no auth
   };
 
   services.xserver.videoDrivers = [ "nvidia" ];
