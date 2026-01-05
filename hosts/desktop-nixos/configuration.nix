@@ -64,22 +64,10 @@
 
   users.users.ngarvey.packages = with pkgs; [
     nvidia-container-toolkit
-    python3Packages.llm
     qemu
     rsync
     xca
   ];
-
-  environment.sessionVariables = {
-    OPENAI_BASE_URL = "http://llm.home.arpa/v1";
-    OPENAI_API_KEY = "dummy";  # llama.cpp doesn't require auth but llm needs a key set
-    LLM_OPENAI_SHOW_RESPONSES = "0";
-  };
-  environment.etc."skel/.config/io.datasette.llm/extra-openai-models.yaml".text = ''
-    - model_id: gpt-oss
-      model_name: gpt-oss-120b-mxfp4-00001-of-00003.gguf
-      aliases: ["gpt", "default", "gpt-4o-mini", "gpt-4o", "gpt-4"]
-  '';
 
   services.xserver.videoDrivers = [ "nvidia" ];
 
