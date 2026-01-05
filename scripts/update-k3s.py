@@ -313,7 +313,7 @@ def process_host_dry_run(host: Host) -> bool:
     return True
 
 
-def process_host(host: Host) -> bool:
+def process_host(host: Host, no_reboot: bool = False) -> bool:
     """Process a host: deploy, verify, reboot if needed, verify health."""
     print(f"\n{'=' * 60}")
     print(f"Processing {host.hostname}")
@@ -329,9 +329,13 @@ def process_host(host: Host) -> bool:
 
     # Check if reboot is needed
     if needs_reboot(host):
-        print(f"  Host {host.hostname} needs reboot for kernel/system update")
-        if not reboot_host(host):
-            return False
+        if no_reboot:
+            print(f"  Host {host.hostname} needs reboot for kernel/system update")
+            print(f"  ⚠ Skipping reboot due to --no-reboot flag")
+        else:
+            print(f"  Host {host.hostname} needs reboot for kernel/system update")
+            if not reboot_host(host):
+                return False
     else:
         print(f"  No reboot needed for {host.hostname}")
 
@@ -353,6 +357,11 @@ def main():
         "--dry-run", "-n",
         action="store_true",
         help="Don't deploy or reboot; just verify SSH, node health, and flake builds",
+    )
+    parser.add_argument(
+        "--no-reboot",
+        action="store_true",
+        help="Skip rebooting hosts even if kernel/system updates require it",
     )
     parser.add_argument(
         "--hosts",
@@ -378,13 +387,15 @@ def main():
         print("Mode: DRY-RUN (no changes will be made)")
     else:
         print("Mode: DEPLOY")
+    if args.no_reboot:
+        print("Reboot: DISABLED (--no-reboot flag set)")
 
     failed_hosts = []
     for host in hosts:
         if args.dry_run:
             success = process_host_dry_run(host)
         else:
-            success = process_host(host)
+            success = process_host(host, no_reboot=args.no_reboot)
 
         if not success:
             failed_hosts.append(host.hostname)
