@@ -46,7 +46,6 @@
       ghostty
       google-chrome
       htop
-      insync
       k9s
       kubectl
       libnotify

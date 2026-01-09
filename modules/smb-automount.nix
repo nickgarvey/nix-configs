@@ -51,7 +51,7 @@ domain=WORKGROUP
     where = "/shares/media";
     wantedBy = [ "multi-user.target" ];
     automountConfig = {
-      TimeoutIdleSec = "60";
+      TimeoutIdleSec = "600";
     };
   }];
 }
