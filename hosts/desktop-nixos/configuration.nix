@@ -63,6 +63,7 @@
   users.users.ngarvey.extraGroups = [ "docker" ];
 
   users.users.ngarvey.packages = with pkgs; [
+    claude-code
     nvidia-container-toolkit
     qemu
     rsync
