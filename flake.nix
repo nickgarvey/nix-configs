@@ -29,6 +29,7 @@
     # Custom packages
     packages.x86_64-linux = {
       triplea = pkgs.callPackage ./pkgs/triplea.nix { };
+      apollo = pkgs.callPackage ./pkgs/apollo { };
     };
 
     # Development shells

@@ -8,10 +8,12 @@
     ../../modules/steam.nix
     ../../modules/nixpkgs-tracker.nix
     ../../modules/k3s-hosts.nix
+    ../../modules/apollo.nix
   ];
 
   nixpkgs.overlays = [
     (import ../../overlays/whisper-cpp.nix)
+    (import ../../overlays/apollo.nix)
   ];
 
   cursorRemoteNode.enable = true;
@@ -112,6 +114,13 @@
       pkgs.xdg-desktop-portal-gtk
     ];
     config.common.default = [ "cosmic" "gtk" ];
+  };
+
+  # Apollo (Sunshine fork) for game streaming
+  services.apollo = {
+    enable = true;
+    openFirewall = true;
+    capSysAdmin = true;
   };
 
   # Most users should NEVER change this value after the initial install, for any reason,
