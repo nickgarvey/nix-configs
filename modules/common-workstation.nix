@@ -67,16 +67,8 @@
   environment.systemPackages = with pkgs; [
   ] ++ config.commonConfig.commonPackages;
 
-  # Display manager with COSMIC desktop
-  services.displayManager = {
-    autoLogin = {
-      enable = true;
-      user = "ngarvey";
-    };
-    defaultSession = "cosmic";
-  };
-
-  # COSMIC desktop
+  # COSMIC display manager and desktop
+  services.displayManager.cosmic-greeter.enable = true;
   services.desktopManager.cosmic = {
     enable = true;
   };

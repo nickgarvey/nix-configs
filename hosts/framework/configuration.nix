@@ -5,6 +5,7 @@ in
 {
   imports = [
     ../../modules/k3s-common.nix
+    ../../modules/common-workstation.nix
     ../../modules/nixos-common.nix
     ./hardware-configuration.nix
   ];
@@ -21,6 +22,12 @@ in
     "ttm.pages_limit=32505856"
   ];
   services.k3s.role = "agent";
+
+  # Enable autologin
+  services.displayManager.autoLogin = {
+    enable = true;
+    user = "ngarvey";
+  };
 
   assertions = [{
     assertion = config.fileSystems ? "${localStoragePath}";

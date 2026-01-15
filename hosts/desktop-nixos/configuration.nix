@@ -90,10 +90,11 @@
     pkgs.openocd
   ];
 
-  # SDDM display manager
-  services.displayManager.sddm.enable = true;
-  # There is an nVidia driver race that causes the desktop to crash on first load
-  services.displayManager.sddm.autoLogin.relogin = true;
+  # Enable autologin
+  services.displayManager.autoLogin = {
+    enable = true;
+    user = "ngarvey";
+  };
 
   # Disable due to graphical glitches (nvidia?)
   systemd.sleep.extraConfig = ''

@@ -103,8 +103,6 @@
     vlc
   ];
 
-  services.displayManager.gdm.enable = true;
-
   systemd.sleep.extraConfig = ''
     AllowSuspend=no
     AllowHibernation=no
