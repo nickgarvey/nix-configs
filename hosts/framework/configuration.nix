@@ -7,6 +7,7 @@ in
     ../../modules/k3s-common.nix
     ../../modules/common-workstation.nix
     ../../modules/nixos-common.nix
+    ../../modules/steam.nix
     ./hardware-configuration.nix
   ];
 

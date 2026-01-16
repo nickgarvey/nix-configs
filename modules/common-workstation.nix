@@ -39,7 +39,7 @@ in
   users.users.ngarvey = {
     uid = 1000;
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" ];
+    extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" "input" ];
     packages = with pkgs; [
       atop
       code-cursor
