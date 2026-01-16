@@ -1,5 +1,10 @@
 { config, lib, pkgs, inputs, ... }:
 
+let
+  helium-browser = pkgs.callPackage ../pkgs/helium-browser {
+    helium-browser-pkg = inputs.helium-browser.packages.${pkgs.system}.default;
+  };
+in
 {
   imports = [
     ./nixos-common.nix
@@ -45,6 +50,7 @@
       gh
       ghostty
       google-chrome
+      helium-browser
       htop
       k9s
       kubectl

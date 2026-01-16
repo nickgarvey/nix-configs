@@ -15,8 +15,13 @@
     cursor-remote-node = {
       url = "path:./modules/cursor-remote-node";
     };
+
+    helium-browser = {
+      url = "github:ominit/helium-browser-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, cursor-remote-node, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, cursor-remote-node, helium-browser, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes for 1 - 3
