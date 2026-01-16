@@ -80,7 +80,6 @@ in
   };
 
   services.xserver.enable = true;
-  programs.firefox.enable = true;
 
   services.kanata = {
     enable = true;
