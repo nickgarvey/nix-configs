@@ -52,6 +52,9 @@
     };
 
     supportedFilesystems = [ "zfs" ];
+    zfs.package = config.boot.kernelPackages.zfs_2_4;
+    zfs.forceImportRoot = false;
+    zfs.forceImportAll = false;
   };
 
   # Docker virtualization
@@ -70,6 +73,7 @@
     qemu
     rsync
     xca
+    zfs
   ];
 
   services.xserver.videoDrivers = [ "nvidia" ];
