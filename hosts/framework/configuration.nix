@@ -13,8 +13,6 @@ in
 
   networking.hostName = "framework";
 
-  boot.kernelPackages = pkgs.linuxPackages_latest;
-
   # AMD Strix Halo iGPU configuration for large LLM models
   # https://github.com/kyuz0/amd-strix-halo-vllm-toolboxes/
   boot.kernelParams = [

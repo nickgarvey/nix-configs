@@ -12,6 +12,8 @@ in
     inputs.sops-nix.nixosModules.sops
   ];
 
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
   nixpkgs.config.allowUnfree = true;

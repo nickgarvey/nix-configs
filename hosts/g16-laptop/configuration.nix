@@ -14,8 +14,6 @@
 
   # Kernel parameters for brightness control
   boot.kernelParams = [ "i915.enable_dpcd_backlight=1" ];
-  # Use latest kernel to get UCSI deadlock fixes
-  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   boot.kernelModules = [ "nvidia" "nvidia_drm" "nvidia_uvm" "nvidia_modeset" ];
 
