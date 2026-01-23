@@ -1,11 +1,28 @@
 { pkgs, helium-browser-pkg }:
 
+let
+  # Fix chrome-wrapper -> helium-wrapper (will fail when upstream fixes this)
+  # PR for upstream fix:
+  # https://github.com/nickgarvey/helium-browser-flake/commit/1b79feb00826098a661b442eaae0b3ebb81d0dc5
+  patchedHeliumPkg = helium-browser-pkg.overrideAttrs (oldAttrs: {
+    installPhase =
+      let
+        original = oldAttrs.installPhase or "";
+        hasIssue = builtins.match ".*chrome-wrapper.*" original != null;
+      in
+        if !hasIssue then
+          throw "chrome-wrapper fix is no longer needed! Remove override."
+        else
+          pkgs.lib.replaceStrings [ "chrome-wrapper" ] [ "helium-wrapper" ] original;
+  });
+in
+
 pkgs.symlinkJoin {
   name = "helium-browser-with-desktop";
-  paths = [ helium-browser-pkg ];
-  
+  paths = [ patchedHeliumPkg ];
+
   buildInputs = [ pkgs.makeWrapper ];
-  
+
   postBuild = ''
     mkdir -p $out/share/applications
     cat > $out/share/applications/helium-browser.desktop << EOF
