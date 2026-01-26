@@ -2,7 +2,7 @@
 
 let
   helium-browser = pkgs.callPackage ../pkgs/helium-browser {
-    helium-browser-pkg = inputs.helium-browser.packages.${pkgs.system}.default;
+    helium-browser-pkg = inputs.helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default;
   };
 in
 {
