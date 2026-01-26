@@ -78,6 +78,11 @@
 
   services.xserver.videoDrivers = [ "nvidia" ];
 
+  # Allow NVIDIA to initialize without a connected monitor
+  services.xserver.deviceSection = ''
+    Option "AllowEmptyInitialConfiguration"
+  '';
+
   hardware = {
     nvidia = {
       modesetting.enable = true;
