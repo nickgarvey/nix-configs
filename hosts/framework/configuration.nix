@@ -1,6 +1,7 @@
 { config, lib, pkgs, inputs, ... }:
 let
   localStoragePath = "/var/lib/rancher/k3s/storage";
+  xone-dongle-firmware = pkgs.callPackage ../../pkgs/xone-dongle-firmware { };
 in
 {
   imports = [
@@ -10,6 +11,12 @@ in
     ../../modules/steam.nix
     ./hardware-configuration.nix
   ];
+
+  # Enable Xbox wireless dongle support
+  hardware.xone.enable = true;
+
+  # Override firmware to include all dongle variants (02e6, 02fe, 02f9, 091e)
+  hardware.firmware = lib.mkForce [ xone-dongle-firmware ];
 
   networking.hostName = "framework";
 
