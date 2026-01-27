@@ -15,8 +15,8 @@ in
   # Enable Xbox wireless dongle support
   hardware.xone.enable = true;
 
-  # Override firmware to include all dongle variants (02e6, 02fe, 02f9, 091e)
-  hardware.firmware = lib.mkForce [ xone-dongle-firmware ];
+  # Add Xbox dongle firmware (append to existing firmware, don't replace)
+  hardware.firmware = [ xone-dongle-firmware ];
 
   networking.hostName = "framework";
 
