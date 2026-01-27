@@ -313,7 +313,7 @@ def process_host_dry_run(host: Host) -> bool:
     return True
 
 
-def process_host(host: Host, no_reboot: bool = False) -> bool:
+def process_host(host: Host, no_reboot: bool = False, force_reboot: bool = False) -> bool:
     """Process a host: deploy, verify, reboot if needed, verify health."""
     print(f"\n{'=' * 60}")
     print(f"Processing {host.hostname}")
@@ -328,7 +328,11 @@ def process_host(host: Host, no_reboot: bool = False) -> bool:
         return False
 
     # Check if reboot is needed
-    if needs_reboot(host):
+    if force_reboot:
+        print(f"  Forcing reboot due to --reboot flag")
+        if not reboot_host(host):
+            return False
+    elif needs_reboot(host):
         if no_reboot:
             print(f"  Host {host.hostname} needs reboot for kernel/system update")
             print(f"  ⚠ Skipping reboot due to --no-reboot flag")
@@ -364,6 +368,11 @@ def main():
         help="Skip rebooting hosts even if kernel/system updates require it",
     )
     parser.add_argument(
+        "--reboot",
+        action="store_true",
+        help="Always reboot hosts after deployment, even if no kernel update occurred",
+    )
+    parser.add_argument(
         "--hosts",
         nargs="+",
         metavar="HOSTNAME",
@@ -382,6 +391,11 @@ def main():
             print(f"Available hosts: {[h[0] for h in HOSTS]}")
             sys.exit(1)
 
+    # Validate mutually exclusive reboot options
+    if args.reboot and args.no_reboot:
+        print("Error: --reboot and --no-reboot cannot be used together")
+        sys.exit(1)
+
     print(f"Processing {len(hosts)} host(s): {[h.hostname for h in hosts]}")
     if args.dry_run:
         print("Mode: DRY-RUN (no changes will be made)")
@@ -389,13 +403,15 @@ def main():
         print("Mode: DEPLOY")
     if args.no_reboot:
         print("Reboot: DISABLED (--no-reboot flag set)")
+    elif args.reboot:
+        print("Reboot: FORCED (--reboot flag set)")
 
     failed_hosts = []
     for host in hosts:
         if args.dry_run:
             success = process_host_dry_run(host)
         else:
-            success = process_host(host, no_reboot=args.no_reboot)
+            success = process_host(host, no_reboot=args.no_reboot, force_reboot=args.reboot)
 
         if not success:
             failed_hosts.append(host.hostname)
