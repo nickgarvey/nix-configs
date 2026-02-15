@@ -32,6 +32,8 @@
   nixpkgs.config.cudaSupport = true;
 
   boot = {
+    kernelPackages = lib.mkForce pkgs.linuxPackages_6_18;
+
     loader.systemd-boot.enable = true;
     loader.efi.canTouchEfiVariables = true;
     loader.efi.efiSysMountPoint = "/efi";
@@ -49,10 +51,6 @@
       "net.ipv6.conf.all.forwarding" = 1;
     };
 
-    supportedFilesystems = [ "zfs" ];
-    # zfs.package = config.boot.kernelPackages.zfs_2_4;
-    zfs.forceImportRoot = false;
-    zfs.forceImportAll = false;
   };
 
   # Docker virtualization
@@ -71,7 +69,6 @@
     qemu
     rsync
     xca
-    zfs
   ];
 
   services.xserver.videoDrivers = [ "nvidia" ];
