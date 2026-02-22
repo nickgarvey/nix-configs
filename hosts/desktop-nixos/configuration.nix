@@ -65,6 +65,7 @@
 
   users.users.ngarvey.packages = with pkgs; [
     claude-code
+    marktext
     nvidia-container-toolkit
     qemu
     rsync
