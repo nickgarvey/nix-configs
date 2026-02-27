@@ -8,6 +8,7 @@
     ../../modules/steam.nix
     ../../modules/nixpkgs-tracker.nix
     ../../modules/k3s-hosts.nix
+    ../../modules/windows-vm.nix
   ];
 
   nixpkgs.overlays = [
@@ -15,6 +16,8 @@
   ];
 
   cursorRemoteNode.enable = true;
+
+  services.windowsVm.enable = true;
 
   services.nixpkgs-tracker.enable = true;
 
@@ -67,6 +70,7 @@
     nvidia-container-toolkit
     rsync
     xca
+    tigervnc
   ];
 
   services.xserver.videoDrivers = [ "nvidia" ];
