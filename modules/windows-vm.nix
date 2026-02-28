@@ -15,27 +15,19 @@ let
       ''}
       <vcpu placement='static'>${toString cfg.vcpus}</vcpu>
       <cputune>
-        <vcpupin vcpu='0'  cpuset='8'/>
-        <vcpupin vcpu='1'  cpuset='9'/>
-        <vcpupin vcpu='2'  cpuset='10'/>
-        <vcpupin vcpu='3'  cpuset='11'/>
-        <vcpupin vcpu='4'  cpuset='12'/>
-        <vcpupin vcpu='5'  cpuset='13'/>
-        <vcpupin vcpu='6'  cpuset='14'/>
-        <vcpupin vcpu='7'  cpuset='15'/>
-        <vcpupin vcpu='8'  cpuset='24'/>
-        <vcpupin vcpu='9'  cpuset='25'/>
-        <vcpupin vcpu='10' cpuset='26'/>
-        <vcpupin vcpu='11' cpuset='27'/>
-        <vcpupin vcpu='12' cpuset='28'/>
-        <vcpupin vcpu='13' cpuset='29'/>
-        <vcpupin vcpu='14' cpuset='30'/>
-        <vcpupin vcpu='15' cpuset='31'/>
+        <vcpupin vcpu='0' cpuset='8'/>
+        <vcpupin vcpu='1' cpuset='9'/>
+        <vcpupin vcpu='2' cpuset='10'/>
+        <vcpupin vcpu='3' cpuset='11'/>
+        <vcpupin vcpu='4' cpuset='12'/>
+        <vcpupin vcpu='5' cpuset='13'/>
+        <vcpupin vcpu='6' cpuset='14'/>
+        <vcpupin vcpu='7' cpuset='15'/>
         <emulatorpin cpuset='0-7,16-23'/>
       </cputune>
       <os>
         <type arch='x86_64' machine='pc-q35-8.2'>hvm</type>
-        <loader readonly='yes' type='pflash'>/run/libvirt/nix-ovmf/edk2-x86_64-code.fd</loader>
+        <loader readonly='yes' secure='yes' type='pflash'>/run/libvirt/nix-ovmf/edk2-x86_64-secure-code.fd</loader>
         <nvram template='/run/libvirt/nix-ovmf/edk2-i386-vars.fd'>/var/lib/libvirt/qemu/nvram/${cfg.vmName}_VARS.fd</nvram>
         <boot dev='hd'/>
         <boot dev='cdrom'/>
@@ -43,6 +35,7 @@ let
       <features>
         <acpi/>
         <apic/>
+        <smm state='on'/>
         <hyperv mode='custom'>
           <relaxed state='on'/>
           <vapic state='on'/>
@@ -59,7 +52,7 @@ let
         <vmport state='off'/>
       </features>
       <cpu mode='host-passthrough' check='none' migratable='on'>
-        <topology sockets='1' dies='1' cores='8' threads='2'/>
+        <topology sockets='1' dies='1' cores='4' threads='2'/>
         <cache mode='passthrough'/>
         <feature policy='disable' name='hypervisor'/>
         <feature policy='require' name='topoext'/>
@@ -90,7 +83,7 @@ let
         <!-- Windows installation ISO -->
         <disk type='file' device='cdrom'>
           <driver name='qemu' type='raw'/>
-          <source file='/var/lib/libvirt/images/windows.iso'/>
+          <source file='${cfg.isoPath}'/>
           <target dev='sda' bus='sata'/>
           <readonly/>
         </disk>
@@ -114,39 +107,27 @@ let
           <model type='virtio'/>
         </interface>
 
-        <!-- Spice for input only — no QXL display, AMD iGPU is the only display adapter -->
+        <!-- SPICE for display and input -->
         <graphics type='spice' port='5901' autoport='no'>
           <listen type='address' address='127.0.0.1'/>
           <image compression='off'/>
         </graphics>
-        <!-- Basic VGA so OVMF uses this for boot display instead of running AMD GOP ROM -->
+        <!-- QXL for software rendering — works natively with SPICE, no extra drivers needed for install -->
         <video>
-          <model type='vga' vram='16384' heads='1'/>
+          <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1'/>
         </video>
 
-        <!-- iGPU passthrough: AMD Radeon (Granite Ridge) -->
-        <hostdev mode='subsystem' type='pci' managed='yes'>
-          <source>
-            <address domain='0x0000' bus='0x72' slot='0x00' function='0x0'/>
-          </source>
-          <rom file='/var/lib/libvirt/vbios/vbios_9950x3d.bin'/>
-        </hostdev>
+        <!-- QEMU guest agent channel -->
+        <channel type='unix'>
+          <target type='virtio' name='org.qemu.guest_agent.0'/>
+        </channel>
 
-        <!-- iGPU Audio passthrough — AMDGopDriver ROM fixes Code 43 with UEFI/OVMF -->
-        <hostdev mode='subsystem' type='pci' managed='yes'>
-          <source>
-            <address domain='0x0000' bus='0x72' slot='0x00' function='0x1'/>
-          </source>
-          <rom file='/var/lib/libvirt/vbios/AMDGopDriver_9950x3d.rom'/>
-        </hostdev>
+        <!-- Virtual TPM 2.0 for Windows 11 -->
+        <tpm model='tpm-crb'>
+          <backend type='emulator' version='2.0'/>
+        </tpm>
 
-        <!-- Looking Glass shared memory (ivshmem) -->
-        <shmem name='looking-glass'>
-          <model type='ivshmem-plain'/>
-          <size unit='M'>128</size>
-        </shmem>
-
-        <memballoon model='none'/>
+        <memballoon model='virtio'/>
         <rng model='virtio'>
           <backend model='random'>/dev/urandom</backend>
         </rng>
@@ -156,12 +137,12 @@ let
 in
 {
   options.services.windowsVm = {
-    enable = lib.mkEnableOption "Windows VM with AMD iGPU passthrough and Looking Glass";
+    enable = lib.mkEnableOption "Windows 11 VM with software rendering and RDP access";
 
     user = lib.mkOption {
       type = lib.types.str;
       default = "ngarvey";
-      description = "User that owns the Looking Glass shm file and belongs to libvirt/kvm groups.";
+      description = "User that belongs to libvirt/kvm groups.";
     };
 
     vmName = lib.mkOption {
@@ -172,13 +153,13 @@ in
 
     memory = lib.mkOption {
       type = lib.types.int;
-      default = 32768;
+      default = 16384;
       description = "VM RAM in MiB.";
     };
 
     vcpus = lib.mkOption {
       type = lib.types.int;
-      default = 16;
+      default = 8;
       description = "Number of vCPUs (pinned to CCD1, cores 8-15 and threads 24-31).";
     };
 
@@ -194,10 +175,16 @@ in
       description = "Size passed to qemu-img when creating the disk image.";
     };
 
+    isoPath = lib.mkOption {
+      type = lib.types.str;
+      default = "/var/lib/libvirt/images/windows.iso";
+      description = "Path to the Windows installation ISO.";
+    };
+
     hugepages = {
       enable = lib.mkOption {
         type = lib.types.bool;
-        default = true;
+        default = false;
         description = "Pre-allocate hugepages at boot for VM memory backing.";
       };
       count = lib.mkOption {
@@ -209,10 +196,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Missing kernel params from the guide; the VFIO IDs and iommu=pt are
-    # already set in the host configuration.
-    boot.kernelParams = [ "amd_iommu=on" "video=efifb:off" ];
-
     virtualisation.libvirtd = {
       enable = true;
       qemu = {
@@ -224,50 +207,16 @@ in
       onShutdown = "shutdown";
     };
 
+    systemd.services.libvirt-guests.environment.SHUTDOWN_TIMEOUT = lib.mkForce "10";
+
     virtualisation.spiceUSBRedirection.enable = true;
 
     environment.systemPackages = with pkgs; [
       virt-manager
-      looking-glass-client
+      freerdp
     ];
 
     users.users.${cfg.user}.extraGroups = [ "libvirtd" "kvm" ];
-
-    # Looking Glass shared memory file — owned by qemu-libvirtd (the QEMU process user)
-    # and group kvm so the client running as cfg.user can also read/write it.
-    systemd.tmpfiles.rules = [
-      "f /dev/shm/looking-glass 0660 qemu-libvirtd kvm -"
-    ];
-
-    system.activationScripts.looking-glass-config = lib.stringAfter [ "users" ] ''
-      mkdir -p /home/${cfg.user}/.config/looking-glass
-      ln -sf ${pkgs.writeText "looking-glass-client.ini" ''
-        [spice]
-        host=127.0.0.1
-        port=5901
-
-        [input]
-        rawMouse=no
-
-        [win]
-        autoResize=yes
-        keepAspect=yes
-      ''} /home/${cfg.user}/.config/looking-glass/client.ini
-      chown -h ${cfg.user}:users /home/${cfg.user}/.config/looking-glass/client.ini
-    '';
-
-    environment.etc."libvirt/hooks/qemu" = {
-      mode = "0755";
-      text = ''
-        #!/bin/sh
-        VM="$1"
-        OPERATION="$2"
-        if [ "$VM" = "${cfg.vmName}" ] && [ "$OPERATION" = "prepare" ]; then
-          echo 1 > /sys/bus/pci/devices/0000:72:00.0/reset || true
-          echo 1 > /sys/bus/pci/devices/0000:72:00.1/reset || true
-        fi
-      '';
-    };
 
     boot.kernel.sysctl = lib.mkIf cfg.hugepages.enable {
       "vm.nr_hugepages" = cfg.hugepages.count;
@@ -276,7 +225,7 @@ in
     # Ensure /var/lib/libvirt/images exists, define the VM, and start the
     # default NAT network if it isn't already running.
     systemd.services.define-windows-vm = {
-      description = "Define ${cfg.vmName} libvirt domain for iGPU passthrough";
+      description = "Define ${cfg.vmName} libvirt domain";
       after = [ "libvirtd.service" ];
       requires = [ "libvirtd.service" ];
       wantedBy = [ "multi-user.target" ];
