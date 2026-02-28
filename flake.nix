@@ -66,6 +66,17 @@
         ];
       };
 
+      # Framework 13 Laptop
+      framework13-laptop = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [
+          disko.nixosModules.disko
+          sops-nix.nixosModules.sops
+          ./hosts/framework13-laptop/configuration.nix
+          ./hosts/framework13-laptop/disk-config.nix
+        ];
+      };
+
       # Framework Desktop (k3s worker node)
       framework = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };

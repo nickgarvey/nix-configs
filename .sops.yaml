@@ -3,6 +3,7 @@ keys:
   - &k3s age12dsw8c59tv758nkkk8j7gwenk4wcc9h6mcl509egn85pk2qvlsys7v8zc5
   - &workstation age1le67uqtvry52ch733vytmr7yjvjsna8u3k6a9n285ggmuzfv9q7s4rqufu
   - &framework age1phmmhj7kfedel0uz052sj8glcevj6qgh5sdmq73ctm8qqlnxaarq4l9rvv
+  - &framework13-laptop age1m9l2ncrkg5zelkegwpa2ux2kw5cljay2m9sxuzf2eyz8qqje45vsmfn76k
 creation_rules:
   - path_regex: secrets/k3s.yaml
     key_groups:
@@ -15,9 +16,11 @@ creation_rules:
       - *ngarvey
       - *workstation
       - *framework
+      - *framework13-laptop
   - path_regex: secrets/smb-credentials.yaml
     key_groups:
     - age:
       - *ngarvey
       - *workstation
       - *framework
+      - *framework13-laptop
