@@ -71,6 +71,7 @@
     rsync
     xca
     remmina
+    moonlight-qt
   ];
 
   services.xserver.videoDrivers = [ "nvidia" ];
