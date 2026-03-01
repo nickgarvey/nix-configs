@@ -203,7 +203,7 @@ in
         swtpm.enable = true;
         runAsRoot = false;
       };
-      onBoot = "start";
+      onBoot = "ignore";
       onShutdown = "shutdown";
     };
 

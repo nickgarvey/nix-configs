@@ -70,7 +70,7 @@
     nvidia-container-toolkit
     rsync
     xca
-    tigervnc
+    remmina
   ];
 
   services.xserver.videoDrivers = [ "nvidia" ];
