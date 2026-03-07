@@ -64,9 +64,9 @@ in
 
     networking.firewall = {
       # Server ports: API server, etcd, etcd peers
-      allowedTCPPorts = [ 10250 ] # Kubelet metrics (all nodes)
+      allowedTCPPorts = [ 10250 7946 ] # Kubelet metrics, MetalLB memberlist (all nodes)
         ++ lib.optionals isServer [ 6443 2379 2380 ];
-      allowedUDPPorts = [ 8472 ]; # Flannel VXLAN (all nodes)
+      allowedUDPPorts = [ 8472 7946 ]; # Flannel VXLAN, MetalLB memberlist (all nodes)
     };
 
     # Longhorn settings
