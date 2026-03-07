@@ -8,6 +8,7 @@ in
 {
   imports = [
     ./nixos-common.nix
+    ./pico-udev.nix
     ./smb-automount.nix
     inputs.sops-nix.nixosModules.sops
   ];
