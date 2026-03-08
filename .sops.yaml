@@ -24,3 +24,9 @@ creation_rules:
       - *workstation
       - *framework
       - *framework13-laptop
+  - path_regex: secrets/nix-builder.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *workstation
+      - *framework13-laptop

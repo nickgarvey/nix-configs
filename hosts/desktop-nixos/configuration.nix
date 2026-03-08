@@ -9,6 +9,7 @@
     ../../modules/nixpkgs-tracker.nix
     ../../modules/k3s-hosts.nix
     ../../modules/windows-vm.nix
+    ../../modules/nix-binary-cache.nix
   ];
 
   nixpkgs.overlays = [
@@ -30,6 +31,14 @@
     download-buffer-size = 524288000;
     max-jobs = 4;
     cores = 6;
+  };
+
+  services.nixBinaryCache = {
+    enable = true;
+    signingKeySopsFile = ../../secrets/nix-builder.yaml;
+    authorizedKeys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJNvgPFo276pFe75SimIDp5JwKrIhSzD+ypRzt4GArzZ nix-builder"
+    ];
   };
 
   nixpkgs.config.cudaSupport = true;
