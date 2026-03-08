@@ -42,7 +42,7 @@ in
     nix.buildMachines = [
       {
         hostName = cfg.hostName;
-        systems = [ "x86_64-linux" ];
+        systems = [ "x86_64-linux" "aarch64-linux" ];
         protocol = "ssh-ng";
         sshUser = "nix-builder";
         sshKey = config.sops.secrets.nix-builder-ssh-key.path;

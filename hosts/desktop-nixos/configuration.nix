@@ -44,6 +44,8 @@
   nixpkgs.config.cudaSupport = true;
 
   boot = {
+    binfmt.emulatedSystems = [ "aarch64-linux" ];
+
     kernelPackages = lib.mkForce pkgs.linuxPackages_6_18;
 
     loader.systemd-boot.enable = true;
