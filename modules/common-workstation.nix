@@ -65,6 +65,24 @@ in
     ];
   };
 
+  # resolved handles split-DNS: Tailscale pushes its nameservers for ts.net
+  # domains, while DHCP-provided DNS is used for everything else.
+  services.resolved = {
+    enable = true;
+    settings.Resolve.DNSSEC = "false";
+  };
+  networking.networkmanager.dns = "systemd-resolved";
+
+  services.tailscale = {
+    enable = true;
+    useRoutingFeatures = "client";
+    extraSetFlags = [
+      "--accept-routes"
+      "--accept-dns"
+      "--operator=ngarvey"
+    ];
+  };
+
   networking.firewall = {
     allowedUDPPorts = [
       5353 # Spotify Connect

@@ -10,16 +10,9 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "framework13-laptop";
+  boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
-  services.tailscale = {
-    enable = true;
-    useRoutingFeatures = "client";
-    extraSetFlags = [
-      "--accept-routes"
-      "--operator=ngarvey"
-    ];
-  };
+  networking.hostName = "framework13-laptop";
 
   hardware.bluetooth = {
     enable = true;

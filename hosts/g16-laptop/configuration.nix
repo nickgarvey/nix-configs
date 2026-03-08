@@ -17,16 +17,6 @@
 
   networking.hostName = "g16-laptop";
 
-  services.tailscale = {
-    enable = true;
-    # Enable loose reverse path filtering for accepting routes
-    useRoutingFeatures = "client";
-    extraSetFlags = [
-      "--accept-routes"
-      "--operator=ngarvey"
-    ];
-  };
-
   hardware = {
     bluetooth = {
       enable = true;
@@ -40,25 +30,8 @@
     enableUserService = false;
   };
 
-  # Add control tools system-wide
   environment.systemPackages = with pkgs; [
     asusctl
-    # Exit node switching scripts
-    (pkgs.writeShellApplication {
-      name = "exitnode-on";
-      runtimeInputs = [ pkgs.tailscale ];
-      text = builtins.readFile ./bin/exitnode-on;
-    })
-    (pkgs.writeShellApplication {
-      name = "exitnode-off";
-      runtimeInputs = [ pkgs.tailscale ];
-      text = builtins.readFile ./bin/exitnode-off;
-    })
-    (pkgs.writeShellApplication {
-      name = "exitnode-status";
-      runtimeInputs = [ pkgs.tailscale pkgs.jq ];
-      text = builtins.readFile ./bin/exitnode-status;
-    })
     upower
   ];
 
