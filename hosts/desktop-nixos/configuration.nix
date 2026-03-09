@@ -5,6 +5,7 @@
     ./hardware-configuration.nix
     ../../modules/common-workstation.nix
     ../../modules/qmk.nix
+    ../../modules/nrfconnect.nix
     ../../modules/steam.nix
     ../../modules/nixpkgs-tracker.nix
     ../../modules/k3s-hosts.nix
