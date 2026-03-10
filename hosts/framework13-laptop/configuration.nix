@@ -19,7 +19,7 @@
     enable = true;
     hostName = "desktop-nixos.bigeye-turtle.ts.net";
     sshKeySopsFile = ../../secrets/nix-builder.yaml;
-    cachePublicKey = "desktop-nixos-cache:LEVKoXHpMfvm4xyKxJX5rY3ocVuK4Qia93q3n1utrPQ=";
+    cachePublicKey = "desktop-nixos-cache:dwK3Z7fL5Kfd3AMiWJhkKI1hSh5M8mm5nGeYeG2mSdE=";
   };
 
   hardware.bluetooth = {
