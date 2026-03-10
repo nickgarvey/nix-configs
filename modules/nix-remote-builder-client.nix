@@ -53,6 +53,7 @@ in
     ];
 
     nix.settings = {
+      builders-use-substitutes = true;
       extra-substituters = [ "http://${cfg.hostName}:${toString cfg.cachePort}" ];
       extra-trusted-public-keys = [ cfg.cachePublicKey ];
     };
