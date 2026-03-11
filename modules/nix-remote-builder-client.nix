@@ -56,6 +56,8 @@ in
       builders-use-substitutes = true;
       extra-substituters = [ "http://${cfg.hostName}:${toString cfg.cachePort}" ];
       extra-trusted-public-keys = [ cfg.cachePublicKey ];
+      fallback = true;
+      connect-timeout = 5;
     };
   };
 }
