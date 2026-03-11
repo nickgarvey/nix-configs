@@ -6,6 +6,7 @@
     ../../modules/common-workstation.nix
     ../../modules/steam.nix
     ../../modules/nix-remote-builder-client.nix
+    ../../modules/esp-prog-udev.nix
   ];
 
   boot.loader.systemd-boot.enable = true;
