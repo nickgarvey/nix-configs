@@ -16,6 +16,8 @@
 
   networking.hostName = "framework13-laptop";
 
+  services.fwupd.enable = true;
+
   services.nixRemoteBuilderClient = {
     enable = true;
     hostName = "desktop-nixos.bigeye-turtle.ts.net";
