@@ -12,10 +12,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    cursor-remote-node = {
-      url = "path:./modules/cursor-remote-node";
-    };
-
     helium-browser = {
       url = "github:ominit/helium-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -23,7 +19,7 @@
 
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, cursor-remote-node, helium-browser, nixos-hardware, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes for 1 - 3
@@ -56,7 +52,6 @@
         specialArgs = { inherit inputs; };
         modules = [
           ./hosts/desktop-nixos/configuration.nix
-          cursor-remote-node.nixosModules.cursor-remote-node
         ];
       };
 

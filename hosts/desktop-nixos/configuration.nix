@@ -17,8 +17,6 @@
     (import ../../overlays/whisper-cpp.nix)
   ];
 
-  cursorRemoteNode.enable = true;
-
   services.windowsVm.enable = true;
 
   services.nixpkgs-tracker.enable = true;
