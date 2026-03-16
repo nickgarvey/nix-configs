@@ -20,8 +20,10 @@
       url = "github:ominit/helium-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, cursor-remote-node, helium-browser, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, cursor-remote-node, helium-browser, nixos-hardware, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes for 1 - 3
@@ -72,6 +74,7 @@
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
+          nixos-hardware.nixosModules.framework-amd-ai-300-series
           ./hosts/framework13-laptop/configuration.nix
           ./hosts/framework13-laptop/disk-config.nix
         ];
@@ -83,6 +86,7 @@
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
+          nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
           ./modules/k3s-hosts.nix
           ./hosts/framework/configuration.nix
           ./hosts/framework/disk-config.nix
