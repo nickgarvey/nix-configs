@@ -45,6 +45,7 @@ in
     extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" "input" ];
     packages = with pkgs; [
       atop
+      claude-code
       code-cursor
       cursor-cli
       dig
