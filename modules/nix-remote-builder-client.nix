@@ -37,6 +37,8 @@ in
       owner = "root";
     };
 
+    systemd.services.nix-daemon.environment.NIX_SSHOPTS = "-o ConnectTimeout=5 -o BatchMode=yes";
+
     nix.distributedBuilds = true;
 
     nix.buildMachines = [
@@ -58,6 +60,7 @@ in
       extra-trusted-public-keys = [ cfg.cachePublicKey ];
       fallback = true;
       connect-timeout = 5;
+      download-attempts = 1;
     };
   };
 }

@@ -28,7 +28,7 @@ HOSTS = [
     ("k3s-node-1", "k3s-node-1", "home.arpa"),
     ("k3s-node-2", "k3s-node-2", "home.arpa"),
     ("k3s-node-3", "k3s-node-3", "home.arpa"),
-    ("framework", "framework", "home.arpa"),
+    ("framework", "framework", ""),
 ]
 
 # Timeouts and retry configuration
@@ -48,7 +48,7 @@ class Host:
 
     @property
     def fqdn(self) -> str:
-        return f"{self.hostname}.{self.domain}"
+        return f"{self.hostname}.{self.domain}" if self.domain else self.hostname
 
 
 def run_cmd(
