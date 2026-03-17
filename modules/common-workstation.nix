@@ -78,7 +78,6 @@ in
     enable = true;
     useRoutingFeatures = "client";
     extraSetFlags = [
-      "--accept-routes"
       "--accept-dns"
       "--operator=ngarvey"
     ];
