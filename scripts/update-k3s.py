@@ -261,7 +261,6 @@ def deploy_host(host: Host) -> bool:
             "--target-host", host.fqdn,
             "--flake", f".#{host.flake_name}",
             "--no-reexec",
-            "--build-host", host.fqdn,
             "--sudo",
         ])
         print(f"  ✓ Deployment to {host.fqdn} succeeded")
