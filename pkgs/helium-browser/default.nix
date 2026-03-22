@@ -7,6 +7,9 @@ pkgs.symlinkJoin {
   buildInputs = [ pkgs.makeWrapper ];
 
   postBuild = ''
+    wrapProgram $out/bin/helium \
+      --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform=wayland --ozone-platform-hint=wayland --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}"
+
     mkdir -p $out/share/applications
     cat > $out/share/applications/helium-browser.desktop << EOF
 [Desktop Entry]
