@@ -4,12 +4,7 @@ let
   cfg = config.routerConfig;
   inherit (import ./lan-hosts.nix) lanHosts;
 
-  # Only include hosts with real MAC addresses whose IPs are within the LAN subnet.
-  # During migration, hosts still on the old subnet (10.28.x.x) are excluded.
-  hostsWithMac = builtins.filter (h:
-    h.mac != "XX:XX:XX:XX:XX:XX" &&
-    lib.hasPrefix (lib.removeSuffix ".0/16" cfg.lanSubnet) h.ipv4
-  ) lanHosts;
+  hostsWithMac = lanHosts;
 in
 {
   config = {
@@ -35,7 +30,7 @@ in
             id = 1;
             subnet = cfg.lanSubnet;
             pools = [
-              { pool = "10.29.100.1 - 10.29.100.254"; }
+              { pool = "10.28.100.1 - 10.28.100.254"; }
             ];
             option-data = [
               { name = "routers";            data = cfg.lanAddress; }

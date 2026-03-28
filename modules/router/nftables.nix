@@ -10,6 +10,27 @@ in
       filter = {
         family = "inet";
         content = ''
+          set bogons_v4 {
+            type ipv4_addr
+            flags interval
+            elements = {
+              0.0.0.0/8,
+              10.0.0.0/8,
+              100.64.0.0/10,
+              127.0.0.0/8,
+              169.254.0.0/16,
+              172.16.0.0/12,
+              192.0.0.0/24,
+              192.0.2.0/24,
+              192.168.0.0/16,
+              198.18.0.0/15,
+              198.51.100.0/24,
+              203.0.113.0/24,
+              224.0.0.0/4,
+              240.0.0.0/4
+            }
+          }
+
           chain input {
             type filter hook input priority 0; policy drop;
 
@@ -19,6 +40,9 @@ in
 
             # Loopback
             iif lo accept
+
+            # Bogon filtering on WAN ingress
+            iifname "${cfg.wanInterface}" ip saddr @bogons_v4 drop
 
             # LAN -> router
             iifname "${cfg.lanInterface}" tcp dport { 22 } accept
@@ -33,23 +57,20 @@ in
               iifname "${cfg.wanInterface}" ip protocol 41 ip saddr ${heCfg.serverIPv4} accept
             ''}
 
-            # TEMPORARY: WAN SSH access during migration from old router. Remove
-            # once all devices are on the LAN subnet and WAN is connected to ISP.
-            iifname "${cfg.wanInterface}" tcp dport 22 accept
-
             # WAN -> router: PMTUD and essential ICMP
             iifname "${cfg.wanInterface}" icmp type { destination-unreachable, time-exceeded } accept
             iifname "${cfg.wanInterface}" icmpv6 type { destination-unreachable, packet-too-big, time-exceeded } accept
 
-            # WAN -> router: allow Tailscale
-            iifname "${cfg.wanInterface}" udp dport 41641 accept
+            # WAN -> router: allow Tailscale (rate limited)
+            iifname "${cfg.wanInterface}" udp dport 41641 limit rate 50/second accept
 
             # HE tunnel -> router: allow ICMPv6
             ${lib.optionalString heCfg.enable ''
               iifname "he-ipv6" icmpv6 type { echo-request, nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept
             ''}
 
-            # Reject with proper ICMP
+            # Log and reject everything else
+            log prefix "nft-input-reject: " limit rate 5/minute
             reject with icmpx admin-prohibited
           }
 
@@ -59,15 +80,17 @@ in
             ct state established,related accept
             ct state invalid drop
 
+            # Bogon filtering on WAN ingress
+            iifname "${cfg.wanInterface}" ip saddr @bogons_v4 drop
+
             # TCP MSS clamping — prevents MTU black holes, especially with 6in4 tunnel
             tcp flags syn tcp option maxseg size set rt mtu
 
+            # Allow forwarding of DNAT'd traffic (port forwards)
+            iifname "${cfg.wanInterface}" oifname "${cfg.lanInterface}" ct status dnat accept
+
             # LAN -> WAN: allow all outbound
             iifname "${cfg.lanInterface}" oifname "${cfg.wanInterface}" accept
-
-            # TEMPORARY: Allow old LAN (10.28.0.0/16) to reach new LAN during migration.
-            # Remove once old router is decommissioned.
-            iifname "${cfg.wanInterface}" oifname "${cfg.lanInterface}" ip saddr 10.28.0.0/16 accept
 
             # LAN <-> HE tunnel
             ${lib.optionalString heCfg.enable ''
@@ -78,6 +101,10 @@ in
             # LAN <-> Tailscale
             iifname "tailscale0" oifname "${cfg.lanInterface}" accept
             iifname "${cfg.lanInterface}" oifname "tailscale0" accept
+
+            # Log and drop everything else
+            log prefix "nft-forward-drop: " limit rate 5/minute
+            drop
           }
         '';
       };
@@ -85,12 +112,17 @@ in
       nat = {
         family = "ip";
         content = ''
+          chain prerouting {
+            type nat hook prerouting priority dstnat;
+
+            # DNAT / port forwarding rules go here
+          }
+
           chain postrouting {
             type nat hook postrouting priority srcnat;
 
-            # TEMPORARY: Don't NAT traffic between new and old LAN during migration.
-            # Remove once old router is decommissioned.
-            oifname "${cfg.wanInterface}" ip daddr 10.28.0.0/16 accept
+            # Hairpin NAT — allows LAN clients to reach port-forwarded services via the WAN IP
+            iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" masquerade
 
             # Masquerade all traffic going out WAN (internet-bound)
             oifname "${cfg.wanInterface}" masquerade

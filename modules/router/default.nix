@@ -18,9 +18,21 @@ in
       description = "Network interface connected to the ISP/WAN.";
     };
 
+    wanMacAddress = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "MAC address to spoof on the WAN interface. Empty string uses the hardware MAC.";
+    };
+
+    lanInterfaces = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      description = "Physical network interfaces to bridge into the LAN.";
+    };
+
     lanInterface = lib.mkOption {
       type = lib.types.str;
-      description = "Network interface connected to the LAN.";
+      default = "br-lan";
+      description = "Name of the LAN bridge interface.";
     };
 
     lanAddress = lib.mkOption {
@@ -58,15 +70,20 @@ in
     networking.firewall.enable = false;
     networking.nftables.enable = true;
 
-    # IP forwarding
+    # IP forwarding + anti-spoofing
     boot.kernel.sysctl = {
       "net.ipv4.ip_forward" = 1;
       "net.ipv6.conf.all.forwarding" = 1;
+      "net.ipv4.conf.all.rp_filter" = 1;
+      "net.ipv4.conf.default.rp_filter" = 1;
     };
 
     # WAN interface — DHCP from ISP
     systemd.network.networks."20-wan" = {
       matchConfig.Name = cfg.wanInterface;
+      linkConfig = lib.mkIf (cfg.wanMacAddress != "") {
+        MACAddress = cfg.wanMacAddress;
+      };
       networkConfig = {
         DHCP = "yes";
         IPv6AcceptRA = true;
@@ -74,7 +91,21 @@ in
       dhcpV4Config.UseDNS = false; # We run our own DNS
     };
 
-    # LAN interface — static address
+    # LAN bridge device
+    systemd.network.netdevs."10-br-lan" = {
+      netdevConfig = {
+        Name = cfg.lanInterface;
+        Kind = "bridge";
+      };
+    };
+
+    # Bind physical LAN ports to the bridge
+    systemd.network.networks."10-lan-members" = {
+      matchConfig.Name = builtins.concatStringsSep " " cfg.lanInterfaces;
+      networkConfig.Bridge = cfg.lanInterface;
+    };
+
+    # LAN bridge — static address
     systemd.network.networks."10-lan" = {
       matchConfig.Name = cfg.lanInterface;
       address = [
