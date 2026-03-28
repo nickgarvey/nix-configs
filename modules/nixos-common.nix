@@ -40,6 +40,10 @@
     };
 
     services.openssh.enable = true;
+
+    # Suppress post-quantum key exchange warnings from SSH client
+    programs.ssh.extraConfig = "WarnWeakCrypto no-pq-kex";
+
     security.pki.certificateFiles = [
       ../public_certs/Garvey_Home_Root_CA.crt
       ../public_certs/Garvey_Home_Intermediate_CA.crt
