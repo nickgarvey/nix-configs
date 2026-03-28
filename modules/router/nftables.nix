@@ -115,7 +115,7 @@ in
           chain prerouting {
             type nat hook prerouting priority dstnat;
 
-            # DNAT / port forwarding rules go here
+            iifname "${cfg.wanInterface}" tcp dport 443 dnat to 10.28.15.201:443
           }
 
           chain postrouting {
