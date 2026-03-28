@@ -87,6 +87,14 @@
           ./hosts/framework/disk-config.nix
         ];
       };
+
+      # Live boot ISO for installation and rescue
+      live-iso = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [
+          ./hosts/live-iso/configuration.nix
+        ];
+      };
     }
     # K3s nodes
     // k3sNodes;
