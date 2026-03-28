@@ -16,6 +16,11 @@ creation_rules:
     - age:
       - *ngarvey
       - *k3s
+  - path_regex: secrets/wifi.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *framework13-laptop
   - path_regex: secrets/github-token.yaml
     key_groups:
     - age:
