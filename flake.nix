@@ -75,6 +75,17 @@
         ];
       };
 
+      # Router
+      router = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [
+          disko.nixosModules.disko
+          sops-nix.nixosModules.sops
+          ./hosts/router/configuration.nix
+          ./hosts/router/disk-config.nix
+        ];
+      };
+
       # Framework Desktop (k3s worker node)
       framework = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };

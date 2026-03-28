@@ -4,7 +4,13 @@ keys:
   - &workstation age1le67uqtvry52ch733vytmr7yjvjsna8u3k6a9n285ggmuzfv9q7s4rqufu
   - &framework age1phmmhj7kfedel0uz052sj8glcevj6qgh5sdmq73ctm8qqlnxaarq4l9rvv
   - &framework13-laptop age1m9l2ncrkg5zelkegwpa2ux2kw5cljay2m9sxuzf2eyz8qqje45vsmfn76k
+  - &router age1c3fwgyf6tm44gzhyvfjk5eyysef0shufd50kdg4t0w2rd9jylcusakgxpy
 creation_rules:
+  - path_regex: secrets/router.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *router
   - path_regex: secrets/k3s.yaml
     key_groups:
     - age:

@@ -19,7 +19,10 @@
   };
 
   # Passwordless root console access (standard for installer ISOs)
-  users.users.root.initialHashedPassword = "";
+  users.users.root = {
+    initialHashedPassword = "";
+    openssh.authorizedKeys.keys = config.users.users.ngarvey.openssh.authorizedKeys.keys;
+  };
 
   environment.systemPackages = with pkgs; [
     # Disk partitioning and filesystem tools
