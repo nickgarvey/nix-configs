@@ -4,7 +4,11 @@
 , makeWrapper
 , jdk21
 , bash
-, xorg
+, libx11
+, libxext
+, libxrender
+, libxtst
+, libxi
 , fontconfig
 , buildFHSEnv
 , unzip
@@ -40,11 +44,11 @@ buildFHSEnv {
   targetPkgs = pkgs: with pkgs; [
     jdk21
     bash
-    xorg.libX11
-    xorg.libXext
-    xorg.libXrender
-    xorg.libXtst
-    xorg.libXi
+    libx11
+    libxext
+    libxrender
+    libxtst
+    libxi
     fontconfig
   ];
 

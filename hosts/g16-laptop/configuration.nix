@@ -26,8 +26,6 @@
 
   services.asusd = {
     enable = true;
-    # user service had config issues
-    enableUserService = false;
   };
 
   environment.systemPackages = with pkgs; [

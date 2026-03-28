@@ -7,7 +7,6 @@
     ../../modules/qmk.nix
     ../../modules/nrfconnect.nix
     ../../modules/steam.nix
-    ../../modules/nixpkgs-tracker.nix
     ../../modules/k3s-hosts.nix
     ../../modules/windows-vm.nix
     ../../modules/nix-binary-cache.nix
@@ -18,8 +17,6 @@
   ];
 
   services.windowsVm.enable = true;
-
-  services.nixpkgs-tracker.enable = true;
 
   networking = {
     hostName = "desktop-nixos";
