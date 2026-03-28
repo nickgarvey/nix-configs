@@ -41,6 +41,9 @@ in
             # Loopback
             iif lo accept
 
+            # Tailscale -> router: trust the overlay network
+            iifname "tailscale0" accept
+
             # Bogon filtering on WAN ingress
             iifname "${cfg.wanInterface}" ip saddr @bogons_v4 drop
 

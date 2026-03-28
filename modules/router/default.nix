@@ -76,6 +76,7 @@ in
       "net.ipv6.conf.all.forwarding" = 1;
       "net.ipv4.conf.all.rp_filter" = 1;
       "net.ipv4.conf.default.rp_filter" = 1;
+      "net.ipv4.conf.tailscale0.rp_filter" = 2; # loose — Tailscale source IPs don't match routing table
     };
 
     # WAN interface — DHCP from ISP
