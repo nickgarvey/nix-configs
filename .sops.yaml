@@ -5,7 +5,13 @@ keys:
   - &framework age1phmmhj7kfedel0uz052sj8glcevj6qgh5sdmq73ctm8qqlnxaarq4l9rvv
   - &framework13-laptop age1m9l2ncrkg5zelkegwpa2ux2kw5cljay2m9sxuzf2eyz8qqje45vsmfn76k
   - &router age1c3fwgyf6tm44gzhyvfjk5eyysef0shufd50kdg4t0w2rd9jylcusakgxpy
+  - &microatx age1cz96x8w6653wruqxrwquczv3ulwe5gfnvyy6p3tzvs8mehc7gyas7hty0k
 creation_rules:
+  - path_regex: secrets/microatx.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *microatx
   - path_regex: secrets/router.yaml
     key_groups:
     - age:

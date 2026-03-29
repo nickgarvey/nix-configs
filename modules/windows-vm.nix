@@ -14,17 +14,14 @@ let
       </memoryBacking>
       ''}
       <vcpu placement='static'>${toString cfg.vcpus}</vcpu>
+      ${lib.optionalString (cfg.cpuPinning != null) ''
       <cputune>
-        <vcpupin vcpu='0' cpuset='8'/>
-        <vcpupin vcpu='1' cpuset='9'/>
-        <vcpupin vcpu='2' cpuset='10'/>
-        <vcpupin vcpu='3' cpuset='11'/>
-        <vcpupin vcpu='4' cpuset='12'/>
-        <vcpupin vcpu='5' cpuset='13'/>
-        <vcpupin vcpu='6' cpuset='14'/>
-        <vcpupin vcpu='7' cpuset='15'/>
-        <emulatorpin cpuset='0-7,16-23'/>
+        ${lib.concatImapStringsSep "\n        " (i: cpuset:
+          "<vcpupin vcpu='${toString (i - 1)}' cpuset='${toString cpuset}'/>")
+          cfg.cpuPinning.vcpuPins}
+        <emulatorpin cpuset='${cfg.cpuPinning.emulatorPin}'/>
       </cputune>
+      ''}
       <os>
         <type arch='x86_64' machine='pc-q35-8.2'>hvm</type>
         <loader readonly='yes' secure='yes' type='pflash'>/run/libvirt/nix-ovmf/edk2-x86_64-secure-code.fd</loader>
@@ -43,7 +40,7 @@ let
           <vpindex state='on'/>
           <synic state='on'/>
           <stimer state='on'/>
-          <vendor_id state='on' value='AuthenticAMD'/>
+          ${lib.optionalString (cfg.hyperv.vendorId != null) ''<vendor_id state='on' value='${cfg.hyperv.vendorId}'/>''}
         </hyperv>
         <kvm>
           <hidden state='on'/>
@@ -52,10 +49,11 @@ let
         <vmport state='off'/>
       </features>
       <cpu mode='host-passthrough' check='none' migratable='on'>
-        <topology sockets='1' dies='1' cores='4' threads='2'/>
+        ${lib.optionalString (cfg.cpuTopology != null)
+          "<topology sockets='${toString cfg.cpuTopology.sockets}' dies='${toString cfg.cpuTopology.dies}' cores='${toString cfg.cpuTopology.cores}' threads='${toString cfg.cpuTopology.threads}'/>"}
         <cache mode='passthrough'/>
         <feature policy='disable' name='hypervisor'/>
-        <feature policy='require' name='topoext'/>
+        ${lib.optionalString cfg.amdFeatures "<feature policy='require' name='topoext'/>"}
       </cpu>
       <clock offset='localtime'>
         <timer name='rtc' tickpolicy='catchup'/>
@@ -75,7 +73,7 @@ let
 
         <!-- Primary disk -->
         <disk type='file' device='disk'>
-          <driver name='qemu' type='raw' cache='none' io='native' discard='unmap'/>
+          <driver name='qemu' type='${cfg.diskFormat}' cache='none' io='native' discard='unmap'/>
           <source file='${cfg.diskPath}'/>
           <target dev='vda' bus='virtio'/>
         </disk>
@@ -102,10 +100,17 @@ let
         <input type='tablet' bus='usb'/>
         <input type='keyboard' bus='virtio'/>
 
+        ${if cfg.bridgeName != null then ''
+        <interface type='bridge'>
+          <source bridge='${cfg.bridgeName}'/>
+          <model type='virtio'/>
+        </interface>
+        '' else ''
         <interface type='network'>
           <source network='default'/>
           <model type='virtio'/>
         </interface>
+        ''}
 
         <!-- SPICE for display and input -->
         <graphics type='spice' port='5901' autoport='no'>
@@ -160,7 +165,63 @@ in
     vcpus = lib.mkOption {
       type = lib.types.int;
       default = 8;
-      description = "Number of vCPUs (pinned to CCD1, cores 8-15 and threads 24-31).";
+      description = "Number of vCPUs.";
+    };
+
+    cpuPinning = lib.mkOption {
+      type = lib.types.nullOr (lib.types.submodule {
+        options = {
+          vcpuPins = lib.mkOption {
+            type = lib.types.listOf lib.types.int;
+            description = "List of host CPU IDs to pin each vCPU to (length must match vcpus).";
+          };
+          emulatorPin = lib.mkOption {
+            type = lib.types.str;
+            description = "CPU set for the emulator threads (e.g., '0-7,16-23').";
+          };
+        };
+      });
+      default = null;
+      description = "CPU pinning configuration. Null disables pinning.";
+    };
+
+    cpuTopology = lib.mkOption {
+      type = lib.types.nullOr (lib.types.submodule {
+        options = {
+          sockets = lib.mkOption { type = lib.types.int; default = 1; };
+          dies = lib.mkOption { type = lib.types.int; default = 1; };
+          cores = lib.mkOption { type = lib.types.int; default = 4; };
+          threads = lib.mkOption { type = lib.types.int; default = 2; };
+        };
+      });
+      default = null;
+      description = "CPU topology. Null lets QEMU decide.";
+    };
+
+    amdFeatures = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable AMD-specific CPU features (topoext).";
+    };
+
+    bridgeName = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Bridge interface name for VM networking. Null uses NAT (default network).";
+    };
+
+    diskFormat = lib.mkOption {
+      type = lib.types.enum [ "raw" "qcow2" ];
+      default = "raw";
+      description = "Disk image format.";
+    };
+
+    hyperv = {
+      vendorId = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Hyper-V vendor_id value. Null disables vendor_id spoofing.";
+      };
     };
 
     diskPath = lib.mkOption {
@@ -243,12 +304,14 @@ in
         # Create disk image if absent
         if [ ! -f "${cfg.diskPath}" ]; then
           echo "Creating disk image at ${cfg.diskPath} (${cfg.diskSize})"
-          "$QEMU_IMG" create -f raw "${cfg.diskPath}" "${cfg.diskSize}"
+          "$QEMU_IMG" create -f ${cfg.diskFormat} "${cfg.diskPath}" "${cfg.diskSize}"
         fi
 
+        ${lib.optionalString (cfg.bridgeName == null) ''
         # Start and autostart the default NAT network
         "$VIRSH" net-start default 2>/dev/null || true
         "$VIRSH" net-autostart default 2>/dev/null || true
+        ''}
 
         # Always redefine the VM so XML changes on rebuild are applied automatically.
         # Undefine first only if it exists and is not running.

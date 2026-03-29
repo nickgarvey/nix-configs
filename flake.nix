@@ -99,6 +99,17 @@
         ];
       };
 
+      # Microatx server (replaces Proxmox on minicheese)
+      microatx = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [
+          disko.nixosModules.disko
+          sops-nix.nixosModules.sops
+          ./hosts/microatx/configuration.nix
+          ./hosts/microatx/disk-config.nix
+        ];
+      };
+
       # Live boot ISO for installation and rescue
       live-iso = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };

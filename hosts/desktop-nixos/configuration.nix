@@ -16,7 +16,21 @@
     (import ../../overlays/whisper-cpp.nix)
   ];
 
-  services.windowsVm.enable = true;
+  services.windowsVm = {
+    enable = true;
+    amdFeatures = true;
+    cpuPinning = {
+      vcpuPins = [ 8 9 10 11 12 13 14 15 ];
+      emulatorPin = "0-7,16-23";
+    };
+    cpuTopology = {
+      sockets = 1;
+      dies = 1;
+      cores = 4;
+      threads = 2;
+    };
+    hyperv.vendorId = "AuthenticAMD";
+  };
 
   networking = {
     hostName = "desktop-nixos";

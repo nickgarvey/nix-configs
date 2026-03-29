@@ -40,10 +40,10 @@ domain=WORKGROUP
   ];
 
   systemd.mounts = [{
-    what = "//truenas.home.arpa/media";
+    what = "//microatx.home.arpa/media";
     where = "/shares/media";
     type = "cifs";
-    options = lib.concatStringsSep "," (mountOptions ++ [ "ip=10.28.12.16" ]);
+    options = lib.concatStringsSep "," (mountOptions ++ [ "ip=10.28.12.108" ]);
     wantedBy = [ ];
   }];
 

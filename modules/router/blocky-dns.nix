@@ -2,12 +2,14 @@
 
 let
   cfg = config.routerConfig;
-  inherit (import ./lan-hosts.nix) lanHosts;
+  inherit (import ./lan-hosts.nix) lanHosts dnsAliases;
+
+  allDnsEntries = lanHosts ++ dnsAliases;
 
   # Build customDNS mapping: both short names and FQDNs
   dnsMapping = builtins.listToAttrs (
-    (map (h: { name = h.hostname;                    value = h.ipv4; }) lanHosts) ++
-    (map (h: { name = "${h.hostname}.${cfg.domain}"; value = h.ipv4; }) lanHosts)
+    (map (h: { name = h.hostname;                    value = h.ipv4; }) allDnsEntries) ++
+    (map (h: { name = "${h.hostname}.${cfg.domain}"; value = h.ipv4; }) allDnsEntries)
   );
 in
 {
