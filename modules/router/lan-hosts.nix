@@ -14,5 +14,7 @@
     { hostname = "k3s-node-3";    mac = "78:55:36:00:4d:80"; ipv4 = "10.28.15.3"; }
     { hostname = "framework";     mac = "9c:bf:0d:01:0e:95"; ipv4 = "10.28.15.4"; }
     { hostname = "minicheese";    mac = "a8:a1:59:d9:d2:3b"; ipv4 = "10.28.12.108"; }
+    { hostname = "unifi";         mac = "";                  ipv4 = "10.28.15.203"; }
+    { hostname = "trmnl-display"; mac = "";                  ipv4 = "10.28.15.210"; }
   ];
 }

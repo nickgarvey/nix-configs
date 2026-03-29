@@ -4,7 +4,7 @@ let
   cfg = config.routerConfig;
   inherit (import ./lan-hosts.nix) lanHosts;
 
-  hostsWithMac = lanHosts;
+  hostsWithMac = builtins.filter (h: h.mac != "") lanHosts;
 in
 {
   config = {
@@ -36,6 +36,7 @@ in
               { name = "routers";            data = cfg.lanAddress; }
               { name = "domain-name-servers"; data = cfg.lanAddress; }
               { name = "domain-name";         data = cfg.domain; }
+              { name = "vendor-encapsulated-options"; data = "01:04:0a:1c:0f:cb"; csv-format = false; }
             ];
             reservations = map (host: {
               hw-address = host.mac;
