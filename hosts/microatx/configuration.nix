@@ -23,12 +23,12 @@
     "iommu=pt"
   ];
 
-  # Coral Edge TPU
-  boot.extraModulePackages = with config.boot.kernelPackages; [ gasket ];
-  boot.kernelModules = [ "apex" ];
-  services.udev.extraRules = ''
-    SUBSYSTEM=="apex", MODE="0660", GROUP="docker"
-  '';
+  # Coral Edge TPU (disabled with Frigate)
+  # boot.extraModulePackages = with config.boot.kernelPackages; [ gasket ];
+  # boot.kernelModules = [ "apex" ];
+  # services.udev.extraRules = ''
+  #   SUBSYSTEM=="apex", MODE="0660", GROUP="docker"
+  # '';
 
   # --- Networking ---
   # Bridge for VMs to get LAN access
@@ -93,6 +93,14 @@
     };
   };
 
+  # --- Users/groups for SMB ---
+  users.groups.media = {};
+  users.users.media-ro = {
+    isSystemUser = true;
+    group = "media";
+    home = "/var/empty";
+  };
+
   # --- SMB shares ---
   services.samba = {
     enable = true;
@@ -101,8 +109,17 @@
       global = {
         "server string" = "microatx";
         security = "user";
+        "map to guest" = "Bad User";
       };
       media = {
+        path = "/fast/media";
+        "read only" = "yes";
+        browseable = "yes";
+        "guest ok" = "yes";
+        "force user" = "media-ro";
+        "force group" = "media";
+      };
+      media-rw = {
         path = "/fast/media";
         "read only" = "no";
         browseable = "yes";
@@ -117,41 +134,41 @@
     };
   };
 
-  # --- Docker + Frigate ---
-  virtualisation.docker = {
-    enable = true;
-    autoPrune.enable = true;
-    enableOnBoot = true;
-  };
-  users.users.ngarvey.extraGroups = [ "docker" ];
+  # --- Docker + Frigate (disabled) ---
+  # virtualisation.docker = {
+  #   enable = true;
+  #   autoPrune.enable = true;
+  #   enableOnBoot = true;
+  # };
+  # users.users.ngarvey.extraGroups = [ "docker" ];
 
-  sops.secrets."frigate_rtsp_password_env" = {};
+  # sops.secrets."frigate_rtsp_password_env" = {};
 
-  virtualisation.oci-containers.containers.frigate = {
-    image = "ghcr.io/blakeblackshear/frigate:stable";
-    ports = [
-      "8971:8971"
-      "5000:5000"
-      "8554:8554"
-      "8555:8555/tcp"
-      "8555:8555/udp"
-    ];
-    volumes = [
-      "/etc/localtime:/etc/localtime:ro"
-      "/var/lib/frigate/config:/config"
-      "/fast/frigate:/media/frigate"
-    ];
-    environment = {
-      FRIGATE_RTSP_USER = "camera";
-    };
-    environmentFiles = [ config.sops.secrets."frigate_rtsp_password_env".path ];
-    # TODO: check if --privileged is actually needed or if --device + --cap-add suffice
-    extraOptions = [
-      "--device=/dev/apex_0:/dev/apex_0"
-      "--shm-size=512m"
-      "--privileged"
-    ];
-  };
+  # virtualisation.oci-containers.containers.frigate = {
+  #   image = "ghcr.io/blakeblackshear/frigate:stable";
+  #   ports = [
+  #     "8971:8971"
+  #     "5000:5000"
+  #     "8554:8554"
+  #     "8555:8555/tcp"
+  #     "8555:8555/udp"
+  #   ];
+  #   volumes = [
+  #     "/etc/localtime:/etc/localtime:ro"
+  #     "/var/lib/frigate/config:/config"
+  #     "/fast/frigate:/media/frigate"
+  #   ];
+  #   environment = {
+  #     FRIGATE_RTSP_USER = "camera";
+  #   };
+  #   environmentFiles = [ config.sops.secrets."frigate_rtsp_password_env".path ];
+  #   # TODO: check if --privileged is actually needed or if --device + --cap-add suffice
+  #   extraOptions = [
+  #     "--device=/dev/apex_0:/dev/apex_0"
+  #     "--shm-size=512m"
+  #     "--privileged"
+  #   ];
+  # };
 
   # --- Windows VM ---
   services.windowsVm = {
