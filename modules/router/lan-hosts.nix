@@ -4,6 +4,7 @@
   # DNS-only aliases (no DHCP reservation — point to an existing host's IP)
   dnsAliases = [
     { hostname = "router";  ipv4 = "10.28.0.1"; }
+    { hostname = "frigate"; ipv4 = "10.28.12.109"; }
   ];
 
   lanHosts = [
