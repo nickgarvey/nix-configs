@@ -69,6 +69,7 @@
     kernelParams = [
       "iommu=pt"
       "vfio-pci.ids=1002:13c0,1002:1640,1022:1649,1022:15b6,1022:15b7,1022:15e3"
+      "pcie_aspm=off"
     ];
 
     kernel.sysctl = {
@@ -109,7 +110,8 @@
       powerManagement.finegrained = false;
       open = true;
       nvidiaSettings = true;
-      package = config.boot.kernelPackages.nvidiaPackages.latest;
+      nvidiaPersistenced = true;
+      package = config.boot.kernelPackages.nvidiaPackages.stable;
     };
     nvidia-container-toolkit.enable = true;
   };
