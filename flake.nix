@@ -45,6 +45,18 @@
       makernexus = import ./devshells/makernexus.nix { inherit pkgs; };
     };
 
+    # Checks
+    checks.x86_64-linux = {
+      deploy-tests = pkgs.runCommand "deploy-tests" {
+        nativeBuildInputs = [ pkgs.python312 ];
+      } ''
+        cp ${./scripts/deploy.py} deploy.py
+        cp ${./scripts/test_deploy.py} test_deploy.py
+        python3 -m unittest test_deploy -v
+        touch $out
+      '';
+    };
+
     # These are all NixOS configurations
     nixosConfigurations = {
       # Desktop
