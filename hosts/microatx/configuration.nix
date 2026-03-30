@@ -5,6 +5,7 @@
     ./hardware-configuration.nix
     ../../modules/nixos-common.nix
     ../../modules/k3s-hosts.nix
+    ../../modules/containers/frigate.nix
     ../../modules/windows-vm.nix
   ];
 
@@ -22,13 +23,6 @@
     "intel_iommu=on"
     "iommu=pt"
   ];
-
-  # Coral Edge TPU (host loads modules for nspawn container)
-  boot.extraModulePackages = with config.boot.kernelPackages; [ gasket ];
-  boot.kernelModules = [ "apex" ];
-  services.udev.extraRules = ''
-    SUBSYSTEM=="apex", MODE="0660", GROUP="root"
-  '';
 
   # --- Networking ---
   # Bridge for VMs to get LAN access
@@ -135,58 +129,11 @@
   };
 
   # --- Frigate NVR (nspawn container) ---
-  containers.frigate = {
-    autoStart = true;
-    privateNetwork = true;
+  nspawn.frigate = {
     hostBridge = "vmbr0";
     localAddress = "10.28.12.109/24";
-
-    bindMounts = {
-      "/var/lib/frigate" = {
-        hostPath = "/fast/frigate/data";
-        isReadOnly = false;
-      };
-      "/var/cache/frigate" = {
-        hostPath = "/fast/frigate/cache";
-        isReadOnly = false;
-      };
-    };
-
-    allowedDevices = [
-      { node = "/dev/apex_0"; modifier = "rwm"; }
-    ];
-    extraFlags = [ "--bind=/dev/apex_0" ];
-
-    config = { config, pkgs, lib, ... }: {
-      # Coral modules are loaded on the host; suppress inside container
-      boot.extraModulePackages = lib.mkForce [];
-
-      # Fix /dev/apex_0 permissions (udev doesn't trigger for bind-mounted devices)
-      systemd.services.frigate.serviceConfig.ExecStartPre = lib.mkBefore [
-        "+${pkgs.coreutils}/bin/chown root:coral /dev/apex_0"
-        "+${pkgs.coreutils}/bin/chmod 660 /dev/apex_0"
-      ];
-
-      services.frigate = {
-        enable = true;
-        hostname = "frigate";
-        settings = {
-          mqtt.enabled = false;
-          detectors.coral = {
-            type = "edgetpu";
-            device = "pci";
-          };
-          cameras = {};
-        };
-      };
-
-      networking = {
-        defaultGateway = "10.28.0.1";
-        firewall.enable = false;
-      };
-
-      system.stateVersion = "25.05";
-    };
+    dataPath = "/fast/frigate/data";
+    cachePath = "/fast/frigate/cache";
   };
 
   # --- Windows VM ---
