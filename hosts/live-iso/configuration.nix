@@ -41,7 +41,7 @@
     # Hardware diagnostics
     smartmontools
     lshw
-  ] ++ config.commonConfig.commonPackages;
+  ];
 
   # Ephemeral live system — no point running GC or optimise timers
   networking.firewall.enable = false;

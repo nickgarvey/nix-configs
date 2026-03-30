@@ -18,7 +18,7 @@ in
     environment.systemPackages = with pkgs; [
       pciutils
       atop
-    ] ++ config.commonConfig.commonPackages;
+    ];
 
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;

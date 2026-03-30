@@ -92,7 +92,7 @@ in
   };
 
   environment.systemPackages = with pkgs; [
-  ] ++ config.commonConfig.commonPackages;
+  ];
 
   # COSMIC display manager and desktop
   services.displayManager.cosmic-greeter.enable = true;
