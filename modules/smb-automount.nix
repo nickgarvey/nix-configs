@@ -43,7 +43,7 @@ domain=WORKGROUP
     what = "//microatx.home.arpa/media";
     where = "/shares/media";
     type = "cifs";
-    options = lib.concatStringsSep "," (mountOptions ++ [ "ip=10.28.12.108" ]);
+    options = lib.concatStringsSep "," (mountOptions ++ [ "ip=10.28.12.110" ]);
     wantedBy = [ ];
   }];
 

@@ -5,6 +5,8 @@
   dnsAliases = [
     { hostname = "router";  ipv4 = "10.28.0.1"; }
     { hostname = "frigate"; ipv4 = "10.28.12.109"; }
+    { hostname = "smb";     ipv4 = "10.28.12.110"; }
+    { hostname = "plex";    ipv4 = "10.28.15.208"; }
   ];
 
   lanHosts = [

@@ -6,6 +6,7 @@
     ../../modules/nixos-common.nix
     ../../modules/k3s-hosts.nix
     ../../modules/containers/frigate.nix
+    ../../modules/microvm/smb.nix
     ../../modules/windows-vm.nix
   ];
 
@@ -87,45 +88,15 @@
     };
   };
 
-  # --- Users/groups for SMB ---
-  users.groups.media = {};
-  users.users.media-ro = {
-    isSystemUser = true;
-    group = "media";
-    home = "/var/empty";
-  };
-
-  # --- SMB shares ---
-  services.samba = {
-    enable = true;
-    openFirewall = true;
-    settings = {
-      global = {
-        "server string" = "microatx";
-        security = "user";
-        "map to guest" = "Bad User";
-      };
-      media = {
-        path = "/fast/media";
-        "read only" = "yes";
-        browseable = "yes";
-        "guest ok" = "yes";
-        "force user" = "media-ro";
-        "force group" = "media";
-      };
-      media-rw = {
-        path = "/fast/media";
-        "read only" = "no";
-        browseable = "yes";
-        "valid users" = "ngarvey";
-      };
-      backups = {
-        path = "/slow/backups";
-        "read only" = "no";
-        browseable = "yes";
-        "valid users" = "ngarvey";
-      };
-    };
+  # --- SMB (microvm) ---
+  microvm-smb = {
+    hostBridge = "vmbr0";
+    address = "10.28.12.110/16";
+    gateway = "10.28.0.1";
+    mac = "02:00:00:00:01:10";
+    shares = [
+      { name = "media"; path = "/fast/media"; owner = "media"; }
+    ];
   };
 
   # --- Frigate NVR (nspawn container) ---

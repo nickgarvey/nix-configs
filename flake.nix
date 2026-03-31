@@ -17,9 +17,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    microvm = {
+      url = "github:microvm-nix/microvm.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes for 1 - 3
@@ -109,6 +114,7 @@
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
+          microvm.nixosModules.host
           ./hosts/microatx/configuration.nix
           ./hosts/microatx/disk-config.nix
         ];
