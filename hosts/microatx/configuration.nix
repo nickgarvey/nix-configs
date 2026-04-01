@@ -7,7 +7,6 @@
     ../../modules/k3s-hosts.nix
     ../../modules/containers/frigate.nix
     ../../modules/microvm/smb.nix
-    ../../modules/windows-vm.nix
   ];
 
   networking.hostName = "microatx";
@@ -136,18 +135,6 @@
     dataPath = "/fast/frigate/data";
     cachePath = "/fast/frigate/cache";
   };
-
-  # --- Windows VM ---
-  services.windowsVm = {
-    enable = true;
-    vmName = "windows-vpn";
-    memory = 8000;
-    vcpus = 2;
-    diskPath = "/var/lib/libvirt/images/windows-vpn.qcow2";
-    diskFormat = "qcow2";
-    bridgeName = "vmbr0";
-  };
-
   networking.firewall.allowedTCPPorts = [ 8443 ];
 
   environment.systemPackages = with pkgs; [
