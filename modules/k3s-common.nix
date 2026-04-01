@@ -36,12 +36,9 @@ in
     # Configure Zot registry (HTTP) for k3s
     environment.etc."rancher/k3s/registries.yaml".text = ''
       mirrors:
-        "10.28.15.206:5000":
+        "zot.zot.k8s.home.arpa":
           endpoint:
-            - "http://10.28.15.206:5000"
-        "zot.home.arpa:5000":
-          endpoint:
-            - "http://zot.home.arpa:5000"
+            - "http://zot.zot.k8s.home.arpa:5000"
     '';
 
     systemd.services.k3s.restartTriggers = [

@@ -43,6 +43,12 @@ in
           };
         };
 
+        conditional = {
+          mapping = {
+            "k8s.home.arpa" = "10.28.15.207";
+          };
+        };
+
         customDNS = {
           mapping = dnsMapping;
         };
