@@ -23,7 +23,10 @@
   boot.kernelParams = [
     "intel_iommu=on"
     "iommu=pt"
+    "split_lock_detect=off"
   ];
+
+  networking.nftables.enable = true;
 
   # --- Networking ---
   # Bridge for VMs to get LAN access
@@ -31,7 +34,19 @@
     interfaces = [ "enp0s31f6" ];
   };
   networking.interfaces.vmbr0 = {
-    useDHCP = true;
+    useDHCP = false;
+    ipv4.addresses = [{ address = "10.28.12.108"; prefixLength = 16; }];
+  };
+  networking.defaultGateway = "10.28.0.1";
+  networking.nameservers = [ "10.28.0.1" ];
+  # Incus loads br_netfilter which causes bridge traffic (including ARP) to
+  # pass through netfilter, breaking DHCP and host connectivity on vmbr0.
+  # Disable bridge netfilter since we use vmbr0 directly, not an Incus NAT bridge.
+  networking.firewall.trustedInterfaces = [ "vmbr0" ];
+  boot.kernel.sysctl = {
+    "net.bridge.bridge-nf-call-iptables" = 0;
+    "net.bridge.bridge-nf-call-ip6tables" = 0;
+    "net.bridge.bridge-nf-call-arptables" = 0;
   };
   # Disable offloading to match current Proxmox config
   systemd.services.disable-offloading = {
@@ -67,6 +82,11 @@
     fsType = "btrfs";
     options = [ "compress=zstd" "subvol=@frigate" "nofail" ];
   };
+  fileSystems."/fast/incus" = {
+    device = "/dev/disk/by-label/fast";
+    fsType = "btrfs";
+    options = [ "subvol=@incus" "nofail" ];
+  };
 
   services.btrfs.autoScrub = {
     enable = true;
@@ -85,6 +105,26 @@
       volume."/fast" = {
         subvolume.media = { snapshot_dir = ".snapshots"; };
       };
+    };
+  };
+
+  # --- Incus ---
+  virtualisation.incus = {
+    enable = true;
+    ui.enable = true;
+    preseed = {
+      config = {
+        "core.https_address" = ":8443";
+      };
+      storage_pools = [
+        {
+          name = "default";
+          driver = "btrfs";
+          config = {
+            source = "/fast/incus";
+          };
+        }
+      ];
     };
   };
 
@@ -117,6 +157,8 @@
     diskFormat = "qcow2";
     bridgeName = "vmbr0";
   };
+
+  networking.firewall.allowedTCPPorts = [ 8443 ];
 
   environment.systemPackages = with pkgs; [
     ethtool

@@ -50,7 +50,7 @@
 
   users.users.ngarvey = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" ];
+    extraGroups = [ "wheel" "networkmanager" "incus-admin" ];
     openssh.authorizedKeys.keys = [
       "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCbmansQ84WUYb3frRU8CKPrZb6DdrfnHavtebK6JF5OQdK3C9nK6Xzoz6YKN4zISv7Vx+o7IReJNwjwV6JrUuOrcavBjTvMCgjotdnlYsk9gpuQjDd0MqHD6WdvuDSWxceKbCIP+6AGrVHKJRycFuLkF49f0fnDDy61+w0NWE3t/U1i2yiWOF+SlwvCxlvMYPFYkMWYarmi2Z3MXV1JCIEGwuv7nTQs/o1EEIk9G/YcjhiRMBRvYp6JaTJIXlpVeGpDp9K79VFWCSm6LdQENSWGwrfBeipdq9qRYHulbzTjWtF3LCcYQUm0Z8ZIIhnaqcqIHgFnYMSB79m/XhvKK3T"
     ];
