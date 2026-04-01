@@ -48,17 +48,7 @@
     "net.bridge.bridge-nf-call-ip6tables" = 0;
     "net.bridge.bridge-nf-call-arptables" = 0;
   };
-  # Disable offloading to match current Proxmox config
-  systemd.services.disable-offloading = {
-    description = "Disable TSO/GSO/GRO on enp5s0";
-    after = [ "network-pre.target" ];
-    wantedBy = [ "network.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = "${pkgs.ethtool}/bin/ethtool -K enp5s0 tso off gso off gro off";
-    };
-  };
+
 
   # Tailscale
   services.tailscale.enable = true;
