@@ -31,7 +31,7 @@
   # --- Networking ---
   # Bridge for VMs to get LAN access
   networking.bridges.vmbr0 = {
-    interfaces = [ "enp0s31f6" ];
+    interfaces = [ "enp5s0" ];
   };
   networking.interfaces.vmbr0 = {
     useDHCP = false;
@@ -50,13 +50,13 @@
   };
   # Disable offloading to match current Proxmox config
   systemd.services.disable-offloading = {
-    description = "Disable TSO/GSO/GRO on enp0s31f6";
+    description = "Disable TSO/GSO/GRO on enp5s0";
     after = [ "network-pre.target" ];
     wantedBy = [ "network.target" ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${pkgs.ethtool}/bin/ethtool -K enp0s31f6 tso off gso off gro off";
+      ExecStart = "${pkgs.ethtool}/bin/ethtool -K enp5s0 tso off gso off gro off";
     };
   };
 
