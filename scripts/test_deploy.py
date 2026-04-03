@@ -53,7 +53,8 @@ class TestHostConfig(unittest.TestCase):
         self.assertEqual(names.index("k3s-node-3"), 2)
         self.assertEqual(names.index("framework"), 3)
         self.assertEqual(names.index("microatx"), 4)
-        self.assertEqual(names.index("router"), 5)
+        self.assertEqual(names.index("framework13-laptop"), 5)
+        self.assertEqual(names.index("router"), 6)
 
     def test_all_hosts_have_unique_hostnames(self):
         names = [h.hostname for h in ALL_HOSTS]
@@ -65,11 +66,24 @@ class TestHostConfig(unittest.TestCase):
 
 
 class TestFilterHosts(unittest.TestCase):
-    def test_no_filters_returns_all_sorted(self):
+    def test_no_filters_returns_default_sorted(self):
         result = filter_hosts(ALL_HOSTS, None, None)
-        self.assertEqual(len(result), len(ALL_HOSTS))
+        default_hosts = [h for h in ALL_HOSTS if h.default]
+        self.assertEqual(len(result), len(default_hosts))
+        for h in result:
+            self.assertTrue(h.default)
         orders = [h.deploy_order for h in result]
         self.assertEqual(orders, sorted(orders))
+
+    def test_no_filters_excludes_non_default(self):
+        result = filter_hosts(ALL_HOSTS, None, None)
+        names = [h.hostname for h in result]
+        self.assertNotIn("framework13-laptop", names)
+
+    def test_explicit_host_includes_non_default(self):
+        result = filter_hosts(ALL_HOSTS, ["framework13-laptop"], None)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].hostname, "framework13-laptop")
 
     def test_filter_by_hostname(self):
         result = filter_hosts(ALL_HOSTS, ["router", "microatx"], None)

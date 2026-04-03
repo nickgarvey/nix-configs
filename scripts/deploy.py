@@ -30,7 +30,13 @@ Deploy order and strategies
      - Prompts before reboot (override with --force-reboot)
      - No k8s health check
 
-  4. router                               [ROUTER_SAFE]
+  4. framework13-laptop                   [STANDARD] (opt-in only)
+     - `nixos-rebuild switch`
+     - Prompts before reboot (override with --force-reboot)
+     - No k8s health check
+     - NOT deployed by default; specify with --hosts framework13-laptop
+
+  5. router                               [ROUTER_SAFE]
      - Arms a systemd watchdog timer on the router via SSH. If the deploy
        breaks networking, the watchdog reboots the router after the timeout
        (default 300s), restoring the previous boot config automatically.
@@ -51,7 +57,7 @@ Host groups
 -----------
   k3s         k3s-node-1, k3s-node-2, k3s-node-3, framework
   infra       k3s-node-1, k3s-node-2, k3s-node-3, microatx, router
-  workstation framework
+  workstation framework, framework13-laptop*
   router      router
 
 Dry-run mode (--dry-run)
@@ -106,6 +112,7 @@ class Host:
     ssh_address: str | None = None
     deploy_order: int = 50
     groups: list[str] = field(default_factory=list)
+    default: bool = True
 
     @property
     def fqdn(self) -> str:
@@ -133,6 +140,10 @@ ALL_HOSTS = [
     Host("router", "router", "",
          DeployStrategy.ROUTER_SAFE, RebootPolicy.NEVER,
          ssh_address="10.28.0.1", deploy_order=99, groups=["infra", "router"]),
+    Host("framework13-laptop", "framework13-laptop", "",
+         DeployStrategy.STANDARD, RebootPolicy.PROMPT,
+         k8s_health_check=False, deploy_order=40, groups=["workstation"],
+         default=False),
 ]
 
 deploy_warnings: list[str] = []
@@ -602,8 +613,10 @@ def filter_hosts(hosts: list[Host], hostnames: list[str] | None,
     filtered = list(hosts)
     if hostnames:
         filtered = [h for h in filtered if h.hostname in hostnames]
-    if groups:
+    elif groups:
         filtered = [h for h in filtered if any(g in h.groups for g in groups)]
+    else:
+        filtered = [h for h in filtered if h.default]
     filtered.sort(key=lambda h: h.deploy_order)
     return filtered
 
