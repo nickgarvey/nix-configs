@@ -50,6 +50,7 @@ in
         Local = "any";
         Remote = heCfg.serverIPv4;
         TTL = 255;
+        Independent = true;
       };
     };
 
@@ -60,7 +61,7 @@ in
       routes = [
         { Gateway = heCfg.serverIPv6; }
       ];
-      networkConfig.IPForward = "yes";
+      networkConfig.IPv6Forwarding = true;
     };
 
     # Enable IPv6 RA on LAN with the routed prefix

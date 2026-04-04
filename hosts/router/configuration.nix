@@ -18,15 +18,14 @@
     lanSubnet = "10.28.0.0/16";
     lanPrefixLength = 16;
 
-    # HE tunnel — uncomment and fill in after creating tunnel on tunnelbroker.net:
-    # heTunnel = {
-    #   enable = true;
-    #   serverIPv4 = "";       # e.g., "216.66.xx.xx"
-    #   clientIPv6 = "";       # e.g., "2001:470:xxxx::2/64"
-    #   serverIPv6 = "";       # e.g., "2001:470:xxxx::1"
-    #   routedPrefix = "";     # e.g., "2001:470:yyyy::"
-    #   routedPrefixLength = 64;
-    # };
+    heTunnel = {
+      enable = true;
+      serverIPv4 = "64.62.134.130";
+      clientIPv6 = "2001:470:66:35::2/64";
+      serverIPv6 = "2001:470:66:35::1";
+      routedPrefix = "2001:470:482f::";
+      routedPrefixLength = 64;
+    };
   };
 
   environment.systemPackages = with pkgs; [
