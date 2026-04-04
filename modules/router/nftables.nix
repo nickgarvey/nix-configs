@@ -60,9 +60,9 @@ in
               iifname "${cfg.wanInterface}" ip protocol 41 ip saddr ${heCfg.serverIPv4} accept
             ''}
 
-            # WAN -> router: PMTUD and essential ICMP
-            iifname "${cfg.wanInterface}" icmp type { destination-unreachable, time-exceeded } accept
-            iifname "${cfg.wanInterface}" icmpv6 type { destination-unreachable, packet-too-big, time-exceeded } accept
+            # WAN -> router: ICMP (ping + PMTUD essentials)
+            iifname "${cfg.wanInterface}" icmp type { echo-request, destination-unreachable, time-exceeded } accept
+            iifname "${cfg.wanInterface}" icmpv6 type { echo-request, destination-unreachable, packet-too-big, time-exceeded } accept
 
             # WAN -> router: allow Tailscale (rate limited)
             iifname "${cfg.wanInterface}" udp dport 41641 limit rate 50/second accept
