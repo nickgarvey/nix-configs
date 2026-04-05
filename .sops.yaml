@@ -27,13 +27,6 @@ creation_rules:
     - age:
       - *ngarvey
       - *framework13-laptop
-  - path_regex: secrets/github-token.yaml
-    key_groups:
-    - age:
-      - *ngarvey
-      - *workstation
-      - *framework
-      - *framework13-laptop
   - path_regex: secrets/smb-credentials.yaml
     key_groups:
     - age:
