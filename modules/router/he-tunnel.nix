@@ -71,6 +71,12 @@ in
       ipv6SendRAConfig = {
         Managed = false;        # SLAAC
         OtherInformation = true; # Clients query DHCPv6 for DNS info
+        # Advertise the prefix so clients get SLAAC addresses for LAN-to-LAN
+        # IPv6, but don't install this router as their default IPv6 gateway.
+        # HE tunnel broker prefixes are frequently flagged as botnets by
+        # Google et al., so outbound IPv6 is intentionally disabled by default.
+        # Individual hosts can opt in with: ip -6 route add default via 2001:470:482f::1
+        RouterLifetimeSec = 0;
       };
       ipv6Prefixes = [
         { Prefix = "${heCfg.routedPrefix}/${toString heCfg.routedPrefixLength}"; }
