@@ -13,10 +13,6 @@
     wanInterface = "enp4s0";
     wanMacAddress = "20:6d:31:ee:38:09";
     lanInterfaces = [ "enp1s0" "enp2s0" "enp3s0" ];
-    lanInterface = "br-lan";
-    lanAddress = "10.28.0.1";
-    lanSubnet = "10.28.0.0/16";
-    lanPrefixLength = 16;
 
     heTunnel = {
       enable = true;
