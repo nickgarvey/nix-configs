@@ -34,11 +34,6 @@
     pkgs = import nixpkgs { system = "x86_64-linux"; };
   in
   {
-    # Custom packages
-    packages.x86_64-linux = {
-      triplea = pkgs.callPackage ./pkgs/triplea.nix { };
-    };
-
     # Development shells
     devShells.x86_64-linux = {
       default = pkgs.mkShell {
