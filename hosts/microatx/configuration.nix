@@ -26,18 +26,29 @@
   ];
 
   networking.nftables.enable = true;
+  networking.networkmanager.enable = false;
 
   # --- Networking ---
-  # Bridge for VMs to get LAN access
-  networking.bridges.vmbr0 = {
-    interfaces = [ "enp5s0" ];
+  # Bridge for VMs to get LAN access (systemd-networkd native config)
+  systemd.network.netdevs."10-vmbr0" = {
+    netdevConfig = {
+      Name = "vmbr0";
+      Kind = "bridge";
+    };
   };
-  networking.interfaces.vmbr0 = {
-    useDHCP = false;
-    ipv4.addresses = [{ address = "10.28.12.108"; prefixLength = 16; }];
+
+  systemd.network.networks."10-enp5s0" = {
+    matchConfig.Name = "enp5s0";
+    networkConfig.Bridge = "vmbr0";
   };
-  networking.defaultGateway = { address = "10.28.0.1"; interface = "vmbr0"; };
-  networking.nameservers = [ "10.28.0.1" ];
+
+  systemd.network.networks."10-vmbr0" = {
+    matchConfig.Name = "vmbr0";
+    address = [ "10.28.12.108/16" ];
+    gateway = [ "10.28.0.1" ];
+    dns = [ "10.28.0.1" ];
+    networkConfig.DHCP = "no";
+  };
   # Incus loads br_netfilter which causes bridge traffic (including ARP) to
   # pass through netfilter, breaking DHCP and host connectivity on vmbr0.
   # Disable bridge netfilter since we use vmbr0 directly, not an Incus NAT bridge.
