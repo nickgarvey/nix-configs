@@ -11,9 +11,6 @@
     ../../modules/nix-binary-cache.nix
   ];
 
-  nixpkgs.overlays = [
-    (import ../../overlays/whisper-cpp.nix)
-  ];
   networking = {
     hostName = "desktop-nixos";
     hostId = "a4c946db";
