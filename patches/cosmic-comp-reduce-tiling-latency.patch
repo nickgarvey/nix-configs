@@ -1,0 +1,39 @@
+Reduce tiling blocker timeout and animation duration to minimize
+new-window latency. The 300ms blocker timeout forces every new tiled
+window to wait before the compositor renders it, even when the client
+has already acknowledged the configure. Reduce to 50ms (enough for a
+few frame roundtrips) and cut animation duration from 200ms to 100ms.
+
+diff --git a/src/shell/layout/tiling/blocker.rs b/src/shell/layout/tiling/blocker.rs
+index 1234567..abcdefg 100644
+--- a/src/shell/layout/tiling/blocker.rs
++++ b/src/shell/layout/tiling/blocker.rs
+@@ -37,14 +37,14 @@ impl TilingBlocker {
+
+     pub fn is_ready(&self) -> bool {
+-        Instant::now().duration_since(self.start) >= Duration::from_millis(300)
++        Instant::now().duration_since(self.start) >= Duration::from_millis(50)
+             || self
+                 .necessary_acks
+                 .iter()
+                 .all(|(surf, serial)| !surf.alive() || surf.serial_acked(serial))
+     }
+
+     pub fn is_processed(&self) -> bool {
+-        Instant::now().duration_since(self.start) >= Duration::from_millis(500)
++        Instant::now().duration_since(self.start) >= Duration::from_millis(150)
+             || self
+                 .necessary_acks
+                 .iter()
+diff --git a/src/shell/layout/tiling/mod.rs b/src/shell/layout/tiling/mod.rs
+index 1234567..abcdefg 100644
+--- a/src/shell/layout/tiling/mod.rs
++++ b/src/shell/layout/tiling/mod.rs
+@@ -76,7 +76,7 @@ pub use self::blocker::*;
+ pub use self::grabs::*;
+
+-pub const ANIMATION_DURATION: Duration = Duration::from_millis(200);
++pub const ANIMATION_DURATION: Duration = Duration::from_millis(100);
+ pub const MINIMIZE_ANIMATION_DURATION: Duration = Duration::from_millis(320);
+ pub const MOUSE_ANIMATION_DELAY: Duration = Duration::from_millis(150);
+ pub const INITIAL_MOUSE_ANIMATION_DELAY: Duration = Duration::from_millis(500);

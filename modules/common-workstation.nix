@@ -25,6 +25,11 @@ in
       google-chrome = super.google-chrome.override {
         commandLineArgs = "--hide-crash-restore-bubble";
       };
+      cosmic-comp = super.cosmic-comp.overrideAttrs (old: {
+        patches = (old.patches or []) ++ [
+          ../patches/cosmic-comp-reduce-tiling-latency.patch
+        ];
+      });
     })
   ];
 
@@ -93,9 +98,7 @@ in
 
   # COSMIC display manager and desktop
   services.displayManager.cosmic-greeter.enable = true;
-  services.desktopManager.cosmic = {
-    enable = true;
-  };
+  services.desktopManager.cosmic.enable = true;
 
   services.xserver.enable = true;
 
