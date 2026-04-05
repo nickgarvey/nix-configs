@@ -59,13 +59,14 @@ in
       matchConfig.Name = "he-ipv6";
       address = [ heCfg.clientIPv6 ];
       routes = [
-        { Gateway = heCfg.serverIPv6; }
+        { Gateway = heCfg.serverIPv6; Metric = 1024; }
       ];
       networkConfig.IPv6Forwarding = true;
     };
 
     # Enable IPv6 RA on LAN with the routed prefix
     systemd.network.networks."10-lan" = {
+      address = [ "${heCfg.routedPrefix}1/${toString heCfg.routedPrefixLength}" ];
       networkConfig.IPv6SendRA = true;
       ipv6SendRAConfig = {
         Managed = false;        # SLAAC

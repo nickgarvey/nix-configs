@@ -6,7 +6,11 @@ let
   domain = "home.arpa";
 in
 {
-  networking.extraHosts = lib.concatMapStringsSep "\n"
-    (h: "${h.ipv4} ${h.hostname} ${h.hostname}.${domain}")
-    allHosts;
+  networking.extraHosts =
+    let
+      ipv4Lines = map (h: "${h.ipv4} ${h.hostname} ${h.hostname}.${domain}") allHosts;
+      ipv6Lines = map (h: "${h.ipv6} ${h.hostname} ${h.hostname}.${domain}")
+        (builtins.filter (h: h.ipv6 != null) allHosts);
+    in
+    lib.concatStringsSep "\n" (ipv4Lines ++ ipv6Lines);
 }

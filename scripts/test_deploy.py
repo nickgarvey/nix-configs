@@ -428,18 +428,20 @@ class TestConnectivityChecks(unittest.TestCase):
         mock_run.return_value = MagicMock(returncode=2)
         self.assertFalse(dns_check())
 
+    @patch("deploy.ping6_check", return_value=True)
     @patch("deploy.dns_check", return_value=True)
     @patch("deploy.ping_check", return_value=True)
     @patch("deploy.check_ssh", return_value=True)
-    def test_verify_router_all_pass(self, mock_ssh, mock_ping, mock_dns):
+    def test_verify_router_all_pass(self, mock_ssh, mock_ping, mock_dns, mock_ping6):
         h = Host("router", "router", "", DeployStrategy.ROUTER_SAFE,
                  RebootPolicy.NEVER, ssh_address="10.28.0.1")
         self.assertTrue(verify_router_connectivity(h))
 
+    @patch("deploy.ping6_check", return_value=True)
     @patch("deploy.dns_check", return_value=True)
     @patch("deploy.ping_check", return_value=False)
     @patch("deploy.check_ssh", return_value=True)
-    def test_verify_router_ping_fails(self, mock_ssh, mock_ping, mock_dns):
+    def test_verify_router_ping_fails(self, mock_ssh, mock_ping, mock_dns, mock_ping6):
         h = Host("router", "router", "", DeployStrategy.ROUTER_SAFE,
                  RebootPolicy.NEVER, ssh_address="10.28.0.1")
         self.assertFalse(verify_router_connectivity(h))

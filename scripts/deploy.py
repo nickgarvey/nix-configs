@@ -424,12 +424,32 @@ def dns_check() -> bool:
         return False
 
 
+def ping6_check(target: str, via_host: str | None = None) -> bool:
+    """Ping an IPv6 target and return True if reachable.
+    If via_host is given, run the ping on that host via SSH."""
+    try:
+        if via_host:
+            cmd = ["ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
+                   via_host, "ping", "-6", "-c", "3", "-W", "5", target]
+        else:
+            cmd = ["ping", "-6", "-c", "3", "-W", "5", target]
+        result = run_cmd(
+            cmd,
+            capture_output=True, check=False, timeout=20,
+        )
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
+
+
 def verify_router_connectivity(host: Host) -> bool:
     """Run connectivity checks after a router config change."""
     checks = [
         ("SSH to router", lambda: check_ssh(host)),
         ("Ping internet (1.1.1.1)", lambda: ping_check("1.1.1.1")),
         ("DNS resolution", dns_check),
+        ("IPv6 tunnel (HE)", lambda: ping6_check("2001:470:66:35::1", via_host=host.ssh_address)),
+        ("IPv6 internet", lambda: ping6_check("2001:4860:4860::8888", via_host=host.ssh_address)),
     ]
     all_ok = True
     for name, check_fn in checks:

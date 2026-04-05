@@ -96,8 +96,12 @@ in
             iifname "${cfg.lanInterface}" oifname "${cfg.wanInterface}" accept
 
             # LAN <-> HE tunnel
+            # Block new outbound IPv6 through HE tunnel to avoid bot detection on
+            # tunnel broker IP ranges. Replies to incoming connections are allowed
+            # by the ct state established,related rule above. Incoming new
+            # connections are accepted so services remain reachable over IPv6.
             ${lib.optionalString heCfg.enable ''
-              iifname "${cfg.lanInterface}" oifname "he-ipv6" accept
+              iifname "he-ipv6" oifname "${cfg.lanInterface}" ct state new accept
               iifname "he-ipv6" oifname "${cfg.lanInterface}" icmpv6 type { echo-request, nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept
             ''}
 

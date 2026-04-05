@@ -74,6 +74,7 @@ in
     boot.kernel.sysctl = {
       "net.ipv4.ip_forward" = 1;
       "net.ipv6.conf.all.forwarding" = 1;
+      "net.ipv6.conf.${cfg.wanInterface}.accept_ra" = 2; # accept RA even with forwarding enabled
       "net.ipv4.conf.all.rp_filter" = 1;
       "net.ipv4.conf.default.rp_filter" = 1;
       "net.ipv4.conf.tailscale0.rp_filter" = 2; # loose — Tailscale source IPs don't match routing table
@@ -86,7 +87,7 @@ in
         MACAddress = cfg.wanMacAddress;
       };
       networkConfig = {
-        DHCP = "yes";
+        DHCP = "ipv4";
         IPv6AcceptRA = true;
       };
       dhcpV4Config.UseDNS = false; # We run our own DNS

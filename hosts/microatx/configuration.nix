@@ -36,7 +36,7 @@
     useDHCP = false;
     ipv4.addresses = [{ address = "10.28.12.108"; prefixLength = 16; }];
   };
-  networking.defaultGateway = "10.28.0.1";
+  networking.defaultGateway = { address = "10.28.0.1"; interface = "vmbr0"; };
   networking.nameservers = [ "10.28.0.1" ];
   # Incus loads br_netfilter which causes bridge traffic (including ARP) to
   # pass through netfilter, breaking DHCP and host connectivity on vmbr0.
