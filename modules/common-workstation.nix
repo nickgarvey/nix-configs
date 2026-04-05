@@ -91,9 +91,6 @@ in
     logRefusedConnections = false;
   };
 
-  environment.systemPackages = with pkgs; [
-  ];
-
   # COSMIC display manager and desktop
   services.displayManager.cosmic-greeter.enable = true;
   services.desktopManager.cosmic = {

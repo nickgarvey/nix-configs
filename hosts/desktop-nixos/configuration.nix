@@ -113,19 +113,6 @@
     AllowSuspendThenHibernate = "no";
   };
 
-  # Flatpak
-  services.flatpak.enable = true;
-
-  # XDG Portals for Flatpak desktop integration
-  xdg.portal = {
-    enable = true;
-    extraPortals = [
-      pkgs.xdg-desktop-portal-cosmic
-      pkgs.xdg-desktop-portal-gtk
-    ];
-    config.common.default = [ "cosmic" "gtk" ];
-  };
-
   # Most users should NEVER change this value after the initial install, for any reason,
   # even if you've upgraded your system to a new NixOS release.
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
