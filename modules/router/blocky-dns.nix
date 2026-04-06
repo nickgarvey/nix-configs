@@ -2,7 +2,7 @@
 
 let
   cfg = config.routerConfig;
-  inherit (import ./lan-hosts.nix) lanHosts dnsAliases;
+  inherit (import ../lan-hosts.nix) lanHosts dnsAliases;
 
   allDnsEntries = lanHosts ++ dnsAliases;
 

@@ -1,56 +1,46 @@
 #!/usr/bin/env python3
 """
-Deploy NixOS updates to all managed hosts with per-host strategies.
+Deploy NixOS updates to all managed hosts with safe rollback.
 
 Overview
 --------
-Each host has a deploy strategy and reboot policy configured in the host
-registry (ALL_HOSTS). The script deploys hosts sequentially in a fixed
-order so that the least-critical-to-lose hosts are updated last.
+Every host is deployed using a safe pattern: arm a systemd watchdog timer,
+activate the config with `nixos-rebuild test` (without persisting), verify
+connectivity, then persist with `nixos-rebuild boot` and disarm the watchdog.
+If any step fails, the watchdog reboots the host back to the last known-good
+config. Use --no-safe to bypass this and use raw `nixos-rebuild switch`.
 
 Before any deployment, `nix flake check` is run to catch evaluation errors
-early (skip with --skip-flake-check). Then each host is deployed according
-to its strategy.
+early (skip with --skip-flake-check). Then each host is deployed sequentially
+in a fixed order.
 
-Deploy order and strategies
----------------------------
-  1. k3s-node-1, k3s-node-2, k3s-node-3  [ROLLING_K3S]
-     - `nixos-rebuild switch` to each node one at a time
-     - Auto-reboots if kernel or kernel params changed (no prompt)
-     - Waits for the k8s node to report Ready before moving to the next
-     - Any failure hard-stops the entire k3s group
+Deploy order
+------------
+  1. k3s-node-1, k3s-node-2, k3s-node-3   (auto-reboot, k8s health check)
+  2. framework                             (prompt reboot, k8s health check)
+  3. microatx                              (prompt reboot)
+  4. framework13-laptop                    (prompt reboot, opt-in only)
+  5. router                                (never reboot, extended checks)
 
-  2. framework                            [STANDARD]
-     - `nixos-rebuild switch`
-     - Prompts before reboot (override with --force-reboot)
-     - Waits for k8s node Ready (it is a k3s agent)
+Safe deploy flow (all hosts)
+-----------------------------
+  1. Arm watchdog timer (systemd-run reboot on timeout)
+  2. `nixos-rebuild test` — activate config without persisting
+  3. Verify connectivity (with retries) — per-host checks:
+       Default: SSH reachable + ping gateway from host
+       Router:  SSH + ping internet + DNS + IPv6 tunnel + IPv6 internet
+  4. `nixos-rebuild boot` — persist as boot default
+  5. Disarm watchdog
+  6. Handle reboot if kernel changed
+  7. Post-deploy checks (k8s health)
 
-  3. microatx                             [STANDARD]
-     - `nixos-rebuild switch`
-     - Prompts before reboot (override with --force-reboot)
-     - No k8s health check
-
-  4. framework13-laptop                   [STANDARD] (opt-in only)
-     - `nixos-rebuild switch`
-     - Prompts before reboot (override with --force-reboot)
-     - No k8s health check
-     - NOT deployed by default; specify with --hosts framework13-laptop
-
-  5. router                               [ROUTER_SAFE]
-     - Arms a systemd watchdog timer on the router via SSH. If the deploy
-       breaks networking, the watchdog reboots the router after the timeout
-       (default 300s), restoring the previous boot config automatically.
-     - `nixos-rebuild test` activates the new config WITHOUT setting it as
-       the boot default.
-     - Runs connectivity checks: SSH to router, ping 1.1.1.1, DNS.
-     - If checks pass: `nixos-rebuild boot` persists the config as the boot
-       default, then disarms the watchdog.
-     - If checks fail: the script exits and the watchdog reboots the router,
-       which boots back into the old (known-good) config.
+  If step 2 or 3 fails, the watchdog reboots to the previous config.
+  If step 4 fails, the config is active but not persisted; watchdog is
+  disarmed and a warning is shown.
 
 Failure handling
 ----------------
-  - K3s node failure: hard stop (cluster stability).
+  - K3s node failure: hard stop remaining k3s group (cluster stability).
   - Other host failure: prompts whether to continue with remaining hosts.
 
 Host groups
@@ -60,39 +50,34 @@ Host groups
   workstation framework, framework13-laptop*
   router      router
 
-Dry-run mode (--dry-run)
-------------------------
-  - Verifies SSH connectivity to each host
-  - Checks k8s node health (for k8s hosts)
-  - Checks systemd-run availability (for router)
-  - Builds the flake for each host (without deploying)
-
 Examples
 --------
-  deploy.py                              # deploy everything
+  deploy.py                              # deploy everything (safe mode)
   deploy.py --group k3s                  # just the k3s cluster + framework
   deploy.py --hosts router               # just the router
   deploy.py --hosts microatx framework   # specific hosts
+  deploy.py --no-safe                    # bypass watchdog, use raw switch
   deploy.py --dry-run                    # verify without deploying
   deploy.py --force-reboot               # skip reboot prompts on PROMPT hosts
   deploy.py --reboot                     # force reboot even without kernel change
   deploy.py --no-reboot                  # never reboot (warn if needed)
   deploy.py --skip-flake-check           # skip nix flake check
-  deploy.py --router-watchdog-timeout 600  # 10min watchdog instead of 5min
+  deploy.py --watchdog-timeout 600       # 10min watchdog instead of 5min
 """
 
 import argparse
+import builtins
 import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 
-
-class DeployStrategy(Enum):
-    ROLLING_K3S = "rolling_k3s"
-    STANDARD = "standard"
-    ROUTER_SAFE = "router_safe"
+# Force all prints to flush immediately so output isn't buffered when piped/backgrounded
+_builtin_print = builtins.print
+def print(*args, **kwargs):
+    kwargs.setdefault("flush", True)
+    _builtin_print(*args, **kwargs)
 
 
 class RebootPolicy(Enum):
@@ -101,18 +86,21 @@ class RebootPolicy(Enum):
     NEVER = "never"
 
 
+DEFAULT_CONNECTIVITY_CHECKS = ["ssh", "ping_gateway"]
+
+
 @dataclass
 class Host:
     hostname: str
     flake_name: str
     domain: str
-    deploy_strategy: DeployStrategy
     reboot_policy: RebootPolicy
     k8s_health_check: bool = False
     ssh_address: str | None = None
     deploy_order: int = 50
     groups: list[str] = field(default_factory=list)
     default: bool = True
+    connectivity_checks: list[str] = field(default_factory=lambda: list(DEFAULT_CONNECTIVITY_CHECKS))
 
     @property
     def fqdn(self) -> str:
@@ -123,26 +111,28 @@ class Host:
 
 ALL_HOSTS = [
     Host("k3s-node-1", "k3s-node-1", "home.arpa",
-         DeployStrategy.ROLLING_K3S, RebootPolicy.AUTO,
+         RebootPolicy.AUTO,
          k8s_health_check=True, deploy_order=10, groups=["k3s", "infra"]),
     Host("k3s-node-2", "k3s-node-2", "home.arpa",
-         DeployStrategy.ROLLING_K3S, RebootPolicy.AUTO,
+         RebootPolicy.AUTO,
          k8s_health_check=True, deploy_order=11, groups=["k3s", "infra"]),
     Host("k3s-node-3", "k3s-node-3", "home.arpa",
-         DeployStrategy.ROLLING_K3S, RebootPolicy.AUTO,
+         RebootPolicy.AUTO,
          k8s_health_check=True, deploy_order=12, groups=["k3s", "infra"]),
     Host("framework", "framework", "",
-         DeployStrategy.STANDARD, RebootPolicy.PROMPT,
+         RebootPolicy.PROMPT,
          k8s_health_check=True, deploy_order=20, groups=["k3s", "workstation"]),
     Host("microatx", "microatx", "home.arpa",
-         DeployStrategy.STANDARD, RebootPolicy.PROMPT,
-         k8s_health_check=False, deploy_order=30, groups=["infra"]),
+         RebootPolicy.PROMPT,
+         deploy_order=30, groups=["infra"]),
     Host("router", "router", "",
-         DeployStrategy.ROUTER_SAFE, RebootPolicy.NEVER,
-         ssh_address="10.28.0.1", deploy_order=99, groups=["infra", "router"]),
+         RebootPolicy.NEVER,
+         ssh_address="10.28.0.1", deploy_order=99, groups=["infra", "router"],
+         connectivity_checks=["ssh", "ping_internet", "dns", "ipv6_tunnel", "ipv6_internet"]),
     Host("framework13-laptop", "framework13-laptop", "",
-         DeployStrategy.STANDARD, RebootPolicy.PROMPT,
-         k8s_health_check=False, deploy_order=40, groups=["workstation"],
+         RebootPolicy.PROMPT,
+         deploy_order=40, groups=["workstation"],
+         connectivity_checks=["ssh"],
          default=False),
 ]
 
@@ -154,7 +144,9 @@ REBOOT_WAIT_INTERVAL = 10
 REBOOT_WAIT_MAX = 300
 NODE_HEALTH_RETRIES = 12
 NODE_HEALTH_INTERVAL = 10
-ROUTER_STABILIZE_WAIT = 10
+VERIFY_RETRIES = 3
+VERIFY_RETRY_DELAY = 2
+DEPLOY_TIMEOUT = 60
 
 def run_cmd(
     cmd: list[str],
@@ -366,8 +358,87 @@ def handle_reboot(host: Host, force_reboot: bool, no_reboot: bool,
     return True
 
 
-def deploy_host(host: Host, mode: str = "switch") -> bool:
-    """Deploy NixOS configuration to a host with the given mode (switch/test/boot)."""
+
+def get_expected_system_path(host: Host) -> str | None:
+    """Get the expected system store path from the local build result."""
+    try:
+        result = run_cmd(
+            ["nix", "build", "--print-out-paths", "--no-link",
+             f".#nixosConfigurations.{host.flake_name}.config.system.build.toplevel"],
+            capture_output=True, check=True,
+        )
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+
+
+def get_active_system_path(host: Host) -> str | None:
+    """Get the currently active system store path on a remote host."""
+    try:
+        result = ssh_cmd(host, "readlink /run/current-system", timeout=10)
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+        pass
+    return None
+
+
+def verify_config_active(host: Host, expected_path: str) -> bool:
+    """Verify the expected config is actually running on the host."""
+    active = get_active_system_path(host)
+    if active is None:
+        print(f"  ✗ Could not read active system path from {host.hostname}")
+        return False
+    if active == expected_path:
+        print(f"  ✓ Config verified active: {expected_path}")
+        return True
+    print(f"  ✗ Config mismatch! Expected:\n      {expected_path}\n    Active:\n      {active}")
+    print(f"  Host may have rebooted (watchdog?) — refusing to persist")
+    return False
+
+
+def build_host(host: Host) -> str | None:
+    """Build the NixOS configuration for a host (local build only, no deploy).
+    Returns the expected system store path, or None on failure."""
+    print(f"  Building config for {host.fqdn}...")
+    try:
+        run_cmd([
+            "nixos-rebuild", "build",
+            "--flake", f".#{host.flake_name}",
+            "--no-reexec",
+        ])
+    except subprocess.CalledProcessError as e:
+        print(f"  ✗ Build for {host.fqdn} failed: {e}")
+        return None
+    path = get_expected_system_path(host)
+    if path:
+        print(f"  ✓ Build for {host.fqdn} succeeded: {path}")
+    else:
+        print(f"  ✗ Build succeeded but could not determine system path")
+    return path
+
+
+def clear_nixos_rebuild_unit(host: Host) -> None:
+    """Clear the nixos-rebuild-switch-to-configuration unit on a remote host.
+    Called after a timed-out 'test' leaves a stale unit that blocks subsequent runs."""
+    print(f"  Clearing stale nixos-rebuild unit on {host.hostname}...")
+    for action in ["stop", "reset-failed"]:
+        try:
+            ssh_cmd(host, f"sudo systemctl {action} nixos-rebuild-switch-to-configuration.service",
+                    timeout=10)
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+            pass
+
+
+def deploy_host(host: Host, mode: str = "switch", timeout: int = DEPLOY_TIMEOUT) -> bool:
+    """Deploy NixOS configuration to a host with the given mode (switch/test/boot).
+
+    Assumes the config is already built locally (via build_host). The timeout
+    only covers the copy + remote activation, not the build. If the command
+    times out during 'test' mode and the host is still reachable via SSH,
+    the activation likely succeeded (SSH session hung after networkd reload).
+    Sets host._test_timed_out so the caller can clean up before 'boot'.
+    """
     print(f"  Deploying ({mode}) to {host.fqdn}...")
     try:
         run_cmd([
@@ -376,9 +447,16 @@ def deploy_host(host: Host, mode: str = "switch") -> bool:
             "--flake", f".#{host.flake_name}",
             "--no-reexec",
             "--sudo",
-        ])
+        ], timeout=timeout)
         print(f"  ✓ Deployment ({mode}) to {host.fqdn} succeeded")
         return True
+    except subprocess.TimeoutExpired:
+        if mode == "test" and check_ssh(host):
+            print(f"  ⚠ Deployment ({mode}) timed out but host is reachable — assuming activation succeeded")
+            host._test_timed_out = True
+            return True
+        print(f"  ✗ Deployment ({mode}) to {host.fqdn} timed out after {timeout}s")
+        return False
     except subprocess.CalledProcessError as e:
         print(f"  ✗ Deployment ({mode}) to {host.fqdn} failed: {e}")
         return False
@@ -400,11 +478,17 @@ def build_flake(host: Host) -> bool:
         return False
 
 
-def ping_check(target: str) -> bool:
-    """Ping a target and return True if reachable."""
+def ping_check(target: str, via_host: str | None = None) -> bool:
+    """Ping a target and return True if reachable.
+    If via_host is given, run the ping on that host via SSH."""
     try:
+        if via_host:
+            cmd = ["ssh", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes",
+                   via_host, "ping", "-c", "3", "-W", "5", target]
+        else:
+            cmd = ["ping", "-c", "3", "-W", "5", target]
         result = run_cmd(
-            ["ping", "-c", "3", "-W", "5", target],
+            cmd,
             capture_output=True, check=False, timeout=20,
         )
         return result.returncode == 0
@@ -442,31 +526,42 @@ def ping6_check(target: str, via_host: str | None = None) -> bool:
         return False
 
 
-def verify_router_connectivity(host: Host) -> bool:
-    """Run connectivity checks after a router config change."""
-    checks = [
-        ("SSH to router", lambda: check_ssh(host)),
-        ("Ping internet (1.1.1.1)", lambda: ping_check("1.1.1.1")),
-        ("DNS resolution", dns_check),
-        ("IPv6 tunnel (HE)", lambda: ping6_check("2001:470:66:35::1", via_host=host.ssh_address)),
-        ("IPv6 internet", lambda: ping6_check("2001:4860:4860::8888", via_host=host.ssh_address)),
-    ]
-    all_ok = True
-    for name, check_fn in checks:
-        try:
-            if check_fn():
-                print(f"    ✓ {name}")
-            else:
-                print(f"    ✗ {name}: FAILED")
+def verify_host_connectivity(host: Host) -> bool:
+    """Run per-host connectivity checks with retries to handle networkd settling."""
+    check_map = {
+        "ssh": ("SSH", lambda: check_ssh(host)),
+        "ping_gateway": ("Ping gateway", lambda: ping_check("10.28.0.1", via_host=host.fqdn)),
+        "ping_internet": ("Ping internet (1.1.1.1)", lambda: ping_check("1.1.1.1")),
+        "dns": ("DNS resolution", dns_check),
+        "ipv6_tunnel": ("IPv6 tunnel (HE)", lambda: ping6_check("2001:470:66:35::1", via_host=host.ssh_address)),
+        "ipv6_internet": ("IPv6 internet", lambda: ping6_check("2001:4860:4860::8888", via_host=host.ssh_address)),
+    }
+
+    for attempt in range(VERIFY_RETRIES):
+        all_ok = True
+        for check_name in host.connectivity_checks:
+            label, check_fn = check_map[check_name]
+            try:
+                if check_fn():
+                    print(f"    ✓ {label}")
+                else:
+                    print(f"    ✗ {label}: FAILED")
+                    all_ok = False
+                    break
+            except Exception as e:
+                print(f"    ✗ {label}: ERROR ({e})")
                 all_ok = False
-        except Exception as e:
-            print(f"    ✗ {name}: ERROR ({e})")
-            all_ok = False
-    return all_ok
+                break
+        if all_ok:
+            return True
+        if attempt < VERIFY_RETRIES - 1:
+            print(f"  Connectivity check failed, retrying in {VERIFY_RETRY_DELAY}s ({attempt + 1}/{VERIFY_RETRIES})...")
+            time.sleep(VERIFY_RETRY_DELAY)
+    return False
 
 
 def arm_watchdog(host: Host, timeout: int) -> str | None:
-    """Arm a systemd watchdog timer on the router. Returns unit name or None."""
+    """Arm a systemd watchdog timer on a host. Returns unit name or None."""
     unit_name = f"deploy-watchdog-{int(time.time())}"
     print(f"  Arming watchdog timer ({timeout}s) on {host.fqdn} [unit={unit_name}]...")
     try:
@@ -483,7 +578,7 @@ def arm_watchdog(host: Host, timeout: int) -> str | None:
 
 
 def disarm_watchdog(host: Host, unit_name: str) -> None:
-    """Cancel the watchdog timer on the router."""
+    """Cancel the watchdog timer on a host."""
     print(f"  Disarming watchdog timer [{unit_name}]...")
     for suffix in [".timer", ""]:
         try:
@@ -493,26 +588,69 @@ def disarm_watchdog(host: Host, unit_name: str) -> None:
     print(f"  Watchdog disarmed")
 
 
-def deploy_rolling_k3s(host: Host, args: argparse.Namespace) -> bool:
-    """Deploy a k3s node: switch, auto-reboot if needed, verify k8s health."""
-    if not deploy_host(host, mode="switch"):
+def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
+    """Deploy safely: build, arm watchdog, test, verify connectivity, boot, disarm."""
+    watchdog_timeout = args.watchdog_timeout
+    deploy_timeout = args.deploy_timeout
+
+    print(f"\n  [1/8] Building locally...")
+    expected_path = build_host(host)
+    if not expected_path:
         return False
 
+    print(f"\n  [2/8] Arming watchdog ({watchdog_timeout}s)...")
+    unit_name = arm_watchdog(host, watchdog_timeout)
+    if unit_name is None:
+        print(f"  FATAL: Cannot proceed without watchdog protection")
+        return False
+
+    print(f"\n  [3/8] Activating config (nixos-rebuild test)...")
+    if not deploy_host(host, mode="test", timeout=deploy_timeout):
+        print(f"  'nixos-rebuild test' failed.")
+        print(f"  Watchdog will reboot {host.hostname} in <={watchdog_timeout}s to restore old config")
+        return False
+
+    print(f"\n  [4/8] Verifying connectivity...")
+    if not verify_host_connectivity(host):
+        print(f"  Connectivity checks FAILED after 'nixos-rebuild test'")
+        print(f"  Watchdog will reboot {host.hostname} in <={watchdog_timeout}s to restore old config")
+        return False
+
+    print(f"\n  [5/8] Verifying active config matches build...")
+    if not verify_config_active(host, expected_path):
+        print(f"  Watchdog will reboot {host.hostname} in <={watchdog_timeout}s to restore old config")
+        return False
+
+    print(f"\n  [6/8] Persisting config (nixos-rebuild boot)...")
+    if getattr(host, '_test_timed_out', False):
+        clear_nixos_rebuild_unit(host)
+    if not deploy_host(host, mode="boot", timeout=deploy_timeout):
+        print(f"  'nixos-rebuild boot' failed! Config is active but NOT persisted as boot default.")
+        disarm_watchdog(host, unit_name)
+        return False
+
+    print(f"\n  [7/8] Disarming watchdog...")
+    disarm_watchdog(host, unit_name)
+
+    print(f"\n  [8/8] Post-deploy checks...")
     if not handle_reboot(host, force_reboot=args.reboot, no_reboot=args.no_reboot,
-                         force_reboot_prompt=False):
+                         force_reboot_prompt=args.force_reboot):
         return False
 
     if host.k8s_health_check:
         if not wait_for_node_healthy(host):
             return False
 
-    print(f"  ✓ {host.hostname} successfully updated and healthy")
+    print(f"\n  ✓ {host.hostname} deployed and persisted successfully")
     return True
 
 
-def deploy_standard(host: Host, args: argparse.Namespace) -> bool:
-    """Deploy a standard host: switch, prompt-reboot if needed, optional k8s check."""
-    if not deploy_host(host, mode="switch"):
+def deploy_unsafe(host: Host, args: argparse.Namespace) -> bool:
+    """Deploy without watchdog protection: raw nixos-rebuild switch."""
+    if not build_host(host):  # returns path or None
+        return False
+
+    if not deploy_host(host, mode="switch", timeout=args.deploy_timeout):
         return False
 
     if not handle_reboot(host, force_reboot=args.reboot, no_reboot=args.no_reboot,
@@ -523,67 +661,15 @@ def deploy_standard(host: Host, args: argparse.Namespace) -> bool:
         if not wait_for_node_healthy(host):
             return False
 
-    print(f"  ✓ {host.hostname} successfully updated")
+    print(f"  ✓ {host.hostname} deployed successfully (no-safe)")
     return True
-
-
-def deploy_router_safe(host: Host, args: argparse.Namespace) -> bool:
-    """Deploy the router safely: arm watchdog, test, verify, boot, disarm."""
-    watchdog_timeout = args.router_watchdog_timeout
-
-    # Step 1: Arm watchdog BEFORE any changes
-    unit_name = arm_watchdog(host, watchdog_timeout)
-    if unit_name is None:
-        print(f"  FATAL: Cannot proceed without watchdog protection")
-        return False
-
-    # Step 2: Deploy with 'test' (activate but don't set as boot default)
-    if not deploy_host(host, mode="test"):
-        print(f"  'nixos-rebuild test' failed.")
-        print(f"  Watchdog will reboot router in <={watchdog_timeout}s to restore old config")
-        return False
-
-    # Step 3: Wait for config to stabilize, then verify connectivity
-    print(f"  Waiting {ROUTER_STABILIZE_WAIT}s for config to stabilize...")
-    time.sleep(ROUTER_STABILIZE_WAIT)
-
-    print(f"  Running connectivity checks...")
-    if not verify_router_connectivity(host):
-        print(f"  Connectivity checks FAILED after 'nixos-rebuild test'")
-        print(f"  Watchdog will reboot router in <={watchdog_timeout}s to restore old config")
-        return False
-
-    # Step 4: Persist with 'boot'
-    print(f"  Checks passed. Persisting config with 'boot'...")
-    if not deploy_host(host, mode="boot"):
-        print(f"  'nixos-rebuild boot' failed! Config is active but NOT persisted as boot default.")
-        disarm_watchdog(host, unit_name)
-        return False
-
-    # Step 5: Disarm watchdog
-    disarm_watchdog(host, unit_name)
-
-    if needs_reboot(host):
-        msg = f"{host.hostname} needs reboot for kernel/param changes (reboot manually)"
-        print(f"  ⚠ {msg}")
-        deploy_warnings.append(msg)
-
-    print(f"  ✓ Router deploy succeeded and persisted")
-    return True
-
-
-STRATEGY_HANDLERS = {
-    DeployStrategy.ROLLING_K3S: deploy_rolling_k3s,
-    DeployStrategy.STANDARD: deploy_standard,
-    DeployStrategy.ROUTER_SAFE: deploy_router_safe,
-}
 
 
 def process_host(host: Host, args: argparse.Namespace) -> bool:
-    """Deploy a host using its configured strategy."""
+    """Deploy a host using the safe (watchdog) or unsafe (switch) flow."""
+    mode = "no-safe" if args.no_safe else "safe"
     print(f"\n{'=' * 60}")
-    print(f"Processing {host.hostname} (strategy={host.deploy_strategy.value}, "
-          f"reboot={host.reboot_policy.value})")
+    print(f"Processing {host.hostname} (mode={mode}, reboot={host.reboot_policy.value})")
     print(f"{'=' * 60}")
 
     if not check_ssh(host):
@@ -592,12 +678,13 @@ def process_host(host: Host, args: argparse.Namespace) -> bool:
     if args.dry_run:
         return process_host_dry_run(host)
 
-    handler = STRATEGY_HANDLERS[host.deploy_strategy]
-    return handler(host, args)
+    if args.no_safe:
+        return deploy_unsafe(host, args)
+    return deploy_safe(host, args)
 
 
 def process_host_dry_run(host: Host) -> bool:
-    """Dry-run: verify SSH (already done), k8s health, flake build, router prereqs."""
+    """Dry-run: verify SSH (already done), systemd-run, k8s health, flake build."""
     print(f"  [DRY-RUN] Checking {host.hostname}...")
 
     if host.k8s_health_check:
@@ -608,17 +695,16 @@ def process_host_dry_run(host: Host) -> bool:
             print(f"  ✗ Node {host.hostname} is not healthy: {status}")
             return False
 
-    if host.deploy_strategy == DeployStrategy.ROUTER_SAFE:
-        try:
-            result = ssh_cmd(host, "which systemd-run", timeout=10)
-            if result.returncode == 0:
-                print(f"  ✓ systemd-run available on {host.hostname}")
-            else:
-                print(f"  ✗ systemd-run not found on {host.hostname}")
-                return False
-        except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
-            print(f"  ✗ Could not check systemd-run on {host.hostname}: {e}")
+    try:
+        result = ssh_cmd(host, "which systemd-run", timeout=10)
+        if result.returncode == 0:
+            print(f"  ✓ systemd-run available on {host.hostname}")
+        else:
+            print(f"  ✗ systemd-run not found on {host.hostname}")
             return False
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        print(f"  ✗ Could not check systemd-run on {host.hostname}: {e}")
+        return False
 
     if not build_flake(host):
         return False
@@ -698,10 +784,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip the initial nix flake check",
     )
     parser.add_argument(
-        "--router-watchdog-timeout",
+        "--no-safe",
+        action="store_true",
+        help="Bypass watchdog protection; use raw nixos-rebuild switch",
+    )
+    parser.add_argument(
+        "--watchdog-timeout",
         type=int,
         default=300,
-        help="Router watchdog timeout in seconds (default: 300)",
+        help="Watchdog timeout in seconds (default: 300)",
+    )
+    parser.add_argument(
+        "--deploy-timeout",
+        type=int,
+        default=DEPLOY_TIMEOUT,
+        help=f"Timeout for each nixos-rebuild command in seconds (default: {DEPLOY_TIMEOUT})",
     )
     return parser
 
@@ -748,7 +845,7 @@ def main():
         if not success:
             failed_hosts.append(host.hostname)
 
-            if host.deploy_strategy == DeployStrategy.ROLLING_K3S:
+            if "k3s" in host.groups:
                 print(f"\n✗ K3s rolling deploy failed at {host.hostname}, stopping.")
                 break
             else:

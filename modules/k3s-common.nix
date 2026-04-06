@@ -59,12 +59,8 @@ in
       ];
     };
 
-    # k3s nodes don't need NetworkManager — systemd-networkd handles DHCP.
-    networking.networkmanager.enable = false;
-
-    # k3s needs IP forwarding for MetalLB LoadBalancer traffic (DNAT + forward to pods).
-    # Must be set explicitly — systemd-networkd resets the sysctl that k3s sets at runtime.
-    boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
+    # k3s needs IPv4 forwarding for MetalLB LoadBalancer traffic (DNAT + forward to pods)
+    homelab.network.ipv4Forward = true;
 
     networking.firewall = {
       # Server ports: API server, etcd, etcd peers

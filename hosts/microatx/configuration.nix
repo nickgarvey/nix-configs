@@ -26,28 +26,16 @@
   ];
 
   networking.nftables.enable = true;
-  networking.networkmanager.enable = false;
 
   # --- Networking ---
-  # Bridge for VMs to get LAN access (systemd-networkd native config)
-  systemd.network.netdevs."10-vmbr0" = {
-    netdevConfig = {
-      Name = "vmbr0";
-      Kind = "bridge";
+  # Bridge for VMs/containers to get LAN access (IPv6 auto-derived from lan-hosts.nix)
+  homelab.network.bridge = {
+    name = "vmbr0";
+    interface = "enp5s0";
+    ipv4 = {
+      address = "10.28.12.108/16";
+      gateway = "10.28.0.1";
     };
-  };
-
-  systemd.network.networks."10-enp5s0" = {
-    matchConfig.Name = "enp5s0";
-    networkConfig.Bridge = "vmbr0";
-  };
-
-  systemd.network.networks."10-vmbr0" = {
-    matchConfig.Name = "vmbr0";
-    address = [ "10.28.12.108/16" ];
-    gateway = [ "10.28.0.1" ];
-    dns = [ "10.28.0.1" ];
-    networkConfig.DHCP = "no";
   };
   # Incus loads br_netfilter which causes bridge traffic (including ARP) to
   # pass through netfilter, breaking DHCP and host connectivity on vmbr0.

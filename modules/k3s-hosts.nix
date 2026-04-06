@@ -1,7 +1,7 @@
 { config, lib, pkgs, ... }:
 
 let
-  inherit (import ./router/lan-hosts.nix) lanHosts dnsAliases;
+  inherit (import ./lan-hosts.nix) lanHosts dnsAliases;
   allHosts = lanHosts ++ dnsAliases;
   domain = "home.arpa";
 in

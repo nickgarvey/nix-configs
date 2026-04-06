@@ -1,6 +1,6 @@
 { config, lib, pkgs, inputs, ... }:
 {
-  imports = [ ./static-ipv6.nix ];
+  imports = [ ./network.nix ];
   environment.systemPackages = with pkgs; [
     btop
     file
@@ -57,6 +57,5 @@
     ];
   };
   security.sudo.wheelNeedsPassword = false;
-  networking.useNetworkd = true;
-  networking.networkmanager.enable = lib.mkDefault true;
+  homelab.network.enable = true;
 }

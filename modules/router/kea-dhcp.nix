@@ -2,7 +2,7 @@
 
 let
   cfg = config.routerConfig;
-  inherit (import ./lan-hosts.nix) lanHosts;
+  inherit (import ../lan-hosts.nix) lanHosts;
 
   hostsWithMac = builtins.filter (h: h.mac != "") lanHosts;
 in

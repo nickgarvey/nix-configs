@@ -9,13 +9,11 @@ from unittest.mock import MagicMock, call, patch
 import deploy
 from deploy import (
     ALL_HOSTS,
-    DeployStrategy,
     Host,
     RebootPolicy,
     build_parser,
-    deploy_rolling_k3s,
-    deploy_router_safe,
-    deploy_standard,
+    deploy_safe,
+    deploy_unsafe,
     deploy_warnings,
     dns_check,
     filter_hosts,
@@ -23,24 +21,24 @@ from deploy import (
     needs_reboot,
     ping_check,
     process_host,
-    verify_router_connectivity,
+    verify_host_connectivity,
 )
 
 
 class TestHostConfig(unittest.TestCase):
     def test_fqdn_with_domain(self):
         h = Host("k3s-node-1", "k3s-node-1", "home.arpa",
-                 DeployStrategy.ROLLING_K3S, RebootPolicy.AUTO)
+                 RebootPolicy.AUTO)
         self.assertEqual(h.fqdn, "k3s-node-1.home.arpa")
 
     def test_fqdn_without_domain(self):
         h = Host("framework", "framework", "",
-                 DeployStrategy.STANDARD, RebootPolicy.PROMPT)
+                 RebootPolicy.PROMPT)
         self.assertEqual(h.fqdn, "framework")
 
     def test_fqdn_ssh_address_override(self):
         h = Host("router", "router", "home.arpa",
-                 DeployStrategy.ROUTER_SAFE, RebootPolicy.NEVER,
+                 RebootPolicy.NEVER,
                  ssh_address="10.28.0.1")
         self.assertEqual(h.fqdn, "10.28.0.1")
 
@@ -63,6 +61,20 @@ class TestHostConfig(unittest.TestCase):
     def test_all_hosts_have_groups(self):
         for h in ALL_HOSTS:
             self.assertTrue(len(h.groups) > 0, f"{h.hostname} has no groups")
+
+    def test_default_connectivity_checks(self):
+        h = Host("test", "test", "home.arpa", RebootPolicy.AUTO)
+        self.assertEqual(h.connectivity_checks, ["ssh", "ping_gateway"])
+
+    def test_router_has_extended_checks(self):
+        router = next(h for h in ALL_HOSTS if h.hostname == "router")
+        self.assertIn("ping_internet", router.connectivity_checks)
+        self.assertIn("dns", router.connectivity_checks)
+        self.assertIn("ipv6_tunnel", router.connectivity_checks)
+
+    def test_laptop_ssh_only(self):
+        laptop = next(h for h in ALL_HOSTS if h.hostname == "framework13-laptop")
+        self.assertEqual(laptop.connectivity_checks, ["ssh"])
 
 
 class TestFilterHosts(unittest.TestCase):
@@ -123,12 +135,22 @@ class TestArgParsing(unittest.TestCase):
     def test_default_watchdog_timeout(self):
         parser = build_parser()
         args = parser.parse_args([])
-        self.assertEqual(args.router_watchdog_timeout, 300)
+        self.assertEqual(args.watchdog_timeout, 300)
 
     def test_custom_watchdog_timeout(self):
         parser = build_parser()
-        args = parser.parse_args(["--router-watchdog-timeout", "600"])
-        self.assertEqual(args.router_watchdog_timeout, 600)
+        args = parser.parse_args(["--watchdog-timeout", "600"])
+        self.assertEqual(args.watchdog_timeout, 600)
+
+    def test_no_safe_flag(self):
+        parser = build_parser()
+        args = parser.parse_args(["--no-safe"])
+        self.assertTrue(args.no_safe)
+
+    def test_no_safe_default_false(self):
+        parser = build_parser()
+        args = parser.parse_args([])
+        self.assertFalse(args.no_safe)
 
     def test_group_flag(self):
         parser = build_parser()
@@ -146,8 +168,7 @@ class TestHandleReboot(unittest.TestCase):
         deploy.deploy_warnings.clear()
 
     def _make_host(self, policy: RebootPolicy) -> Host:
-        return Host("test", "test", "home.arpa",
-                    DeployStrategy.STANDARD, policy)
+        return Host("test", "test", "home.arpa", policy)
 
     @patch("deploy.reboot_host", return_value=True)
     @patch("deploy.needs_reboot", return_value=True)
@@ -222,46 +243,26 @@ class TestHandleReboot(unittest.TestCase):
         self.assertIn("NEVER", deploy.deploy_warnings[0])
 
 
-class TestStrategyDispatch(unittest.TestCase):
+class TestProcessHostDispatch(unittest.TestCase):
+    @patch("deploy.deploy_safe", return_value=True)
     @patch("deploy.check_ssh", return_value=True)
-    def test_rolling_k3s_dispatched(self, mock_ssh):
-        mock_handler = MagicMock(return_value=True)
-        h = Host("k3s-node-1", "k3s-node-1", "home.arpa",
-                 DeployStrategy.ROLLING_K3S, RebootPolicy.AUTO,
-                 k8s_health_check=True)
+    def test_safe_mode_by_default(self, mock_ssh, mock_safe):
+        h = Host("test", "test", "home.arpa", RebootPolicy.AUTO)
         args = build_parser().parse_args([])
-        with patch.dict("deploy.STRATEGY_HANDLERS",
-                        {DeployStrategy.ROLLING_K3S: mock_handler}):
-            process_host(h, args)
-        mock_handler.assert_called_once()
+        process_host(h, args)
+        mock_safe.assert_called_once()
 
+    @patch("deploy.deploy_unsafe", return_value=True)
     @patch("deploy.check_ssh", return_value=True)
-    def test_standard_dispatched(self, mock_ssh):
-        mock_handler = MagicMock(return_value=True)
-        h = Host("microatx", "microatx", "home.arpa",
-                 DeployStrategy.STANDARD, RebootPolicy.PROMPT)
-        args = build_parser().parse_args([])
-        with patch.dict("deploy.STRATEGY_HANDLERS",
-                        {DeployStrategy.STANDARD: mock_handler}):
-            process_host(h, args)
-        mock_handler.assert_called_once()
-
-    @patch("deploy.check_ssh", return_value=True)
-    def test_router_safe_dispatched(self, mock_ssh):
-        mock_handler = MagicMock(return_value=True)
-        h = Host("router", "router", "",
-                 DeployStrategy.ROUTER_SAFE, RebootPolicy.NEVER,
-                 ssh_address="10.28.0.1")
-        args = build_parser().parse_args([])
-        with patch.dict("deploy.STRATEGY_HANDLERS",
-                        {DeployStrategy.ROUTER_SAFE: mock_handler}):
-            process_host(h, args)
-        mock_handler.assert_called_once()
+    def test_no_safe_uses_unsafe(self, mock_ssh, mock_unsafe):
+        h = Host("test", "test", "home.arpa", RebootPolicy.AUTO)
+        args = build_parser().parse_args(["--no-safe"])
+        process_host(h, args)
+        mock_unsafe.assert_called_once()
 
     @patch("deploy.check_ssh", return_value=False)
     def test_ssh_failure_stops(self, mock_ssh):
-        h = Host("test", "test", "",
-                 DeployStrategy.STANDARD, RebootPolicy.PROMPT)
+        h = Host("test", "test", "", RebootPolicy.PROMPT)
         args = build_parser().parse_args([])
         result = process_host(h, args)
         self.assertFalse(result)
@@ -269,8 +270,7 @@ class TestStrategyDispatch(unittest.TestCase):
 
 class TestNeedsReboot(unittest.TestCase):
     def _make_host(self):
-        return Host("test", "test", "home.arpa",
-                    DeployStrategy.STANDARD, RebootPolicy.AUTO)
+        return Host("test", "test", "home.arpa", RebootPolicy.AUTO)
 
     @patch("deploy.get_new_kernel_params", return_value={"a", "b"})
     @patch("deploy.get_booted_kernel_params", return_value={"a", "b"})
@@ -301,106 +301,182 @@ class TestNeedsReboot(unittest.TestCase):
         self.assertFalse(needs_reboot(self._make_host()))
 
 
-class TestRouterSafeDeploy(unittest.TestCase):
+class TestSafeDeploy(unittest.TestCase):
     def setUp(self):
         deploy.deploy_warnings.clear()
 
-    def _make_router(self):
-        return Host("router", "router", "",
-                    DeployStrategy.ROUTER_SAFE, RebootPolicy.NEVER,
-                    ssh_address="10.28.0.1")
+    def _make_host(self, **kwargs):
+        defaults = dict(hostname="test", flake_name="test", domain="home.arpa",
+                        reboot_policy=RebootPolicy.AUTO)
+        defaults.update(kwargs)
+        return Host(**defaults)
 
     def _make_args(self, timeout=300):
-        return build_parser().parse_args(["--router-watchdog-timeout", str(timeout)])
+        return build_parser().parse_args(["--watchdog-timeout", str(timeout)])
 
-    @patch("deploy.needs_reboot", return_value=False)
+    @patch("deploy.handle_reboot", return_value=True)
     @patch("deploy.disarm_watchdog")
     @patch("deploy.deploy_host", side_effect=[True, True])  # test, boot
-    @patch("deploy.verify_router_connectivity", return_value=True)
+    @patch("deploy.verify_config_active", return_value=True)
+    @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
-    @patch("deploy.time")
-    def test_success_flow(self, mock_time, mock_arm, mock_verify, mock_deploy, mock_disarm, mock_needs):
-        h = self._make_router()
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_success_flow(self, mock_build, mock_arm, mock_verify_conn, mock_verify_cfg, mock_deploy, mock_disarm, mock_reboot):
+        h = self._make_host()
         args = self._make_args()
-        result = deploy_router_safe(h, args)
+        result = deploy_safe(h, args)
         self.assertTrue(result)
+        mock_build.assert_called_once_with(h)
         mock_arm.assert_called_once_with(h, 300)
         self.assertEqual(mock_deploy.call_count, 2)
-        mock_deploy.assert_any_call(h, mode="test")
-        mock_deploy.assert_any_call(h, mode="boot")
+        mock_deploy.assert_any_call(h, mode="test", timeout=60)
+        mock_deploy.assert_any_call(h, mode="boot", timeout=60)
         mock_disarm.assert_called_once_with(h, "deploy-watchdog-123")
 
     @patch("deploy.arm_watchdog", return_value=None)
-    def test_watchdog_arm_failure_aborts(self, mock_arm):
-        h = self._make_router()
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_watchdog_arm_failure_aborts(self, mock_build, mock_arm):
+        h = self._make_host()
         args = self._make_args()
-        result = deploy_router_safe(h, args)
+        result = deploy_safe(h, args)
+        self.assertFalse(result)
+
+    @patch("deploy.build_host", return_value=None)
+    def test_build_failure_aborts(self, mock_build):
+        h = self._make_host()
+        args = self._make_args()
+        result = deploy_safe(h, args)
         self.assertFalse(result)
 
     @patch("deploy.disarm_watchdog")
     @patch("deploy.deploy_host", return_value=False)  # test fails
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
-    def test_test_failure_no_disarm(self, mock_arm, mock_deploy, mock_disarm):
-        h = self._make_router()
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_test_failure_no_disarm(self, mock_build, mock_arm, mock_deploy, mock_disarm):
+        h = self._make_host()
         args = self._make_args()
-        result = deploy_router_safe(h, args)
+        result = deploy_safe(h, args)
         self.assertFalse(result)
         mock_disarm.assert_not_called()
 
     @patch("deploy.disarm_watchdog")
     @patch("deploy.deploy_host", side_effect=[True, False])  # test ok, boot fails
-    @patch("deploy.verify_router_connectivity", return_value=True)
+    @patch("deploy.verify_config_active", return_value=True)
+    @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
-    @patch("deploy.time")
-    def test_boot_failure_still_disarms(self, mock_time, mock_arm, mock_verify,
-                                        mock_deploy, mock_disarm):
-        h = self._make_router()
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_boot_failure_still_disarms(self, mock_build, mock_arm, mock_verify_conn,
+                                        mock_verify_cfg, mock_deploy, mock_disarm):
+        h = self._make_host()
         args = self._make_args()
-        result = deploy_router_safe(h, args)
+        result = deploy_safe(h, args)
         self.assertFalse(result)
         mock_disarm.assert_called_once()
 
     @patch("deploy.disarm_watchdog")
     @patch("deploy.deploy_host", return_value=True)
-    @patch("deploy.verify_router_connectivity", return_value=False)
+    @patch("deploy.verify_host_connectivity", return_value=False)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
-    @patch("deploy.time")
-    def test_connectivity_failure_no_disarm(self, mock_time, mock_arm, mock_verify,
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_connectivity_failure_no_disarm(self, mock_build, mock_arm, mock_verify,
                                             mock_deploy, mock_disarm):
-        h = self._make_router()
+        h = self._make_host()
         args = self._make_args()
-        result = deploy_router_safe(h, args)
+        result = deploy_safe(h, args)
         self.assertFalse(result)
         mock_disarm.assert_not_called()
 
-    @patch("deploy.needs_reboot", return_value=True)
     @patch("deploy.disarm_watchdog")
-    @patch("deploy.deploy_host", side_effect=[True, True])
-    @patch("deploy.verify_router_connectivity", return_value=True)
+    @patch("deploy.deploy_host", return_value=True)
+    @patch("deploy.verify_config_active", return_value=False)
+    @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
-    @patch("deploy.time")
-    def test_kernel_update_warns_no_reboot(self, mock_time, mock_arm, mock_verify,
-                                           mock_deploy, mock_disarm, mock_needs):
-        h = self._make_router()
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_config_mismatch_no_boot(self, mock_build, mock_arm, mock_verify_conn,
+                                      mock_verify_cfg, mock_deploy, mock_disarm):
+        h = self._make_host()
         args = self._make_args()
-        result = deploy_router_safe(h, args)
-        self.assertTrue(result)
-        self.assertEqual(len(deploy.deploy_warnings), 1)
-        self.assertIn("reboot", deploy.deploy_warnings[0].lower())
+        result = deploy_safe(h, args)
+        self.assertFalse(result)
+        # Should not have called boot (deploy_host only called once for test)
+        mock_deploy.assert_called_once()
+        mock_disarm.assert_not_called()
 
-    @patch("deploy.needs_reboot", return_value=False)
+    @patch("deploy.wait_for_node_healthy", return_value=True)
+    @patch("deploy.handle_reboot", return_value=True)
     @patch("deploy.disarm_watchdog")
     @patch("deploy.deploy_host", side_effect=[True, True])
-    @patch("deploy.verify_router_connectivity", return_value=True)
+    @patch("deploy.verify_config_active", return_value=True)
+    @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
-    @patch("deploy.time")
-    def test_no_kernel_update_no_warning(self, mock_time, mock_arm, mock_verify,
-                                         mock_deploy, mock_disarm, mock_needs):
-        h = self._make_router()
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_k8s_health_check_runs(self, mock_build, mock_arm, mock_verify_conn, mock_verify_cfg,
+                                    mock_deploy, mock_disarm, mock_reboot, mock_health):
+        h = self._make_host(k8s_health_check=True)
         args = self._make_args()
-        result = deploy_router_safe(h, args)
+        result = deploy_safe(h, args)
         self.assertTrue(result)
-        self.assertEqual(len(deploy.deploy_warnings), 0)
+        mock_health.assert_called_once()
+
+    @patch("deploy.wait_for_node_healthy", return_value=False)
+    @patch("deploy.handle_reboot", return_value=True)
+    @patch("deploy.disarm_watchdog")
+    @patch("deploy.deploy_host", side_effect=[True, True])
+    @patch("deploy.verify_config_active", return_value=True)
+    @patch("deploy.verify_host_connectivity", return_value=True)
+    @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_k8s_health_failure(self, mock_build, mock_arm, mock_verify_conn, mock_verify_cfg,
+                                 mock_deploy, mock_disarm, mock_reboot, mock_health):
+        h = self._make_host(k8s_health_check=True)
+        args = self._make_args()
+        result = deploy_safe(h, args)
+        self.assertFalse(result)
+
+
+class TestUnsafeDeploy(unittest.TestCase):
+    def _make_host(self, **kwargs):
+        defaults = dict(hostname="test", flake_name="test", domain="home.arpa",
+                        reboot_policy=RebootPolicy.AUTO)
+        defaults.update(kwargs)
+        return Host(**defaults)
+
+    @patch("deploy.handle_reboot", return_value=True)
+    @patch("deploy.deploy_host", return_value=True)
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_success_uses_switch(self, mock_build, mock_deploy, mock_reboot):
+        h = self._make_host()
+        args = build_parser().parse_args(["--no-safe"])
+        result = deploy_unsafe(h, args)
+        self.assertTrue(result)
+        mock_build.assert_called_once_with(h)
+        mock_deploy.assert_called_once_with(h, mode="switch", timeout=60)
+
+    @patch("deploy.build_host", return_value=False)
+    def test_build_failure(self, mock_build):
+        h = self._make_host()
+        args = build_parser().parse_args(["--no-safe"])
+        result = deploy_unsafe(h, args)
+        self.assertFalse(result)
+
+    @patch("deploy.deploy_host", return_value=False)
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_deploy_failure(self, mock_build, mock_deploy):
+        h = self._make_host()
+        args = build_parser().parse_args(["--no-safe"])
+        result = deploy_unsafe(h, args)
+        self.assertFalse(result)
+
+    @patch("deploy.wait_for_node_healthy", return_value=True)
+    @patch("deploy.handle_reboot", return_value=True)
+    @patch("deploy.deploy_host", return_value=True)
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_with_k8s_check(self, mock_build, mock_deploy, mock_reboot, mock_health):
+        h = self._make_host(k8s_health_check=True)
+        args = build_parser().parse_args(["--no-safe"])
+        result = deploy_unsafe(h, args)
+        self.assertTrue(result)
+        mock_health.assert_called_once()
 
 
 class TestConnectivityChecks(unittest.TestCase):
@@ -419,6 +495,14 @@ class TestConnectivityChecks(unittest.TestCase):
         self.assertFalse(ping_check("1.1.1.1"))
 
     @patch("deploy.run_cmd")
+    def test_ping_check_via_host(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0)
+        self.assertTrue(ping_check("10.28.0.1", via_host="k3s-node-1.home.arpa"))
+        cmd = mock_run.call_args[0][0]
+        self.assertIn("ssh", cmd)
+        self.assertIn("k3s-node-1.home.arpa", cmd)
+
+    @patch("deploy.run_cmd")
     def test_dns_check_success(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
         self.assertTrue(dns_check())
@@ -428,88 +512,42 @@ class TestConnectivityChecks(unittest.TestCase):
         mock_run.return_value = MagicMock(returncode=2)
         self.assertFalse(dns_check())
 
+    @patch("deploy.time")
+    @patch("deploy.check_ssh", return_value=True)
+    @patch("deploy.ping_check", return_value=True)
+    def test_verify_default_checks_pass(self, mock_ping, mock_ssh, mock_time):
+        h = Host("test", "test", "home.arpa", RebootPolicy.AUTO)
+        self.assertTrue(verify_host_connectivity(h))
+
+    @patch("deploy.time")
+    @patch("deploy.check_ssh", return_value=True)
+    @patch("deploy.ping_check", return_value=False)
+    def test_verify_gateway_ping_fails_retries(self, mock_ping, mock_ssh, mock_time):
+        h = Host("test", "test", "home.arpa", RebootPolicy.AUTO)
+        self.assertFalse(verify_host_connectivity(h))
+        # Should have retried VERIFY_RETRIES times
+        self.assertEqual(mock_ssh.call_count, deploy.VERIFY_RETRIES)
+
     @patch("deploy.ping6_check", return_value=True)
     @patch("deploy.dns_check", return_value=True)
     @patch("deploy.ping_check", return_value=True)
     @patch("deploy.check_ssh", return_value=True)
     def test_verify_router_all_pass(self, mock_ssh, mock_ping, mock_dns, mock_ping6):
-        h = Host("router", "router", "", DeployStrategy.ROUTER_SAFE,
-                 RebootPolicy.NEVER, ssh_address="10.28.0.1")
-        self.assertTrue(verify_router_connectivity(h))
+        h = Host("router", "router", "", RebootPolicy.NEVER,
+                 ssh_address="10.28.0.1",
+                 connectivity_checks=["ssh", "ping_internet", "dns", "ipv6_tunnel", "ipv6_internet"])
+        self.assertTrue(verify_host_connectivity(h))
 
+    @patch("deploy.time")
     @patch("deploy.ping6_check", return_value=True)
     @patch("deploy.dns_check", return_value=True)
     @patch("deploy.ping_check", return_value=False)
     @patch("deploy.check_ssh", return_value=True)
-    def test_verify_router_ping_fails(self, mock_ssh, mock_ping, mock_dns, mock_ping6):
-        h = Host("router", "router", "", DeployStrategy.ROUTER_SAFE,
-                 RebootPolicy.NEVER, ssh_address="10.28.0.1")
-        self.assertFalse(verify_router_connectivity(h))
-
-
-class TestRollingK3s(unittest.TestCase):
-    def _make_k3s_host(self):
-        return Host("k3s-node-1", "k3s-node-1", "home.arpa",
-                    DeployStrategy.ROLLING_K3S, RebootPolicy.AUTO,
-                    k8s_health_check=True)
-
-    @patch("deploy.wait_for_node_healthy", return_value=True)
-    @patch("deploy.handle_reboot", return_value=True)
-    @patch("deploy.deploy_host", return_value=True)
-    def test_success(self, mock_deploy, mock_reboot, mock_health):
-        h = self._make_k3s_host()
-        args = build_parser().parse_args([])
-        self.assertTrue(deploy_rolling_k3s(h, args))
-        mock_deploy.assert_called_once_with(h, mode="switch")
-        mock_health.assert_called_once()
-
-    @patch("deploy.handle_reboot")
-    @patch("deploy.deploy_host", return_value=False)
-    def test_deploy_failure(self, mock_deploy, mock_reboot):
-        h = self._make_k3s_host()
-        args = build_parser().parse_args([])
-        self.assertFalse(deploy_rolling_k3s(h, args))
-        mock_reboot.assert_not_called()
-
-    @patch("deploy.wait_for_node_healthy", return_value=False)
-    @patch("deploy.handle_reboot", return_value=True)
-    @patch("deploy.deploy_host", return_value=True)
-    def test_health_check_failure(self, mock_deploy, mock_reboot, mock_health):
-        h = self._make_k3s_host()
-        args = build_parser().parse_args([])
-        self.assertFalse(deploy_rolling_k3s(h, args))
-
-
-class TestStandard(unittest.TestCase):
-    @patch("deploy.handle_reboot", return_value=True)
-    @patch("deploy.deploy_host", return_value=True)
-    def test_no_k8s_check(self, mock_deploy, mock_reboot):
-        h = Host("microatx", "microatx", "home.arpa",
-                 DeployStrategy.STANDARD, RebootPolicy.PROMPT,
-                 k8s_health_check=False)
-        args = build_parser().parse_args([])
-        self.assertTrue(deploy_standard(h, args))
-
-    @patch("deploy.wait_for_node_healthy", return_value=True)
-    @patch("deploy.handle_reboot", return_value=True)
-    @patch("deploy.deploy_host", return_value=True)
-    def test_with_k8s_check(self, mock_deploy, mock_reboot, mock_health):
-        h = Host("framework", "framework", "",
-                 DeployStrategy.STANDARD, RebootPolicy.PROMPT,
-                 k8s_health_check=True)
-        args = build_parser().parse_args([])
-        self.assertTrue(deploy_standard(h, args))
-        mock_health.assert_called_once()
-
-    @patch("deploy.handle_reboot", return_value=True)
-    @patch("deploy.deploy_host", return_value=True)
-    def test_force_reboot_passed(self, mock_deploy, mock_reboot):
-        h = Host("microatx", "microatx", "home.arpa",
-                 DeployStrategy.STANDARD, RebootPolicy.PROMPT)
-        args = build_parser().parse_args(["--force-reboot"])
-        deploy_standard(h, args)
-        mock_reboot.assert_called_once_with(
-            h, force_reboot=False, no_reboot=False, force_reboot_prompt=True)
+    def test_verify_router_ping_fails(self, mock_ssh, mock_ping, mock_dns, mock_ping6, mock_time):
+        h = Host("router", "router", "", RebootPolicy.NEVER,
+                 ssh_address="10.28.0.1",
+                 connectivity_checks=["ssh", "ping_internet", "dns", "ipv6_tunnel", "ipv6_internet"])
+        self.assertFalse(verify_host_connectivity(h))
 
 
 if __name__ == "__main__":
