@@ -80,6 +80,9 @@ in
           chain forward {
             type filter hook forward priority 0; policy drop;
 
+            # Block all outbound forwarded traffic from the LG TV (IPv4 + IPv6)
+            iifname "${cfg.lanInterface}" ether saddr ac:5a:f0:2c:ef:18 drop
+
             ct state established,related accept
             ct state invalid drop
 
