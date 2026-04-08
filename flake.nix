@@ -32,6 +32,18 @@
     k3sNodes = k3sHelpers.generateK3sNodes [ 1 2 3 ];
 
     pkgs = import nixpkgs { system = "x86_64-linux"; };
+
+    # Shared module list for the k3s-vm-node-1 microVM. Used both by the
+    # top-level nixosConfiguration (deploy.py path) and by microatx's
+    # microvm.vms.k3s-vm-node-1 (host-rebuild path) so they stay in sync.
+    # The top-level entry additionally needs microvm.nixosModules.microvm;
+    # microvm.vms.* injects that automatically on the host side.
+    k3sVmNode1Modules = [
+      sops-nix.nixosModules.sops
+      ./modules/k3s-hosts.nix
+      ./hosts/k3s-vm-node-1/configuration.nix
+      ./hosts/k3s-vm-node-1/microvm.nix
+    ];
   in
   {
     # Development shells
@@ -103,9 +115,16 @@
         ];
       };
 
+      # k3s worker running as a microVM on microatx.
+      # See hosts/k3s-vm-node-1/microvm.nix for the microvm hardware bits.
+      k3s-vm-node-1 = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [ microvm.nixosModules.microvm ] ++ k3sVmNode1Modules;
+      };
+
       # Microatx server (replaces Proxmox on minicheese)
       microatx = nixpkgs.lib.nixosSystem {
-        specialArgs = { inherit inputs; };
+        specialArgs = { inherit inputs k3sVmNode1Modules; };
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops

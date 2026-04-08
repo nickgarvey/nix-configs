@@ -1,4 +1,4 @@
-{ config, lib, pkgs, inputs, ... }:
+{ config, lib, pkgs, inputs, k3sVmNode1Modules, ... }:
 
 {
   imports = [
@@ -114,6 +114,33 @@
           };
         }
       ];
+    };
+  };
+
+  # --- k3s worker microVM ---
+  # Declarative microvm: built from the same modules as nixosConfigurations.k3s-vm-node-1
+  # so the host-rebuild and direct deploy.py paths stay in sync.
+  systemd.tmpfiles.rules = [
+    "d /var/lib/microvms/k3s-vm-node-1 0755 root root - -"
+    "d /var/lib/microvms/k3s-vm-node-1/sops 0700 root root - -"
+  ];
+
+  microvm.vms.k3s-vm-node-1 = {
+    specialArgs = { inherit inputs; };
+    config.imports = k3sVmNode1Modules;
+  };
+
+  # Attach the VM's tap interface to vmbr0 (mirrors the smb VM pattern).
+  systemd.services.microvm-k3s-vm-node-1-bridge = {
+    description = "Attach k3s-vm-node-1 microvm tap to vmbr0";
+    after = [ "microvm-tap-interfaces@k3s-vm-node-1.service" ];
+    requires = [ "microvm-tap-interfaces@k3s-vm-node-1.service" ];
+    before = [ "microvm@k3s-vm-node-1.service" ];
+    wantedBy = [ "microvms.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.iproute2}/bin/ip link set vm-k3s1 master vmbr0";
     };
   };
 
