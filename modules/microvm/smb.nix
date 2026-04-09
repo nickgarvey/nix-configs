@@ -68,6 +68,10 @@ in
       config = { config, pkgs, lib, ... }: {
         imports = [ inputs.microvm.nixosModules.microvm ];
 
+        # microvm.nix bind-mounts /nix/store from /nix/.ro-store without an
+        # fsType; current nixpkgs requires one on every fileSystems entry.
+        fileSystems."/nix/store".fsType = lib.mkDefault "none";
+
         microvm = {
           hypervisor = "qemu";
           vcpu = 1;
