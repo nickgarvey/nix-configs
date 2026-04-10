@@ -9,9 +9,7 @@
     { hostname = "router";   ipv4 = "10.28.0.1";      ipv6 = "2001:470:482f::1"; }
     { hostname = "frigate";  ipv4 = "10.28.12.109";    ipv6 = null; }
     { hostname = "smb";      ipv4 = "10.28.12.110";    ipv6 = null; }
-    { hostname = "plex";          ipv4 = "10.28.15.208";  ipv6 = null; }
-    { hostname = "unifi";         ipv4 = "10.28.15.203";  ipv6 = null; }
-    { hostname = "trmnl-display"; ipv4 = "10.28.15.210";  ipv6 = null; }
+    # plex, unifi, trmnl-display: DNS handled by CNAME → k8s-gateway (see blocky-dns.nix)
   ];
 
   lanHosts = [
@@ -25,6 +23,9 @@
     { hostname = "k3s-node-2";    mac = "78:55:36:00:47:f2"; ipv4 = "10.28.15.2";    ipv6 = "2001:470:482f::22"; }
     { hostname = "k3s-node-3";    mac = "78:55:36:00:4d:80"; ipv4 = "10.28.15.3";    ipv6 = "2001:470:482f::23"; }
     { hostname = "framework";     mac = "9c:bf:0d:01:0e:95"; ipv4 = "10.28.15.4";    ipv6 = "2001:470:482f::12"; }
-    { hostname = "k3s-vm-node-1"; mac = "02:00:00:00:01:20"; ipv4 = "10.28.15.5";    ipv6 = "2001:470:482f::13"; }
+    { hostname = "k3s-vm-node-1";   mac = "02:00:00:00:01:20"; ipv4 = "10.28.15.5";    ipv6 = "2001:470:482f::13"; }
+    { hostname = "k3s-vm-server-1"; mac = "02:00:00:00:02:01"; ipv4 = "10.28.15.11";   ipv6 = "2001:470:482f::31"; }
+    { hostname = "k3s-vm-server-2"; mac = "02:00:00:00:02:02"; ipv4 = "10.28.15.12";   ipv6 = "2001:470:482f::32"; }
+    { hostname = "k3s-vm-server-3"; mac = "02:00:00:00:02:03"; ipv4 = "10.28.15.13";   ipv6 = "2001:470:482f::33"; }
   ];
 }

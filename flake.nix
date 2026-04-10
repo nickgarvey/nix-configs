@@ -44,6 +44,18 @@
       ./hosts/k3s-vm-node-1/configuration.nix
       ./hosts/k3s-vm-node-1/microvm.nix
     ];
+
+    # Shared module lists for k3s-vm-server-{1,2,3} microVMs (temporary control
+    # plane for cluster migration). Same pattern as k3sVmNode1Modules.
+    mkK3sVmServerModules = n: [
+      sops-nix.nixosModules.sops
+      ./modules/k3s-hosts.nix
+      ./hosts/k3s-vm-server-${toString n}/configuration.nix
+      ./hosts/k3s-vm-server-${toString n}/microvm.nix
+    ];
+    k3sVmServer1Modules = mkK3sVmServerModules 1;
+    k3sVmServer2Modules = mkK3sVmServerModules 2;
+    k3sVmServer3Modules = mkK3sVmServerModules 3;
   in
   {
     # Development shells
@@ -122,9 +134,23 @@
         modules = [ microvm.nixosModules.microvm ] ++ k3sVmNode1Modules;
       };
 
+      # Temporary k3s server VMs for cluster migration (hosted on microatx)
+      k3s-vm-server-1 = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [ microvm.nixosModules.microvm ] ++ k3sVmServer1Modules;
+      };
+      k3s-vm-server-2 = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [ microvm.nixosModules.microvm ] ++ k3sVmServer2Modules;
+      };
+      k3s-vm-server-3 = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [ microvm.nixosModules.microvm ] ++ k3sVmServer3Modules;
+      };
+
       # Microatx server (replaces Proxmox on minicheese)
       microatx = nixpkgs.lib.nixosSystem {
-        specialArgs = { inherit inputs k3sVmNode1Modules; };
+        specialArgs = { inherit inputs k3sVmServer1Modules k3sVmServer2Modules k3sVmServer3Modules; };
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops

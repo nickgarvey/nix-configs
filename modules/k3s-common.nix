@@ -4,6 +4,15 @@ let
   isServer = config.services.k3s.role == "server";
   isAgent = config.services.k3s.role == "agent";
   isFirstNode = cfg.isFirstNode;
+
+  # Derive node IPs from lan-hosts.nix for dual-stack --node-ip
+  inherit (import ./lan-hosts.nix) lanHosts;
+  hostname = config.networking.hostName;
+  hostEntry = lib.findFirst (h: h.hostname == hostname) null lanHosts;
+  hasIPv6 = hostEntry != null && hostEntry.ipv6 != null;
+  nodeIpFlags = lib.optionals hasIPv6 [
+    "--node-ip=${hostEntry.ipv4},${hostEntry.ipv6}"
+  ];
 in
 {
   options.k3sConfig = {
@@ -51,16 +60,17 @@ in
       role = lib.mkDefault "server";
       # First node bootstraps the cluster, others join it
       clusterInit = lib.mkIf isFirstNode true;
-      serverAddr = lib.mkIf (!isFirstNode) "https://k3s-node-1.home.arpa:6443";
+      serverAddr = lib.mkIf (!isFirstNode) "https://k3s-vm-server-1.home.arpa:6443";
       # Server-specific flags
-      extraFlags = lib.mkIf isServer [
+      extraFlags = lib.optionals isServer [
         "--write-kubeconfig-mode=644"
         "--disable=servicelb"  # Using MetalLB instead
-      ];
+      ] ++ nodeIpFlags;
     };
 
     # k3s needs IPv4 forwarding for MetalLB LoadBalancer traffic (DNAT + forward to pods)
     homelab.network.ipv4Forward = true;
+    homelab.network.ipv6Forward = true;
 
     networking.firewall = {
       # Server ports: API server, etcd, etcd peers

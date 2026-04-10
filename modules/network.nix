@@ -17,8 +17,8 @@ in
     # Affects both IPv4 and IPv6 interface management
     useNetworkManager = lib.mkEnableOption "NetworkManager (for workstations/WiFi)";
 
-    # IPv4 only — IPv6 forwarding is managed separately by the router module
     ipv4Forward = lib.mkEnableOption "IPv4 forwarding (required for k3s/MetalLB)";
+    ipv6Forward = lib.mkEnableOption "IPv6 forwarding (required for k3s dual-stack)";
 
     bridge = lib.mkOption {
       type = lib.types.nullOr (lib.types.submodule {
@@ -64,6 +64,11 @@ in
     # --- IPv4 forwarding ---
     (lib.mkIf cfg.ipv4Forward {
       boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
+    })
+
+    # --- IPv6 forwarding ---
+    (lib.mkIf cfg.ipv6Forward {
+      boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
     })
 
     # --- Primary interface (no bridge, no NM) ---

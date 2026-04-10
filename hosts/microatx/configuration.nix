@@ -1,4 +1,4 @@
-{ config, lib, pkgs, inputs, k3sVmNode1Modules, ... }:
+{ config, lib, pkgs, inputs, k3sVmServer1Modules, k3sVmServer2Modules, k3sVmServer3Modules, ... }:
 
 {
   imports = [
@@ -51,6 +51,13 @@
   # Tailscale
   services.tailscale.enable = true;
 
+  # --- NFS server (Longhorn backup target) ---
+  services.nfs.server = {
+    enable = true;
+    exports = ''
+      /slow/backups/longhorn 10.28.0.0/16(rw,sync,no_subtree_check,no_root_squash)
+    '';
+  };
   # --- Storage: btrfs ---
   # SATA mirror (2x 8TB Seagate) — slow/bulk storage
   fileSystems."/slow/backups" = {
@@ -74,6 +81,11 @@
     device = "/dev/disk/by-label/fast";
     fsType = "btrfs";
     options = [ "subvol=@incus" "nofail" ];
+  };
+  fileSystems."/fast/longhorn" = {
+    device = "/dev/disk/by-label/fast";
+    fsType = "btrfs";
+    options = [ "compress=zstd" "subvol=@longhorn" "nofail" ];
   };
 
   services.btrfs.autoScrub = {
@@ -121,26 +133,66 @@
   # Declarative microvm: built from the same modules as nixosConfigurations.k3s-vm-node-1
   # so the host-rebuild and direct deploy.py paths stay in sync.
   systemd.tmpfiles.rules = [
-    "d /var/lib/microvms/k3s-vm-node-1 0755 root root - -"
-    "d /var/lib/microvms/k3s-vm-node-1/sops 0700 root root - -"
+    "d /slow/backups/longhorn 0755 root root - -"
+    "d /var/lib/microvms/k3s-vm-server-1 0755 root root - -"
+    "d /var/lib/microvms/k3s-vm-server-1/sops 0700 root root - -"
+    "d /var/lib/microvms/k3s-vm-server-2 0755 root root - -"
+    "d /var/lib/microvms/k3s-vm-server-2/sops 0700 root root - -"
+    "d /var/lib/microvms/k3s-vm-server-3 0755 root root - -"
+    "d /var/lib/microvms/k3s-vm-server-3/sops 0700 root root - -"
+    "d /fast/longhorn/k3s-vm-server-1 0755 microvm kvm - -"
+    "d /fast/longhorn/k3s-vm-server-2 0755 microvm kvm - -"
+    "d /fast/longhorn/k3s-vm-server-3 0755 microvm kvm - -"
   ];
 
-  microvm.vms.k3s-vm-node-1 = {
+  # --- k3s server VMs (temporary, for cluster migration) ---
+  microvm.vms.k3s-vm-server-1 = {
     specialArgs = { inherit inputs; };
-    config.imports = k3sVmNode1Modules;
+    config.imports = k3sVmServer1Modules;
+  };
+  microvm.vms.k3s-vm-server-2 = {
+    specialArgs = { inherit inputs; };
+    config.imports = k3sVmServer2Modules;
+  };
+  microvm.vms.k3s-vm-server-3 = {
+    specialArgs = { inherit inputs; };
+    config.imports = k3sVmServer3Modules;
   };
 
-  # Attach the VM's tap interface to vmbr0 (mirrors the smb VM pattern).
-  systemd.services.microvm-k3s-vm-node-1-bridge = {
-    description = "Attach k3s-vm-node-1 microvm tap to vmbr0";
-    after = [ "microvm-tap-interfaces@k3s-vm-node-1.service" ];
-    requires = [ "microvm-tap-interfaces@k3s-vm-node-1.service" ];
-    before = [ "microvm@k3s-vm-node-1.service" ];
+  systemd.services.microvm-k3s-vm-server-1-bridge = {
+    description = "Attach k3s-vm-server-1 microvm tap to vmbr0";
+    after = [ "microvm-tap-interfaces@k3s-vm-server-1.service" ];
+    requires = [ "microvm-tap-interfaces@k3s-vm-server-1.service" ];
+    before = [ "microvm@k3s-vm-server-1.service" ];
     wantedBy = [ "microvms.target" ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${pkgs.iproute2}/bin/ip link set vm-k3s1 master vmbr0";
+      ExecStart = "${pkgs.iproute2}/bin/ip link set vm-ks1 master vmbr0";
+    };
+  };
+  systemd.services.microvm-k3s-vm-server-2-bridge = {
+    description = "Attach k3s-vm-server-2 microvm tap to vmbr0";
+    after = [ "microvm-tap-interfaces@k3s-vm-server-2.service" ];
+    requires = [ "microvm-tap-interfaces@k3s-vm-server-2.service" ];
+    before = [ "microvm@k3s-vm-server-2.service" ];
+    wantedBy = [ "microvms.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.iproute2}/bin/ip link set vm-ks2 master vmbr0";
+    };
+  };
+  systemd.services.microvm-k3s-vm-server-3-bridge = {
+    description = "Attach k3s-vm-server-3 microvm tap to vmbr0";
+    after = [ "microvm-tap-interfaces@k3s-vm-server-3.service" ];
+    requires = [ "microvm-tap-interfaces@k3s-vm-server-3.service" ];
+    before = [ "microvm@k3s-vm-server-3.service" ];
+    wantedBy = [ "microvms.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.iproute2}/bin/ip link set vm-ks3 master vmbr0";
     };
   };
 
@@ -162,7 +214,7 @@
     dataPath = "/fast/frigate/data";
     cachePath = "/fast/frigate/cache";
   };
-  networking.firewall.allowedTCPPorts = [ 8443 ];
+  networking.firewall.allowedTCPPorts = [ 2049 8443 ];
 
   environment.systemPackages = with pkgs; [
     ethtool
