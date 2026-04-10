@@ -53,6 +53,13 @@ in
 
         customDNS = {
           mapping = dnsMapping;
+          # CNAMEs for k8s LoadBalancer services — resolved dynamically via k8s-gateway
+          zone = ''
+            $ORIGIN ${cfg.domain}.
+            plex          300 IN CNAME plex.plex.k8s.${cfg.domain}.
+            unifi         300 IN A    10.28.0.1
+            trmnl-display 300 IN CNAME trmnl-display.trmnl-display.k8s.${cfg.domain}.
+          '';
         };
 
         queryLog = {

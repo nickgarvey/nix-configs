@@ -51,6 +51,11 @@ in
             iifname "${cfg.lanInterface}" tcp dport { 22 } accept
             iifname "${cfg.lanInterface}" udp dport { 53, 67, 68 } accept
             iifname "${cfg.lanInterface}" tcp dport { 53 } accept
+
+            # UniFi controller (nspawn container, host networking)
+            iifname "${cfg.lanInterface}" tcp dport { 8080, 8443, 8880, 8843, 6789 } accept
+            iifname "${cfg.lanInterface}" udp dport { 3478, 10001 } accept
+
             iifname "${cfg.lanInterface}" udp dport { 546, 547 } accept
             iifname "${cfg.lanInterface}" icmp type echo-request accept
             iifname "${cfg.lanInterface}" icmpv6 type { echo-request, nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept

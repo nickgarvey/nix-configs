@@ -66,7 +66,10 @@ in
 
     # Enable IPv6 RA on LAN with the routed prefix
     systemd.network.networks."10-lan" = {
-      address = [ "${heCfg.routedPrefix}1/${toString heCfg.routedPrefixLength}" ];
+      address = [
+        "${heCfg.routedPrefix}1/${toString heCfg.routedPrefixLength}"
+        "2001:470:482f:2::1/64"  # k8s services (MetalLB) subnet
+      ];
       networkConfig.IPv6SendRA = true;
       ipv6SendRAConfig = {
         Managed = false;        # SLAAC
@@ -80,6 +83,7 @@ in
       };
       ipv6Prefixes = [
         { Prefix = "${heCfg.routedPrefix}/${toString heCfg.routedPrefixLength}"; }
+        { Prefix = "2001:470:482f:2::/64"; }  # k8s services (MetalLB)
       ];
     };
 

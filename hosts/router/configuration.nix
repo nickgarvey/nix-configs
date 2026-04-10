@@ -5,6 +5,7 @@
     ./hardware-configuration.nix
     ../../modules/nixos-common.nix
     ../../modules/router
+    ../../modules/containers/unifi.nix
   ];
 
   networking.hostName = "router";
