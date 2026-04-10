@@ -640,7 +640,7 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
                          force_reboot_prompt=args.force_reboot):
         return False
 
-    if host.k8s_health_check:
+    if host.k8s_health_check and not args.skip_k8s_check:
         if not wait_for_node_healthy(host):
             return False
 
@@ -660,7 +660,7 @@ def deploy_unsafe(host: Host, args: argparse.Namespace) -> bool:
                          force_reboot_prompt=args.force_reboot):
         return False
 
-    if host.k8s_health_check:
+    if host.k8s_health_check and not args.skip_k8s_check:
         if not wait_for_node_healthy(host):
             return False
 
@@ -802,6 +802,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEPLOY_TIMEOUT,
         help=f"Timeout for each nixos-rebuild command in seconds (default: {DEPLOY_TIMEOUT})",
+    )
+    parser.add_argument(
+        "--skip-k8s-check",
+        action="store_true",
+        help="Skip the post-deploy k8s node health check",
     )
     return parser
 

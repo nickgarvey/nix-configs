@@ -1,7 +1,7 @@
 { config, lib, pkgs, inputs, ... }:
 {
   imports = [
-    ../../modules/k3s-common.nix
+    ../../modules/k3s-common-v2.nix
     ../../modules/nixos-common.nix
     ./hardware-configuration.nix
   ];

@@ -8,7 +8,8 @@ in
 {
   networking.extraHosts =
     let
-      ipv4Lines = map (h: "${h.ipv4} ${h.hostname} ${h.hostname}.${domain}") allHosts;
+      ipv4Lines = map (h: "${h.ipv4} ${h.hostname} ${h.hostname}.${domain}")
+        (builtins.filter (h: h.ipv4 != null) allHosts);
       ipv6Lines = map (h: "${h.ipv6} ${h.hostname} ${h.hostname}.${domain}")
         (builtins.filter (h: h.ipv6 != null) allHosts);
     in

@@ -8,7 +8,10 @@ let
 
   # Build customDNS mapping: both short names and FQDNs
   # Blocky accepts comma-separated IPs for multiple records per hostname
-  ipStr = h: if h.ipv6 != null then "${h.ipv4},${h.ipv6}" else h.ipv4;
+  ipStr = h:
+    if h.ipv4 != null && h.ipv6 != null then "${h.ipv4},${h.ipv6}"
+    else if h.ipv6 != null then h.ipv6
+    else h.ipv4;
   dnsMapping = builtins.listToAttrs (
     (map (h: { name = h.hostname;                    value = ipStr h; }) allDnsEntries) ++
     (map (h: { name = "${h.hostname}.${cfg.domain}"; value = ipStr h; }) allDnsEntries)

@@ -153,6 +153,16 @@ class TestArgParsing(unittest.TestCase):
         args = parser.parse_args([])
         self.assertFalse(args.no_safe)
 
+    def test_skip_k8s_check_flag(self):
+        parser = build_parser()
+        args = parser.parse_args(["--skip-k8s-check"])
+        self.assertTrue(args.skip_k8s_check)
+
+    def test_skip_k8s_check_default_false(self):
+        parser = build_parser()
+        args = parser.parse_args([])
+        self.assertFalse(args.skip_k8s_check)
+
     def test_group_flag(self):
         parser = build_parser()
         args = parser.parse_args(["--group", "k3s", "infra"])
@@ -434,6 +444,22 @@ class TestSafeDeploy(unittest.TestCase):
         result = deploy_safe(h, args)
         self.assertFalse(result)
 
+    @patch("deploy.wait_for_node_healthy")
+    @patch("deploy.handle_reboot", return_value=True)
+    @patch("deploy.disarm_watchdog")
+    @patch("deploy.deploy_host", side_effect=[True, True])
+    @patch("deploy.verify_config_active", return_value=True)
+    @patch("deploy.verify_host_connectivity", return_value=True)
+    @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_skip_k8s_check_skips_health(self, mock_build, mock_arm, mock_verify_conn, mock_verify_cfg,
+                                          mock_deploy, mock_disarm, mock_reboot, mock_health):
+        h = self._make_host(k8s_health_check=True)
+        args = build_parser().parse_args(["--skip-k8s-check"])
+        result = deploy_safe(h, args)
+        self.assertTrue(result)
+        mock_health.assert_not_called()
+
 
 class TestUnsafeDeploy(unittest.TestCase):
     def _make_host(self, **kwargs):
@@ -478,6 +504,17 @@ class TestUnsafeDeploy(unittest.TestCase):
         result = deploy_unsafe(h, args)
         self.assertTrue(result)
         mock_health.assert_called_once()
+
+    @patch("deploy.wait_for_node_healthy")
+    @patch("deploy.handle_reboot", return_value=True)
+    @patch("deploy.deploy_host", return_value=True)
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_skip_k8s_check(self, mock_build, mock_deploy, mock_reboot, mock_health):
+        h = self._make_host(k8s_health_check=True)
+        args = build_parser().parse_args(["--no-safe", "--skip-k8s-check"])
+        result = deploy_unsafe(h, args)
+        self.assertTrue(result)
+        mock_health.assert_not_called()
 
 
 class TestConnectivityChecks(unittest.TestCase):
