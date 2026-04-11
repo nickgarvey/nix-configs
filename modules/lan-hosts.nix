@@ -10,7 +10,8 @@
     { hostname = "frigate";  ipv4 = "10.28.12.109";    ipv6 = null; }
     { hostname = "smb";      ipv4 = "10.28.12.110";    ipv6 = null; }
     { hostname = "k3s-api";  ipv4 = null;              ipv6 = "2001:470:482f::21"; }
-    # plex, unifi, trmnl-display: DNS handled by CNAME → k8s-gateway (see blocky-dns.nix)
+    { hostname = "unifi";   ipv4 = "10.28.0.1";      ipv6 = null; }
+    # plex, trmnl-display: DNS handled by CNAME → k8s-gateway (see blocky-dns.nix)
   ];
 
   lanHosts = [
