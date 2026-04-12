@@ -112,13 +112,16 @@ class Host:
 ALL_HOSTS = [
     Host("k3s-node-1", "k3s-node-1", "home.arpa",
          RebootPolicy.AUTO,
-         k8s_health_check=True, deploy_order=10, groups=["k3s", "infra"]),
+         k8s_health_check=True, deploy_order=10, groups=["k3s", "infra"],
+         connectivity_checks=["ssh", "ping6_gateway"]),
     Host("k3s-node-2", "k3s-node-2", "home.arpa",
          RebootPolicy.AUTO,
-         k8s_health_check=True, deploy_order=11, groups=["k3s", "infra"]),
+         k8s_health_check=True, deploy_order=11, groups=["k3s", "infra"],
+         connectivity_checks=["ssh", "ping6_gateway"]),
     Host("k3s-node-3", "k3s-node-3", "home.arpa",
          RebootPolicy.AUTO,
-         k8s_health_check=True, deploy_order=12, groups=["k3s", "infra"]),
+         k8s_health_check=True, deploy_order=12, groups=["k3s", "infra"],
+         connectivity_checks=["ssh", "ping6_gateway"]),
     Host("framework", "framework", "",
          RebootPolicy.PROMPT,
          k8s_health_check=True, deploy_order=20, groups=["k3s", "workstation"]),
@@ -534,6 +537,7 @@ def verify_host_connectivity(host: Host) -> bool:
     check_map = {
         "ssh": ("SSH", lambda: check_ssh(host)),
         "ping_gateway": ("Ping gateway", lambda: ping_check("10.28.0.1", via_host=host.fqdn)),
+        "ping6_gateway": ("Ping6 gateway", lambda: ping6_check("2001:470:482f::1", via_host=host.fqdn)),
         "ping_internet": ("Ping internet (1.1.1.1)", lambda: ping_check("1.1.1.1")),
         "dns": ("DNS resolution", dns_check),
         "ipv6_tunnel": ("IPv6 tunnel (HE)", lambda: ping6_check("2001:470:66:35::1", via_host=host.ssh_address)),
@@ -601,6 +605,9 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
     if not expected_path:
         return False
 
+    # Clear any stale nixos-rebuild unit from a previous failed deploy
+    clear_nixos_rebuild_unit(host)
+
     print(f"\n  [2/8] Arming watchdog ({watchdog_timeout}s)...")
     unit_name = arm_watchdog(host, watchdog_timeout)
     if unit_name is None:
@@ -625,8 +632,6 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
         return False
 
     print(f"\n  [6/8] Persisting config (nixos-rebuild boot)...")
-    if getattr(host, '_test_timed_out', False):
-        clear_nixos_rebuild_unit(host)
     if not deploy_host(host, mode="boot", timeout=deploy_timeout):
         print(f"  'nixos-rebuild boot' failed! Config is active but NOT persisted as boot default.")
         disarm_watchdog(host, unit_name)
