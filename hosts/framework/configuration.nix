@@ -1,15 +1,14 @@
 { config, lib, pkgs, inputs, ... }:
 let
-  localStoragePath = "/var/lib/rancher/k3s/storage";
   xone-dongle-firmware = pkgs.callPackage ../../pkgs/xone-dongle-firmware { };
 in
 {
   imports = [
-    ../../modules/k3s-common.nix
     ../../modules/common-workstation.nix
     ../../modules/nixos-common.nix
     ../../modules/lan-network.nix
     ../../modules/steam.nix
+    ../../modules/containers/llama-cpp.nix
     ./hardware-configuration.nix
   ];
 
@@ -33,7 +32,6 @@ in
     "amdgpu.gttsize=126976"
     "ttm.pages_limit=32505856"
   ];
-  services.k3s.role = "agent";
 
   # Enable autologin
   services.displayManager.autoLogin = {
@@ -41,8 +39,5 @@ in
     user = "ngarvey";
   };
 
-  assertions = [{
-    assertion = config.fileSystems ? "${localStoragePath}";
-    message = "Local storage partition must be mounted at ${localStoragePath}";
-  }];
+  system.stateVersion = "25.11";
 }

@@ -124,7 +124,7 @@ ALL_HOSTS = [
          connectivity_checks=["ssh", "ping6_gateway"]),
     Host("framework", "framework", "",
          RebootPolicy.PROMPT,
-         k8s_health_check=True, deploy_order=20, groups=["k3s", "workstation"]),
+         deploy_order=20, groups=["workstation"]),
     Host("microatx", "microatx", "home.arpa",
          RebootPolicy.PROMPT,
          deploy_order=30, groups=["infra"]),

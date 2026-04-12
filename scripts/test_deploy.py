@@ -107,7 +107,7 @@ class TestFilterHosts(unittest.TestCase):
         result = filter_hosts(ALL_HOSTS, None, ["k3s"])
         names = [h.hostname for h in result]
         self.assertIn("k3s-node-1", names)
-        self.assertIn("framework", names)  # framework is in k3s group
+        self.assertNotIn("framework", names)  # framework is no longer in k3s group
         self.assertNotIn("microatx", names)
 
     def test_filter_by_hostname_and_group(self):

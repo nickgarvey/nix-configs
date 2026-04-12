@@ -63,6 +63,23 @@
         "type": "github"
       }
     },
+    "llama-cpp": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1772004263,
+        "narHash": "sha256-KF/ETUagiJKteOHeC7Ww4Dwp73VDxVOcU4Gp0uMixmM=",
+        "path": "/home/ngarvey/homelab/homelab-nixpkgs/llama-cpp",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/ngarvey/homelab/homelab-nixpkgs/llama-cpp",
+        "type": "path"
+      }
+    },
     "microvm": {
       "inputs": {
         "nixpkgs": [
@@ -120,6 +137,7 @@
       "inputs": {
         "disko": "disko",
         "helium-browser": "helium-browser",
+        "llama-cpp": "llama-cpp",
         "microvm": "microvm",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs",

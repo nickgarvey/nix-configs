@@ -23,8 +23,13 @@
     };
 
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+
+    llama-cpp = {
+      url = "path:/home/ngarvey/homelab/homelab-nixpkgs/llama-cpp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes for 1 - 3
@@ -114,14 +119,12 @@
         ];
       };
 
-      # Framework Desktop (k3s worker node)
+      # Framework Desktop (llama-cpp inference server)
       framework = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
-          sops-nix.nixosModules.sops
           nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
-          ./modules/k3s-hosts.nix
           ./hosts/framework/configuration.nix
           ./hosts/framework/disk-config.nix
         ];

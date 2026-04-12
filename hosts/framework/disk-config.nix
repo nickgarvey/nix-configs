@@ -18,19 +18,11 @@
               };
             };
             root = {
-              size = "400G";
-              content = {
-                type = "filesystem";
-                format = "ext4";
-                mountpoint = "/";
-              };
-            };
-            local-storage = {
               size = "100%";
               content = {
                 type = "filesystem";
                 format = "ext4";
-                mountpoint = "/var/lib/rancher/k3s/storage";
+                mountpoint = "/";
               };
             };
           };
