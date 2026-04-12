@@ -51,9 +51,8 @@ class TestHostConfig(unittest.TestCase):
         self.assertEqual(names.index("k3s-node-3"), 2)
         self.assertEqual(names.index("framework"), 3)
         self.assertEqual(names.index("microatx"), 4)
-        self.assertEqual(names.index("k3s-vm-node-1"), 5)
-        self.assertEqual(names.index("framework13-laptop"), 6)
-        self.assertEqual(names.index("router"), 7)
+        self.assertEqual(names.index("framework13-laptop"), 5)
+        self.assertEqual(names.index("router"), 6)
 
     def test_all_hosts_have_unique_hostnames(self):
         names = [h.hostname for h in ALL_HOSTS]
