@@ -14,6 +14,8 @@ let
   ];
 in
 {
+  imports = [ ./lan-network.nix ];
+
   options.k3sConfig = {
     isFirstNode = lib.mkOption {
       type = lib.types.bool;
@@ -75,6 +77,7 @@ in
       ] ++ nodeIpFlags;
     };
 
+    homelab.network.enable = true;
     homelab.network.ipv6Only = true;
     homelab.network.ipv4Forward = false;
     homelab.network.ipv6Forward = true;

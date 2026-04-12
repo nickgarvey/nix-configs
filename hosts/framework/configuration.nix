@@ -8,6 +8,7 @@ in
     ../../modules/k3s-common.nix
     ../../modules/common-workstation.nix
     ../../modules/nixos-common.nix
+    ../../modules/lan-network.nix
     ../../modules/steam.nix
     ./hardware-configuration.nix
   ];
@@ -18,7 +19,12 @@ in
   # Add Xbox dongle firmware (append to existing firmware, don't replace)
   hardware.firmware = [ xone-dongle-firmware ];
 
+  homelab.network.enable = true;
+
   networking.hostName = "framework";
+
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
 
   # AMD Strix Halo iGPU configuration for large LLM models
   # https://github.com/kyuz0/amd-strix-halo-vllm-toolboxes/

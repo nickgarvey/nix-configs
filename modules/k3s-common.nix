@@ -15,6 +15,8 @@ let
   ];
 in
 {
+  imports = [ ./lan-network.nix ];
+
   options.k3sConfig = {
     isFirstNode = lib.mkOption {
       type = lib.types.bool;
@@ -68,7 +70,7 @@ in
       ] ++ nodeIpFlags;
     };
 
-    # k3s needs IPv4 forwarding for MetalLB LoadBalancer traffic (DNAT + forward to pods)
+    homelab.network.enable = true;
     homelab.network.ipv4Forward = true;
     homelab.network.ipv6Forward = true;
 

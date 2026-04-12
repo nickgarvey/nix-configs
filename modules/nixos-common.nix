@@ -1,6 +1,5 @@
 { config, lib, pkgs, inputs, ... }:
 {
-  imports = [ ./network.nix ];
   environment.systemPackages = with pkgs; [
     btop
     file
@@ -57,5 +56,4 @@
     ];
   };
   security.sudo.wheelNeedsPassword = false;
-  homelab.network.enable = true;
 }

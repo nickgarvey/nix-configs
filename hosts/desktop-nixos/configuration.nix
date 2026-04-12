@@ -4,12 +4,15 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/common-workstation.nix
+    ../../modules/lan-network.nix
     ../../modules/qmk.nix
     ../../modules/nrfconnect.nix
     ../../modules/steam.nix
     ../../modules/k3s-hosts.nix
     ../../modules/nix-binary-cache.nix
   ];
+
+  homelab.network.enable = true;
 
   networking = {
     hostName = "desktop-nixos";

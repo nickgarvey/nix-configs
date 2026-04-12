@@ -4,10 +4,13 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/nixos-common.nix
+    ../../modules/lan-network.nix
     ../../modules/k3s-hosts.nix
     ../../modules/containers/frigate.nix
     ../../modules/microvm/smb.nix
   ];
+
+  homelab.network.enable = true;
 
   networking.hostName = "microatx";
 
