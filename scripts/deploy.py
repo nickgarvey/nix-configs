@@ -441,30 +441,46 @@ def deploy_host(host: Host, mode: str = "switch", timeout: int = DEPLOY_TIMEOUT)
 
     Assumes the config is already built locally (via build_host). The timeout
     only covers the copy + remote activation, not the build. If the command
-    times out during 'test' mode and the host is still reachable via SSH,
-    the activation likely succeeded (SSH session hung after networkd reload).
-    Sets host._test_timed_out so the caller can clean up before 'boot'.
+    times out or the SSH connection drops during 'test' mode (common when
+    sysinit-reactivation.target restarts networkd mid-activation), and the host
+    is still reachable via SSH, the activation likely succeeded.
+    Sets host._test_timed_out so the caller can clear the unit before 'boot'.
     """
     print(f"  Deploying ({mode}) to {host.fqdn}...")
+    env = {
+        **__import__('os').environ,
+        # ServerAliveInterval causes SSH to detect a dead control socket in
+        # ~15s instead of waiting for the OS TCP timeout (~minutes).
+        "NIX_SSHOPTS": "-o ServerAliveInterval=5 -o ServerAliveCountMax=3",
+    }
     try:
-        run_cmd([
-            "nixos-rebuild", mode,
-            "--target-host", host.fqdn,
-            "--flake", f".#{host.flake_name}",
-            "--no-reexec",
-            "--sudo",
-        ], timeout=timeout)
+        print(f"  Running: nixos-rebuild {mode} --target-host {host.fqdn} --flake .#{host.flake_name} --no-reexec --sudo")
+        subprocess.run(
+            ["nixos-rebuild", mode,
+             "--target-host", host.fqdn,
+             "--flake", f".#{host.flake_name}",
+             "--no-reexec",
+             "--sudo"],
+            check=True,
+            timeout=timeout,
+            env=env,
+        )
         print(f"  ✓ Deployment ({mode}) to {host.fqdn} succeeded")
         return True
-    except subprocess.TimeoutExpired:
-        if mode == "test" and check_ssh(host):
-            print(f"  ⚠ Deployment ({mode}) timed out but host is reachable — assuming activation succeeded")
-            host._test_timed_out = True
-            return True
-        print(f"  ✗ Deployment ({mode}) to {host.fqdn} timed out after {timeout}s")
-        return False
-    except subprocess.CalledProcessError as e:
-        print(f"  ✗ Deployment ({mode}) to {host.fqdn} failed: {e}")
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        if mode == "test":
+            # SSH may have died when sysinit-reactivation.target restarted network
+            # services mid-activation. Wait briefly for the host to settle, then
+            # check reachability — if SSH is up, activation almost certainly succeeded.
+            time.sleep(5)
+            if check_ssh(host):
+                print(f"  ⚠ Deployment ({mode}) disconnected but host is reachable — assuming activation succeeded")
+                host._test_timed_out = True
+                return True
+        if isinstance(e, subprocess.TimeoutExpired):
+            print(f"  ✗ Deployment ({mode}) to {host.fqdn} timed out after {timeout}s")
+        else:
+            print(f"  ✗ Deployment ({mode}) to {host.fqdn} failed: {e}")
         return False
 
 
@@ -632,6 +648,8 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
         return False
 
     print(f"\n  [6/8] Persisting config (nixos-rebuild boot)...")
+    if getattr(host, '_test_timed_out', False):
+        clear_nixos_rebuild_unit(host)
     if not deploy_host(host, mode="boot", timeout=deploy_timeout):
         print(f"  'nixos-rebuild boot' failed! Config is active but NOT persisted as boot default.")
         disarm_watchdog(host, unit_name)

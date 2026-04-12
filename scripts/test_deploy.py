@@ -331,8 +331,9 @@ class TestSafeDeploy(unittest.TestCase):
     @patch("deploy.verify_config_active", return_value=True)
     @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_success_flow(self, mock_build, mock_arm, mock_verify_conn, mock_verify_cfg, mock_deploy, mock_disarm, mock_reboot):
+    def test_success_flow(self, mock_build, mock_clear, mock_arm, mock_verify_conn, mock_verify_cfg, mock_deploy, mock_disarm, mock_reboot):
         h = self._make_host()
         args = self._make_args()
         result = deploy_safe(h, args)
@@ -345,8 +346,9 @@ class TestSafeDeploy(unittest.TestCase):
         mock_disarm.assert_called_once_with(h, "deploy-watchdog-123")
 
     @patch("deploy.arm_watchdog", return_value=None)
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_watchdog_arm_failure_aborts(self, mock_build, mock_arm):
+    def test_watchdog_arm_failure_aborts(self, mock_build, mock_clear, mock_arm):
         h = self._make_host()
         args = self._make_args()
         result = deploy_safe(h, args)
@@ -362,8 +364,9 @@ class TestSafeDeploy(unittest.TestCase):
     @patch("deploy.disarm_watchdog")
     @patch("deploy.deploy_host", return_value=False)  # test fails
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_test_failure_no_disarm(self, mock_build, mock_arm, mock_deploy, mock_disarm):
+    def test_test_failure_no_disarm(self, mock_build, mock_clear, mock_arm, mock_deploy, mock_disarm):
         h = self._make_host()
         args = self._make_args()
         result = deploy_safe(h, args)
@@ -375,8 +378,9 @@ class TestSafeDeploy(unittest.TestCase):
     @patch("deploy.verify_config_active", return_value=True)
     @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_boot_failure_still_disarms(self, mock_build, mock_arm, mock_verify_conn,
+    def test_boot_failure_still_disarms(self, mock_build, mock_clear, mock_arm, mock_verify_conn,
                                         mock_verify_cfg, mock_deploy, mock_disarm):
         h = self._make_host()
         args = self._make_args()
@@ -388,8 +392,9 @@ class TestSafeDeploy(unittest.TestCase):
     @patch("deploy.deploy_host", return_value=True)
     @patch("deploy.verify_host_connectivity", return_value=False)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_connectivity_failure_no_disarm(self, mock_build, mock_arm, mock_verify,
+    def test_connectivity_failure_no_disarm(self, mock_build, mock_clear, mock_arm, mock_verify,
                                             mock_deploy, mock_disarm):
         h = self._make_host()
         args = self._make_args()
@@ -402,8 +407,9 @@ class TestSafeDeploy(unittest.TestCase):
     @patch("deploy.verify_config_active", return_value=False)
     @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_config_mismatch_no_boot(self, mock_build, mock_arm, mock_verify_conn,
+    def test_config_mismatch_no_boot(self, mock_build, mock_clear, mock_arm, mock_verify_conn,
                                       mock_verify_cfg, mock_deploy, mock_disarm):
         h = self._make_host()
         args = self._make_args()
@@ -420,8 +426,9 @@ class TestSafeDeploy(unittest.TestCase):
     @patch("deploy.verify_config_active", return_value=True)
     @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_k8s_health_check_runs(self, mock_build, mock_arm, mock_verify_conn, mock_verify_cfg,
+    def test_k8s_health_check_runs(self, mock_build, mock_clear, mock_arm, mock_verify_conn, mock_verify_cfg,
                                     mock_deploy, mock_disarm, mock_reboot, mock_health):
         h = self._make_host(k8s_health_check=True)
         args = self._make_args()
@@ -436,8 +443,9 @@ class TestSafeDeploy(unittest.TestCase):
     @patch("deploy.verify_config_active", return_value=True)
     @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_k8s_health_failure(self, mock_build, mock_arm, mock_verify_conn, mock_verify_cfg,
+    def test_k8s_health_failure(self, mock_build, mock_clear, mock_arm, mock_verify_conn, mock_verify_cfg,
                                  mock_deploy, mock_disarm, mock_reboot, mock_health):
         h = self._make_host(k8s_health_check=True)
         args = self._make_args()
@@ -451,8 +459,9 @@ class TestSafeDeploy(unittest.TestCase):
     @patch("deploy.verify_config_active", return_value=True)
     @patch("deploy.verify_host_connectivity", return_value=True)
     @patch("deploy.arm_watchdog", return_value="deploy-watchdog-123")
+    @patch("deploy.clear_nixos_rebuild_unit")
     @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
-    def test_skip_k8s_check_skips_health(self, mock_build, mock_arm, mock_verify_conn, mock_verify_cfg,
+    def test_skip_k8s_check_skips_health(self, mock_build, mock_clear, mock_arm, mock_verify_conn, mock_verify_cfg,
                                           mock_deploy, mock_disarm, mock_reboot, mock_health):
         h = self._make_host(k8s_health_check=True)
         args = build_parser().parse_args(["--skip-k8s-check"])
