@@ -201,6 +201,8 @@
     hostBridge = "vmbr0";
     address = "10.28.12.110/16";
     gateway = "10.28.0.1";
+    ipv6Address = "2001:470:482f::14/64";
+    ipv6Gateway = "2001:470:482f::1";
     mac = "02:00:00:00:01:10";
     shares = [
       { name = "media"; path = "/fast/media"; owner = "media"; }

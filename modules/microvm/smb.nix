@@ -38,6 +38,18 @@ in
       description = "Default gateway for the SMB VM.";
     };
 
+    ipv6Address = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "IPv6 address with prefix length for the SMB VM (e.g. \"2001:470:482f::14/64\").";
+    };
+
+    ipv6Gateway = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "IPv6 default gateway for the SMB VM.";
+    };
+
     mac = lib.mkOption {
       type = lib.types.str;
       description = "MAC address for the VM's network interface.";
@@ -149,8 +161,11 @@ in
           enable = true;
           networks."20-eth" = {
             matchConfig.Type = "ether";
-            addresses = [{ Address = cfg.address; }];
-            routes = [{ Gateway = cfg.gateway; }];
+            addresses = [{ Address = cfg.address; }]
+              ++ lib.optional (cfg.ipv6Address != null) { Address = cfg.ipv6Address; };
+            routes = [{ Gateway = cfg.gateway; }]
+              ++ lib.optional (cfg.ipv6Gateway != null) { Gateway = cfg.ipv6Gateway; };
+            networkConfig.IPv6AcceptRA = false;
           };
         };
 

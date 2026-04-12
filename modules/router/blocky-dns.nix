@@ -50,7 +50,7 @@ in
 
         conditional = {
           mapping = {
-            "k8s.home.arpa" = "10.28.15.207";
+            "k8s.home.arpa" = "[2001:470:482f:2::53]";
           };
         };
 
