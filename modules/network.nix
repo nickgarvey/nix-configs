@@ -9,6 +9,15 @@ let
 
   hasBridge = cfg.bridge != null;
   hasIPv6 = hostEntry != null && hostEntry.ipv6 != null && hostEntry.mac != "";
+
+  # Static routes for k3s pod CIDRs — each k3s node gets a /64 from the /56 pod range.
+  # Non-k3s hosts need these routes so pods can communicate with LAN services (return path).
+  k3sNodes = builtins.filter (h: h.podCIDR or null != null && h.ipv6 != null) lanHosts;
+  isK3sNode = lib.any (h: h.hostname == hostname) k3sNodes;
+  podRoutes = map (h: {
+    Destination = h.podCIDR;
+    Gateway = h.ipv6;
+  }) k3sNodes;
 in
 {
   options.homelab.network = {
@@ -17,8 +26,16 @@ in
     # Affects both IPv4 and IPv6 interface management
     useNetworkManager = lib.mkEnableOption "NetworkManager (for workstations/WiFi)";
 
-    ipv4Forward = lib.mkEnableOption "IPv4 forwarding (required for k3s/MetalLB)";
-    ipv6Forward = lib.mkEnableOption "IPv6 forwarding (required for k3s dual-stack)";
+    ipv6Only = lib.mkEnableOption "IPv6-only networking (no IPv4, static IPv6 from lan-hosts.nix)";
+
+    ipv4Forward = lib.mkEnableOption "IPv4 forwarding";
+    ipv6Forward = lib.mkEnableOption "IPv6 forwarding";
+
+    podCIDR = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Pod CIDR (/64) assigned to this node for k3s pod networking.";
+    };
 
     bridge = lib.mkOption {
       type = lib.types.nullOr (lib.types.submodule {
@@ -71,17 +88,38 @@ in
       boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
     })
 
-    # --- Primary interface (no bridge, no NM) ---
-    # networkd manages the ethernet directly:
-    #   IPv4: DHCP from Kea on router (MAC-based reservation gives stable address)
-    #   IPv6: static address from lan-hosts.nix
-    (lib.mkIf (!hasBridge && !cfg.useNetworkManager && hasIPv6) {
+    # --- IPv6-only: static IPv6 address, no IPv4, gateway via router ---
+    # Uses the router's link-local as the gateway because Cilium's BPF on the
+    # physical NIC intercepts NDP for global addresses, preventing resolution
+    # of the router's GUA.  Link-local NDP is unaffected.
+    (lib.mkIf (cfg.ipv6Only && hasIPv6) {
       systemd.network.networks."25-static" = {
         matchConfig.MACAddress = hostEntry.mac;
-        networkConfig.DHCP = "ipv4"; # IPv4 only — IPv6 is static below
-        # Use MAC as client ID so Kea matches hw-address reservations
+        networkConfig = {
+          DHCP = "no";
+        };
+        address = [ "${hostEntry.ipv6}/64" ];
+        gateway = [ "fe80::8fb:cff:fe5c:daa4" ];
+        dns = [ "2001:470:482f::1" ];
+        routes = [
+          # Host route for the router's GUA via its link-local.  Cilium's BPF
+          # on enp+ intercepts NDP for global addresses, so direct on-link NDP
+          # for the router fails.  This route forces traffic through the link-local
+          # next-hop instead.
+          { Destination = "2001:470:482f::1/128"; Gateway = "fe80::8fb:cff:fe5c:daa4"; }
+        ] ++ lib.optionals (!isK3sNode) podRoutes;
+      };
+    })
+
+    # --- Dual-stack: IPv4 via DHCP + static IPv6 (no bridge, no NM) ---
+    (lib.mkIf (!cfg.ipv6Only && !hasBridge && !cfg.useNetworkManager && hasIPv6) {
+      systemd.network.networks."25-static" = {
+        matchConfig.MACAddress = hostEntry.mac;
+        networkConfig.DHCP = "ipv4";
         dhcpV4Config.ClientIdentifier = "mac";
-        address = [ "${hostEntry.ipv6}/64" ]; # IPv6 static
+        address = [ "${hostEntry.ipv6}/64" ];
+        dns = [ "2001:470:482f::1" ];
+        routes = lib.optionals (!isK3sNode) podRoutes;
       };
     })
 
@@ -101,13 +139,12 @@ in
 
       systemd.network.networks."10-${br.name}" = {
         matchConfig.Name = br.name;
-        # IPv4: static address from bridge config
         address = [ br.ipv4.address ]
-          # IPv6: auto-derived from lan-hosts.nix
           ++ lib.optionals hasIPv6 [ "${hostEntry.ipv6}/64" ];
         gateway = [ br.ipv4.gateway ];
-        dns = br.ipv4.dns;
+        dns = br.ipv4.dns ++ [ "2001:470:482f::1" ];
         networkConfig.DHCP = "no";
+        routes = lib.optionals (hasIPv6 && !isK3sNode) podRoutes;
       };
     }))
   ]);

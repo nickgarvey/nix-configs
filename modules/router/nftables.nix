@@ -34,6 +34,10 @@ in
           chain input {
             type filter hook input priority 0; policy drop;
 
+            # ICMPv6 NDP must be accepted before conntrack — conntrack may
+            # classify unsolicited NS/NA as "invalid" and drop them.
+            icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept
+
             # Connection tracking
             ct state established,related accept
             ct state invalid drop
@@ -87,6 +91,13 @@ in
 
             # Block all outbound forwarded traffic from the LG TV (IPv4 + IPv6)
             iifname "${cfg.lanInterface}" ether saddr ac:5a:f0:2c:ef:18 drop
+
+            # LAN <-> LAN: k8s pod traffic must be accepted before conntrack —
+            # outbound goes directly node→LAN (on-link), so the router only
+            # sees the return path.  Conntrack marks those replies "invalid"
+            # (no matching outbound entry) and drops them.
+            iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" ip6 daddr 2001:470:482f:100::/56 accept
+            iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" ip6 saddr 2001:470:482f:100::/56 accept
 
             ct state established,related accept
             ct state invalid drop

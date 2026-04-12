@@ -55,7 +55,7 @@
   services.nfs.server = {
     enable = true;
     exports = ''
-      /slow/backups/longhorn 10.28.0.0/16(rw,sync,no_subtree_check,no_root_squash)
+      /slow/backups/longhorn 2001:470:482f::/48(rw,sync,no_subtree_check,no_root_squash)
     '';
   };
   # --- Storage: btrfs ---

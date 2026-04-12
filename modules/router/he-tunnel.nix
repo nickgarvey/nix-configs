@@ -3,6 +3,12 @@
 let
   cfg = config.routerConfig;
   heCfg = cfg.heTunnel;
+
+  # Routes for k3s pod CIDRs — the router needs these to forward return traffic
+  # from the HE tunnel (internet) back to the correct k3s node.
+  inherit (import ../lan-hosts.nix) lanHosts;
+  k3sNodes = builtins.filter (h: h.podCIDR or null != null && h.ipv6 != null) lanHosts;
+  podRoutes = map (h: { Destination = h.podCIDR; Gateway = h.ipv6; }) k3sNodes;
 in
 {
   options.routerConfig.heTunnel = {
@@ -67,24 +73,31 @@ in
     # Enable IPv6 RA on LAN with the routed prefix
     systemd.network.networks."10-lan" = {
       address = [
-        "${heCfg.routedPrefix}1/${toString heCfg.routedPrefixLength}"
-        "2001:470:482f:2::1/64"  # k8s services (MetalLB) subnet
+        # Router's address on the main LAN (:0 subnet).
+        # Use /64 so the router knows subnet :0 is on-link.
+        "${heCfg.routedPrefix}1/64"
+        # k8s LB subnet (:2::/112) — router needs an address for return routing
+        # from HE tunnel, but use /112 to match the actual LB pool size.
+        "2001:470:482f:2::1/112"
       ];
       networkConfig.IPv6SendRA = true;
       ipv6SendRAConfig = {
         Managed = false;        # SLAAC
         OtherInformation = true; # Clients query DHCPv6 for DNS info
-        # Advertise the prefix so clients get SLAAC addresses for LAN-to-LAN
-        # IPv6, but don't install this router as their default IPv6 gateway.
-        # HE tunnel broker prefixes are frequently flagged as botnets by
-        # Google et al., so outbound IPv6 is intentionally disabled by default.
-        # Individual hosts can opt in with: ip -6 route add default via 2001:470:482f::1
+        # Advertise only the main LAN /64 for SLAAC — NOT the full /48.
+        # Don't install this router as default IPv6 gateway.
+        # HE tunnel broker prefixes are frequently flagged by Google et al.
         RouterLifetimeSec = 0;
       };
       ipv6Prefixes = [
-        { Prefix = "${heCfg.routedPrefix}/${toString heCfg.routedPrefixLength}"; }
-        { Prefix = "2001:470:482f:2::/64"; }  # k8s services (MetalLB)
+        { Prefix = "2001:470:482f::/64"; }     # Main LAN SLAAC
+        # Do NOT advertise :2::/64 — LB IPs use Cilium L2 NDP announcements.
+        # Advertising this prefix gives LAN hosts SLAAC addresses in :2::,
+        # which breaks source address selection for LB destinations.
       ];
+      # Kernel routes for pod CIDRs — needed so return traffic from the HE
+      # tunnel reaches the correct k3s node.  Not advertised via RA.
+      routes = podRoutes;
     };
 
     # Systemd service to update HE tunnel endpoint (for dynamic WAN IP)

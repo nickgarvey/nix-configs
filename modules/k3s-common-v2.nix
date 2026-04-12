@@ -26,6 +26,7 @@ in
     environment.systemPackages = with pkgs; [
       pciutils
       atop
+      nfs-utils  # Required by Longhorn for NFS backup targets
     ];
 
     boot.loader.systemd-boot.enable = true;
@@ -66,7 +67,7 @@ in
         "--flannel-backend=none"
         "--disable-network-policy"
         "--disable-kube-proxy"
-        "--cluster-cidr=fd42::/48"
+        "--cluster-cidr=2001:470:482f:100::/56"
         "--service-cidr=fd43::/112"
         "--tls-san=k3s-api.home.arpa"
       ] ++ lib.optionals (isServer && hostEntry != null && hostEntry.ipv6 != null) [
@@ -74,18 +75,24 @@ in
       ] ++ nodeIpFlags;
     };
 
-    homelab.network.ipv4Forward = true;
+    homelab.network.ipv6Only = true;
+    homelab.network.ipv4Forward = false;
     homelab.network.ipv6Forward = true;
 
     # Disable IPv6 RA/SLAAC — etcd peers must use the static address only
     systemd.network.networks."25-static".ipv6AcceptRAConfig.UseAutonomousPrefix = false;
     systemd.network.networks."25-static".networkConfig.IPv6AcceptRA = false;
 
-    networking.firewall = {
-      allowedTCPPorts = [ 10250 4240 4244 4245 ]  # Kubelet, Cilium health, Hubble
-        ++ lib.optionals isServer [ 6443 2379 2380 ];
-      allowedUDPPorts = [ 8472 ];  # VXLAN (Cilium tunnel mode fallback)
-    };
+    # Disable systemd-resolved stub listener so /etc/resolv.conf contains the
+    # real DNS server IP (2001:470:482f::1) instead of 127.0.0.53.
+    # k3s rejects loopback in resolv.conf and falls back to Google DNS,
+    # which can't resolve .home.arpa domains.
+    services.resolved.settings.Resolve.DNSStubListener = "no";
+
+    # Cilium BPF host routing bypasses conntrack, so the NixOS iptables
+    # firewall drops pod return traffic as unsolicited.  Disable iptables
+    # and rely on Cilium Host Firewall (eBPF) instead.
+    networking.firewall.enable = false;
 
     # Longhorn settings
     services.openiscsi = {
