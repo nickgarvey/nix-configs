@@ -61,12 +61,14 @@ in
       google-chrome
       helium-browser
       htop
+      incus
       k9s
       kubectl
       libnotify
       mpv
       obsidian
       spotify
+      virt-viewer
       wl-clipboard
     ];
   };
