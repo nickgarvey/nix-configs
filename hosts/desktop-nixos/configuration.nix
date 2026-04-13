@@ -8,7 +8,6 @@
     ../../modules/qmk.nix
     ../../modules/nrfconnect.nix
     ../../modules/steam.nix
-    ../../modules/k3s-hosts.nix
     ../../modules/nix-binary-cache.nix
   ];
 

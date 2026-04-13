@@ -1,5 +1,5 @@
 # Canonical source of static LAN host assignments.
-# Consumed by: kea DHCP (reservations), blocky DNS (local records), k3s-hosts (extraHosts), lan-network.nix (static IPv6).
+# Consumed by: kea DHCP (reservations), blocky DNS (local records), lan-network.nix (static IPv6).
 #
 # IPv6 addresses are from 2001:470:482f::/64 (HE /48 subnet :0).
 # Subnet plan: :0 = main LAN, :1 = (reserved), :2 = k8s LB (Cilium L2),

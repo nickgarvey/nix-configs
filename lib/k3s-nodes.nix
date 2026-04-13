@@ -6,7 +6,6 @@ let
     modules = [
       disko.nixosModules.disko
       sops-nix.nixosModules.sops
-      ../modules/k3s-hosts.nix
       ../hosts/k3s-node-${toString nodeNumber}/configuration.nix
       ../hosts/k3s-node-${toString nodeNumber}/disk-config.nix
     ];
