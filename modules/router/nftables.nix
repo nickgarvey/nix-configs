@@ -114,6 +114,11 @@ in
             # LAN -> WAN: allow all outbound
             iifname "${cfg.lanInterface}" oifname "${cfg.wanInterface}" accept
 
+            # LAN <-> NAT64 namespace (Jool via jool0 veth)
+            iifname "${cfg.lanInterface}" oifname "jool0" accept
+            iifname "jool0" oifname "${cfg.wanInterface}" accept
+            iifname "jool0" oifname "${cfg.lanInterface}" accept
+
             # LAN <-> HE tunnel: fully open in both directions.
             # Clients don't get a default IPv6 route (RouterLifetimeSec=0 in RA)
             # so outbound IPv6 only happens when a host opts in manually.

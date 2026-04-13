@@ -66,6 +66,11 @@ in
           '';
         };
 
+        dns64 = {
+          enable = true;
+          prefixes = [ "64:ff9b::/96" ];
+        };
+
         queryLog = {
           type = "none";
         };
