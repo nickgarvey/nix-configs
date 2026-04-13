@@ -8,6 +8,7 @@
     ../../modules/nix-remote-builder-client.nix
     ../../modules/esp-prog-udev.nix
     ../../modules/wifi.nix
+    ../../modules/vector-db-learning.nix
   ];
 
   boot.loader.systemd-boot.enable = true;
