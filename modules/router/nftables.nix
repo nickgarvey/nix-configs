@@ -146,8 +146,6 @@ in
         content = ''
           chain prerouting {
             type nat hook prerouting priority dstnat;
-
-            iifname "${cfg.wanInterface}" tcp dport 443 dnat to 10.28.15.201:443
           }
 
           chain postrouting {
