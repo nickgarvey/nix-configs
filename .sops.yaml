@@ -2,7 +2,7 @@ keys:
   - &ngarvey age1nyxjtps38j4p52nmwtf96h7d9mege90ftf4xcpxppctcwq5huqys4hy5k0
   - &k3s age12dsw8c59tv758nkkk8j7gwenk4wcc9h6mcl509egn85pk2qvlsys7v8zc5
   - &workstation age1le67uqtvry52ch733vytmr7yjvjsna8u3k6a9n285ggmuzfv9q7s4rqufu
-  - &framework age1phmmhj7kfedel0uz052sj8glcevj6qgh5sdmq73ctm8qqlnxaarq4l9rvv
+  - &framework-desktop age1phmmhj7kfedel0uz052sj8glcevj6qgh5sdmq73ctm8qqlnxaarq4l9rvv
   - &framework13-laptop age1m9l2ncrkg5zelkegwpa2ux2kw5cljay2m9sxuzf2eyz8qqje45vsmfn76k
   - &router age1c3fwgyf6tm44gzhyvfjk5eyysef0shufd50kdg4t0w2rd9jylcusakgxpy
   - &microatx age1cz96x8w6653wruqxrwquczv3ulwe5gfnvyy6p3tzvs8mehc7gyas7hty0k
@@ -32,7 +32,7 @@ creation_rules:
     - age:
       - *ngarvey
       - *workstation
-      - *framework
+      - *framework-desktop
       - *framework13-laptop
   - path_regex: secrets/nix-builder.yaml
     key_groups:

@@ -20,7 +20,7 @@ in
 
   homelab.network.enable = true;
 
-  networking.hostName = "framework";
+  networking.hostName = "framework-desktop";
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;

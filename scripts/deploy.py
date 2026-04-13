@@ -17,7 +17,7 @@ in a fixed order.
 Deploy order
 ------------
   1. k3s-node-1, k3s-node-2, k3s-node-3   (auto-reboot, k8s health check)
-  2. framework                             (prompt reboot, k8s health check)
+  2. framework-desktop                     (prompt reboot, k8s health check)
   3. microatx                              (prompt reboot)
   4. framework13-laptop                    (prompt reboot, opt-in only)
   5. router                                (never reboot, extended checks)
@@ -45,17 +45,17 @@ Failure handling
 
 Host groups
 -----------
-  k3s         k3s-node-1, k3s-node-2, k3s-node-3, framework
+  k3s         k3s-node-1, k3s-node-2, k3s-node-3, framework-desktop
   infra       k3s-node-1, k3s-node-2, k3s-node-3, microatx, router
-  workstation framework, framework13-laptop*
+  workstation framework-desktop, framework13-laptop*
   router      router
 
 Examples
 --------
   deploy.py                              # deploy everything (safe mode)
-  deploy.py --group k3s                  # just the k3s cluster + framework
+  deploy.py --group k3s                  # just the k3s cluster + framework-desktop
   deploy.py --hosts router               # just the router
-  deploy.py --hosts microatx framework   # specific hosts
+  deploy.py --hosts microatx framework-desktop   # specific hosts
   deploy.py --no-safe                    # bypass watchdog, use raw switch
   deploy.py --dry-run                    # verify without deploying
   deploy.py --force-reboot               # skip reboot prompts on PROMPT hosts
@@ -122,7 +122,7 @@ ALL_HOSTS = [
          RebootPolicy.AUTO,
          k8s_health_check=True, deploy_order=12, groups=["k3s", "infra"],
          connectivity_checks=["ssh", "ping6_gateway"]),
-    Host("framework", "framework", "",
+    Host("framework-desktop", "framework-desktop", "home.arpa",
          RebootPolicy.PROMPT,
          deploy_order=20, groups=["workstation"]),
     Host("microatx", "microatx", "home.arpa",

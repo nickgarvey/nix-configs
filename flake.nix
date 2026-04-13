@@ -97,13 +97,13 @@
       };
 
       # Framework Desktop (llama-cpp inference server)
-      framework = nixpkgs.lib.nixosSystem {
+      framework-desktop = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
           nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
-          ./hosts/framework/configuration.nix
-          ./hosts/framework/disk-config.nix
+          ./hosts/framework-desktop/configuration.nix
+          ./hosts/framework-desktop/disk-config.nix
         ];
       };
 

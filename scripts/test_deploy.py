@@ -32,9 +32,9 @@ class TestHostConfig(unittest.TestCase):
         self.assertEqual(h.fqdn, "k3s-node-1.home.arpa")
 
     def test_fqdn_without_domain(self):
-        h = Host("framework", "framework", "",
+        h = Host("framework-desktop", "framework-desktop", "home.arpa",
                  RebootPolicy.PROMPT)
-        self.assertEqual(h.fqdn, "framework")
+        self.assertEqual(h.fqdn, "framework-desktop.home.arpa")
 
     def test_fqdn_ssh_address_override(self):
         h = Host("router", "router", "home.arpa",
@@ -46,10 +46,10 @@ class TestHostConfig(unittest.TestCase):
         hosts = list(ALL_HOSTS)
         hosts.sort(key=lambda h: h.deploy_order)
         names = [h.hostname for h in hosts]
-        # k3s nodes first, then framework, microatx, router last
+        # k3s nodes first, then framework-desktop, microatx, router last
         self.assertEqual(names.index("k3s-node-1"), 0)
         self.assertEqual(names.index("k3s-node-3"), 2)
-        self.assertEqual(names.index("framework"), 3)
+        self.assertEqual(names.index("framework-desktop"), 3)
         self.assertEqual(names.index("microatx"), 4)
         self.assertEqual(names.index("framework13-laptop"), 5)
         self.assertEqual(names.index("router"), 6)
@@ -106,7 +106,7 @@ class TestFilterHosts(unittest.TestCase):
         result = filter_hosts(ALL_HOSTS, None, ["k3s"])
         names = [h.hostname for h in result]
         self.assertIn("k3s-node-1", names)
-        self.assertNotIn("framework", names)  # framework is no longer in k3s group
+        self.assertNotIn("framework-desktop", names)  # framework-desktop is no longer in k3s group
         self.assertNotIn("microatx", names)
 
     def test_filter_by_hostname_and_group(self):
