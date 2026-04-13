@@ -9,6 +9,7 @@ in
     ./kea-dhcp.nix
     ./blocky-dns.nix
     ./he-tunnel.nix
+    ./lan-ipv6.nix
     ./nat64.nix
     ./tailscale.nix
   ];
