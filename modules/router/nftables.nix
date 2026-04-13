@@ -56,6 +56,9 @@ in
             iifname "${cfg.lanInterface}" udp dport { 53, 67, 68 } accept
             iifname "${cfg.lanInterface}" tcp dport { 53 } accept
 
+            # TRMNL reverse proxy (nspawn container, host networking)
+            iifname "${cfg.lanInterface}" tcp dport { 80 } ip daddr 10.28.0.2 accept
+
             # UniFi controller (nspawn container, host networking)
             iifname "${cfg.lanInterface}" tcp dport { 8080, 8443, 8880, 8843, 6789 } accept
             iifname "${cfg.lanInterface}" udp dport { 3478, 10001 } accept

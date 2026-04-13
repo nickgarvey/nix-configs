@@ -6,6 +6,7 @@
     ../../modules/nixos-common.nix
     ../../modules/router
     ../../modules/containers/unifi.nix
+    ../../modules/containers/trmnl-proxy.nix
   ];
 
   networking.hostName = "router";

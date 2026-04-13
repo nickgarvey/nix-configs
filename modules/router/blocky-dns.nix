@@ -61,7 +61,8 @@ in
             $ORIGIN ${cfg.domain}.
             plex          300 IN CNAME plex.plex.k8s.${cfg.domain}.
             unifi         300 IN A    10.28.0.1
-            trmnl-display 300 IN CNAME trmnl-display.trmnl-display.k8s.${cfg.domain}.
+            trmnl-display 300 IN A    10.28.0.2
+            trmnl-display 300 IN AAAA 2001:470:482f:2::5
             llama-cpp     300 IN CNAME framework.${cfg.domain}.
           '';
         };
