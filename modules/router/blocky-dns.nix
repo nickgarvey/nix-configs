@@ -2,20 +2,32 @@
 
 let
   cfg = config.routerConfig;
-  inherit (import ../lan-hosts.nix) lanHosts dnsAliases;
+  inherit (import ../lan-hosts.nix) lanHosts;
+  dns = import ../dns.nix { inherit lib; };
 
-  allDnsEntries = lanHosts ++ dnsAliases;
-
-  # Build customDNS mapping: both short names and FQDNs
-  # Blocky accepts comma-separated IPs for multiple records per hostname
-  ipStr = h:
+  # lanHosts uses single-string ipv4/ipv6 (one physical host = one IP per family).
+  hostIpStr = h:
     if h.ipv4 != null && h.ipv6 != null then "${h.ipv4},${h.ipv6}"
     else if h.ipv6 != null then h.ipv6
     else h.ipv4;
+
+  # dns.records uses list-valued v4/v6, joined for blocky's comma-separated syntax.
+  recordIpStr = r: lib.concatStringsSep "," (r.v4 ++ r.v6);
+
+  entries =
+    (map (h: { name = h.hostname; value = hostIpStr h; }) lanHosts) ++
+    (lib.mapAttrsToList (n: r: { name = n; value = recordIpStr r; }) dns.records);
+
   dnsMapping = builtins.listToAttrs (
-    (map (h: { name = h.hostname;                    value = ipStr h; }) allDnsEntries) ++
-    (map (h: { name = "${h.hostname}.${cfg.domain}"; value = ipStr h; }) allDnsEntries)
+    entries ++
+    (map (e: e // { name = "${e.name}.${cfg.domain}"; }) entries)
   );
+
+  cnameLines = lib.mapAttrsToList
+    (name: target: "${name} 300 IN CNAME ${target}") dns.cnames;
+
+  zoneText = lib.concatStringsSep "\n"
+    ([ "$ORIGIN ${cfg.domain}." ] ++ cnameLines);
 in
 {
   config = {
@@ -56,16 +68,7 @@ in
 
         customDNS = {
           mapping = dnsMapping;
-          # CNAMEs for k8s LoadBalancer services — resolved dynamically via k8s-gateway
-          zone = ''
-            $ORIGIN ${cfg.domain}.
-            plex          300 IN CNAME plex.plex.k8s.${cfg.domain}.
-            unifi         300 IN A    10.28.0.1
-            trmnl-display 300 IN A    10.28.0.2
-            trmnl-display 300 IN AAAA 2001:470:482f:2::5
-            zot           300 IN CNAME zot.zot.k8s.${cfg.domain}.
-            llama-cpp     300 IN CNAME framework-desktop.${cfg.domain}.
-          '';
+          zone = zoneText;
         };
 
         dns64 = {

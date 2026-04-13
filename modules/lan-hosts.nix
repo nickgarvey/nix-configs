@@ -1,20 +1,13 @@
-# Canonical source of static LAN host assignments.
-# Consumed by: kea DHCP (reservations), blocky DNS (local records), lan-network.nix (static IPv6).
+# Canonical source of static LAN host assignments (physical hosts with MACs).
+# Consumed by: kea DHCP (reservations), blocky DNS (A/AAAA records),
+# lan-network.nix (static IPv6), k3s-common.nix (node-ip).
+#
+# Non-host DNS (service aliases, VIPs, CNAMEs) lives in dns.nix.
 #
 # IPv6 addresses are from 2001:470:482f::/64 (HE /48 subnet :0).
 # Subnet plan: :0 = main LAN, :1 = (reserved), :2 = k8s LB (Cilium L2),
 #   :100-:1ff = k8s pod CIDRs (/56, native routing, no masquerade), :3+ = future VLANs
 {
-  # DNS-only aliases (no DHCP reservation — point to an existing host's IP)
-  dnsAliases = [
-    { hostname = "router";   ipv4 = "10.28.0.1";      ipv6 = "2001:470:482f::1"; }
-    { hostname = "frigate";  ipv4 = "10.28.12.109";    ipv6 = null; }
-    { hostname = "smb";      ipv4 = "10.28.12.110";    ipv6 = "2001:470:482f::14"; }
-    { hostname = "k3s-api";  ipv4 = null;              ipv6 = "2001:470:482f::21"; }
-    { hostname = "unifi";   ipv4 = "10.28.0.1";      ipv6 = null; }
-    # plex, trmnl-display: DNS handled by CNAME → k8s-gateway (see blocky-dns.nix)
-  ];
-
   lanHosts = [
     { hostname = "desktop-nixos"; mac = "bc:fc:e7:1c:40:0f"; ipv4 = "10.28.8.80";    ipv6 = "2001:470:482f::10"; }
     { hostname = "microatx";      mac = "9c:6b:00:af:e9:d0"; ipv4 = "10.28.12.108";  ipv6 = "2001:470:482f::11"; }
