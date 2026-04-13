@@ -95,6 +95,9 @@ in
             # Block all outbound forwarded traffic from the LG TV (IPv4 + IPv6)
             iifname "${cfg.lanInterface}" ether saddr ac:5a:f0:2c:ef:18 drop
 
+            # Block all outbound forwarded traffic from the Reolink camera
+            iifname "${cfg.lanInterface}" ether saddr c4:3c:b0:f9:df:19 drop
+
             # LAN <-> LAN: k8s pod traffic must be accepted before conntrack —
             # outbound goes directly node→LAN (on-link), so the router only
             # sees the return path.  Conntrack marks those replies "invalid"
