@@ -6,6 +6,7 @@
     ../../modules/nixos-common.nix
     ../../modules/lan-network.nix
     ../../modules/containers/frigate.nix
+    ../../modules/containers/caddy-static.nix
     ../../modules/microvm/smb.nix
   ];
 
@@ -157,6 +158,9 @@
     cachePath = "/fast/frigate/cache";
   };
   networking.firewall.allowedTCPPorts = [ 2049 8443 ];
+
+  # --- Static file server (nspawn container) ---
+  nspawn.caddy-static.enable = true;
 
   environment.systemPackages = with pkgs; [
     ethtool
