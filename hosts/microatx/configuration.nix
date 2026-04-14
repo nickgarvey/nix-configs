@@ -152,7 +152,7 @@
   # --- Frigate NVR (nspawn container) ---
   nspawn.frigate = {
     hostBridge = "vmbr0";
-    localAddress = "10.28.12.109/24";
+    localAddress = "10.28.12.109/16";
     dataPath = "/fast/frigate/data";
     cachePath = "/fast/frigate/cache";
   };
