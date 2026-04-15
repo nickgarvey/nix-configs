@@ -137,6 +137,10 @@ in
             iifname "tailscale0" oifname "${cfg.lanInterface}" accept
             iifname "${cfg.lanInterface}" oifname "tailscale0" accept
 
+            # Tailscale exit-node: clients egress to internet via router
+            iifname "tailscale0" oifname "${cfg.wanInterface}" accept
+            iifname "tailscale0" oifname "jool0" accept
+
             # Log and drop everything else
             log prefix "nft-forward-drop: " limit rate 5/minute
             drop
