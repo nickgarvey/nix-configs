@@ -73,6 +73,7 @@
     xca
     remmina
     moonlight-qt
+    insync
   ];
 
   services.xserver.videoDrivers = [ "nvidia" ];
