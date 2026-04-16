@@ -17,6 +17,11 @@ creation_rules:
     - age:
       - *ngarvey
       - *microatx
+  - path_regex: secrets/garage.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *microatx
   - path_regex: secrets/router.yaml
     key_groups:
     - age:

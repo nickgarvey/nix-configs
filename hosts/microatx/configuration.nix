@@ -7,6 +7,7 @@
     ../../modules/lan-network.nix
     ../../modules/containers/frigate.nix
     ../../modules/containers/caddy-static.nix
+    ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
   ];
 
@@ -148,6 +149,18 @@
     shares = [
       { name = "media"; path = "/fast/media"; owner = "media"; }
     ];
+  };
+
+  # --- Garage S3 (nspawn container, IPv6-only) ---
+  fileSystems."/fast/garage" = {
+    device = "/dev/disk/by-label/fast";
+    fsType = "btrfs";
+    options = [ "compress=zstd" "subvol=@garage" "nofail" ];
+  };
+  nspawn.garage = {
+    hostBridge = "vmbr0";
+    localAddress6 = "2001:470:482f::15/64";
+    dataPath = "/fast/garage";
   };
 
   # --- Frigate NVR (nspawn container) ---
