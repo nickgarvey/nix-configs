@@ -4,6 +4,7 @@ let
   helium-browser = pkgs.callPackage ../pkgs/helium-browser {
     helium-browser-pkg = inputs.helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default;
   };
+  claude-code = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
 in
 {
   imports = [

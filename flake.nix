@@ -28,8 +28,13 @@
       url = "path:/home/ngarvey/homelab/homelab-nixpkgs/llama-cpp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    claude-code-nix = {
+      url = "github:sadjow/claude-code-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, claude-code-nix, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes for 1 - 3
