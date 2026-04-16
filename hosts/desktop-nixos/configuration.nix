@@ -5,11 +5,15 @@
     ./hardware-configuration.nix
     ../../modules/common-workstation.nix
     ../../modules/lan-network.nix
+    ../../modules/icmpv6-archive
+    ../../modules/icmpv6-archive/sops.nix
     ../../modules/qmk.nix
     ../../modules/nrfconnect.nix
     ../../modules/steam.nix
     ../../modules/nix-binary-cache.nix
   ];
+
+  services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
 

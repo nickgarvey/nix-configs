@@ -92,9 +92,6 @@ in
     })
 
     # --- IPv6-only: static IPv6 address, no IPv4, gateway via router ---
-    # Uses the router's link-local as the gateway because Cilium's BPF on the
-    # physical NIC intercepts NDP for global addresses, preventing resolution
-    # of the router's GUA.  Link-local NDP is unaffected.
     (lib.mkIf (cfg.ipv6Only && hasIPv6) {
       systemd.network.networks."25-static" = {
         matchConfig.MACAddress = hostEntry.mac;
@@ -102,15 +99,9 @@ in
           DHCP = "no";
         };
         address = [ "${hostEntry.ipv6}/64" ];
-        gateway = [ "fe80::8fb:cff:fe5c:daa4" ];
+        gateway = [ "2001:470:482f::1" ];
         dns = [ "2001:470:482f::1" ];
-        routes = [
-          # Host route for the router's GUA via its link-local.  Cilium's BPF
-          # on enp+ intercepts NDP for global addresses, so direct on-link NDP
-          # for the router fails.  This route forces traffic through the link-local
-          # next-hop instead.
-          { Destination = "2001:470:482f::1/128"; Gateway = "fe80::8fb:cff:fe5c:daa4"; }
-        ] ++ lib.optionals (!isK3sNode) (podRoutes ++ lbRoutes);
+        routes = lib.optionals (!isK3sNode) (podRoutes ++ lbRoutes);
       };
     })
 

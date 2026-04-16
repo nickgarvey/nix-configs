@@ -95,11 +95,19 @@ in
       dhcpV4Config.UseDNS = false; # We run our own DNS
     };
 
-    # LAN bridge device
+    # LAN bridge device.
+    # TODO: MulticastSnooping=false is a workaround. The kernel snooping
+    # path doesn't create host_joined MDB entries for br-lan's own IPv6
+    # solicited-node groups, so multicast NS for the router's GUA was
+    # being dropped at the bridge filter. See docs/br-lan-mdb-desync.md
+    # for diagnosis and possible real fixes.
     systemd.network.netdevs."10-br-lan" = {
       netdevConfig = {
         Name = cfg.lanInterface;
         Kind = "bridge";
+      };
+      bridgeConfig = {
+        MulticastSnooping = false;
       };
     };
 

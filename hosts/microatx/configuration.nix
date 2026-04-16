@@ -5,11 +5,15 @@
     ./hardware-configuration.nix
     ../../modules/nixos-common.nix
     ../../modules/lan-network.nix
+    ../../modules/icmpv6-archive
+    ../../modules/icmpv6-archive/sops.nix
     ../../modules/containers/frigate.nix
     ../../modules/containers/caddy-static.nix
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
   ];
+
+  services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
 

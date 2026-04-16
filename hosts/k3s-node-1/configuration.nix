@@ -3,12 +3,16 @@
   imports = [
     ../../modules/k3s-common.nix
     ../../modules/nixos-common.nix
+    ../../modules/icmpv6-archive
+    ../../modules/icmpv6-archive/sops.nix
     ./hardware-configuration.nix
   ];
 
   networking.hostName = "k3s-node-1";
   k3sConfig.isFirstNode = true;
   homelab.network.podCIDR = "2001:470:482f:100::/64";
+
+  services.icmpv6-archive.enable = true;
 
   # Prevent unused secondary NIC from being created
   services.udev.extraRules = ''

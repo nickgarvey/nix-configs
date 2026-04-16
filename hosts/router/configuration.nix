@@ -5,11 +5,18 @@
     ./hardware-configuration.nix
     ../../modules/nixos-common.nix
     ../../modules/router
+    ../../modules/icmpv6-archive
+    ../../modules/icmpv6-archive/sops.nix
     ../../modules/containers/unifi.nix
     ../../modules/containers/trmnl-proxy.nix
   ];
 
   networking.hostName = "router";
+
+  services.icmpv6-archive = {
+    enable = true;
+    interface = "br-lan";
+  };
 
   routerConfig = {
     wanInterface = "enp4s0";
