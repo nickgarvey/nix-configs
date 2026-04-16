@@ -127,8 +127,12 @@ in
         systemd.services.garage.serviceConfig.DynamicUser = lib.mkForce false;
 
         networking = {
+          # Router GUA via its link-local: Cilium BPF on k3s nodes intercepts
+          # NDP for global addresses on the LAN, so direct on-link NDP for
+          # the router's GUA fails. See modules/lan-network.nix for the same
+          # workaround on k3s nodes.
           defaultGateway6 = {
-            address = "2001:470:482f::1";
+            address = "fe80::8fb:cff:fe5c:daa4";
             interface = "eth0";
           };
           nameservers = [ "2001:470:482f::1" ];
