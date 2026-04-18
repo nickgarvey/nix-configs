@@ -5,6 +5,15 @@ let
     helium-browser-pkg = inputs.helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default;
   };
   claude-code = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  anki-with-sync = pkgs.symlinkJoin {
+    name = "anki-with-sync";
+    paths = [ (pkgs.anki.withAddons (with pkgs.ankiAddons; [ anki-connect ])) ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/anki \
+        --set SYNC_ENDPOINT https://anki-sync-server.bigeye-turtle.ts.net/
+    '';
+  };
 in
 {
   imports = [
@@ -50,6 +59,7 @@ in
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" "input" ];
     packages = with pkgs; [
+      anki-with-sync
       atop
       claude-code
       code-cursor
