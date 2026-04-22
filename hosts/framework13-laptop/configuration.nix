@@ -5,7 +5,6 @@
     ./hardware-configuration.nix
     ../../modules/common-workstation.nix
     ../../modules/steam.nix
-    ../../modules/nix-remote-builder-client.nix
     ../../modules/esp-prog-udev.nix
     ../../modules/wifi.nix
     ../../modules/vector-db-learning.nix
@@ -27,13 +26,6 @@
   networking.networkmanager.wifi.powersave = false;
 
   services.fwupd.enable = true;
-
-  services.nixRemoteBuilderClient = {
-    enable = true;
-    hostName = "desktop-nixos.bigeye-turtle.ts.net";
-    sshKeySopsFile = ../../secrets/nix-builder.yaml;
-    cachePublicKey = "desktop-nixos-cache:dwK3Z7fL5Kfd3AMiWJhkKI1hSh5M8mm5nGeYeG2mSdE=";
-  };
 
   hardware.bluetooth = {
     enable = true;
