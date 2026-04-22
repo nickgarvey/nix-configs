@@ -109,14 +109,19 @@
         ]
       },
       "locked": {
-        "lastModified": 1772004263,
-        "narHash": "sha256-KF/ETUagiJKteOHeC7Ww4Dwp73VDxVOcU4Gp0uMixmM=",
-        "path": "/home/ngarvey/homelab/homelab-nixpkgs/llama-cpp",
-        "type": "path"
+        "dir": "llama-cpp",
+        "lastModified": 1776057689,
+        "narHash": "sha256-ofzgkLVO8qPd2dAxVU8watwgCbzHwWUoLaMkb8W5JPE=",
+        "owner": "nickgarvey",
+        "repo": "homelab-nixpkgs",
+        "rev": "8869853c492edebde741aa26d9a7c77f4f5b5de9",
+        "type": "github"
       },
       "original": {
-        "path": "/home/ngarvey/homelab/homelab-nixpkgs/llama-cpp",
-        "type": "path"
+        "dir": "llama-cpp",
+        "owner": "nickgarvey",
+        "repo": "homelab-nixpkgs",
+        "type": "github"
       }
     },
     "microvm": {

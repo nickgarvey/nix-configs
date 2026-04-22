@@ -25,7 +25,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
     llama-cpp = {
-      url = "path:/home/ngarvey/homelab/homelab-nixpkgs/llama-cpp";
+      url = "github:nickgarvey/homelab-nixpkgs?dir=llama-cpp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
