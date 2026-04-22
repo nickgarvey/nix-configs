@@ -1,7 +1,7 @@
 { config, lib, pkgs, inputs, ... }:
 
 let
-  llama-cpp-vulkan = inputs.llama-cpp.packages.${pkgs.system}.default;
+  llama-cpp-vulkan = inputs.llama-cpp.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   modelsConfig = builtins.toJSON [
     {
@@ -96,6 +96,7 @@ in
         wantedBy = [ "multi-user.target" ];
         after = [ "llama-cpp-download.service" "network-online.target" ];
         requires = [ "llama-cpp-download.service" ];
+        wants = [ "network-online.target" ];
         serviceConfig = {
           Type = "simple";
           ExecStart = "${llama-cpp-vulkan}/bin/llama-server ${llamaArgs}";
