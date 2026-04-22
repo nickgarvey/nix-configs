@@ -57,7 +57,7 @@ in
   users.users.ngarvey = {
     uid = 1000;
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" "input" ];
+    extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" "input" "docker" ];
     packages = with pkgs; [
       anki-with-sync
       atop
@@ -114,6 +114,12 @@ in
   services.desktopManager.cosmic.enable = true;
 
   services.xserver.enable = true;
+
+  virtualisation.docker = {
+    enable = true;
+    autoPrune.enable = true;
+    enableOnBoot = true;
+  };
 
   services.kanata = {
     enable = true;

@@ -61,16 +61,6 @@
 
   };
 
-  # Docker virtualization
-  virtualisation = {
-    docker = {
-      enable = true;
-      autoPrune.enable = true;
-      enableOnBoot = true;
-    };
-  };
-  users.users.ngarvey.extraGroups = [ "docker" ];
-
   users.users.ngarvey.packages = with pkgs; [
     nvidia-container-toolkit
     rsync
