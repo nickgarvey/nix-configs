@@ -98,6 +98,7 @@ in
     extraSetFlags = [
       "--accept-dns"
       "--operator=ngarvey"
+      "--exit-node-allow-lan-access"
     ];
   };
 
