@@ -62,8 +62,6 @@ in
       anki-with-sync
       atop
       claude-code
-      code-cursor
-      cursor-cli
       dig
       dmidecode
       efibootmgr
