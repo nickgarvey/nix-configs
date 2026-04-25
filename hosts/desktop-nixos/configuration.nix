@@ -11,6 +11,7 @@
     ../../modules/nrfconnect.nix
     ../../modules/steam.nix
     ../../modules/nix-binary-cache.nix
+    ../../modules/whisper-gpu.nix
   ];
 
   services.icmpv6-archive.enable = true;
