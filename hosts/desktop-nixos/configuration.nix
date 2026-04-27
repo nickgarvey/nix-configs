@@ -29,6 +29,14 @@
     cores = 6;
   };
 
+  # Auto-reboot if the box wedges while unattended (last hang lasted 3 days).
+  systemd.settings.Manager = {
+    RuntimeWatchdogSec = "30s";
+    RebootWatchdogSec = "10min";
+  };
+
+  zramSwap.enable = true;
+
   services.nixBinaryCache = {
     enable = true;
     signingKeySopsFile = ../../secrets/nix-builder.yaml;
@@ -58,6 +66,7 @@
 
     kernel.sysctl = {
       "net.ipv6.conf.all.forwarding" = 1;
+      "kernel.panic" = 10;
     };
 
   };
