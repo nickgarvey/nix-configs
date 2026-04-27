@@ -6,6 +6,7 @@ Downloads GGUF models from HuggingFace and organizes them for llama-cpp router m
 
 import json
 import os
+import shutil
 import sys
 import time
 import threading
@@ -234,8 +235,11 @@ def download_file(url: str, dest: Path, expected_size: int = None) -> bool:
             download_progress[filename]["active"] = False
 
 
-def download_model(config: dict) -> bool:
-    """Download a single model based on its configuration."""
+def download_model(config: dict) -> Path | None:
+    """Download a single model based on its configuration.
+
+    Returns the model directory on success, None on failure.
+    """
     name = config.get("name")
     repo = config.get("repo")
     filter_pattern = config.get("filter", "")
@@ -253,13 +257,13 @@ def download_model(config: dict) -> bool:
 
     if not gguf_files:
         log(f"ERROR: No GGUF files found matching filter '{filter_pattern}' in {repo}")
-        return False
+        return None
 
     # Determine model directory name from GGUF files
     model_dir_name = get_model_dir_name(gguf_files)
     if not model_dir_name:
         log(f"ERROR: Could not determine model directory name")
-        return False
+        return None
 
     model_dir = MODELS_DIR / model_dir_name
     log(f"Model directory: {model_dir}")
@@ -281,7 +285,7 @@ def download_model(config: dict) -> bool:
         dest_path = model_dir / filename
 
         if not download_file(download_url, dest_path, filesize):
-            return False
+            return None
 
     # Write .model_path file
     model_files = sorted([f for f in model_dir.glob("*.gguf") if not f.name.lower().startswith("mmproj")])
@@ -313,7 +317,44 @@ def download_model(config: dict) -> bool:
 
     log(f"Model {model_dir_name} ready")
     log("")
-    return True
+    return model_dir
+
+
+def cleanup_stale(kept_dirs: set[Path]) -> None:
+    """Remove subdirectories of MODELS_DIR not in kept_dirs.
+
+    Multiple guards prevent this from escaping /models:
+      - empty kept_dirs is treated as a misconfiguration, not as "delete all"
+      - MODELS_DIR must not be a symlink and must equal its resolved path
+      - entries that are symlinks are never followed or removed
+      - each entry's resolved path must be a direct child of MODELS_DIR
+    """
+    if not kept_dirs:
+        log("Skipping cleanup: no models in current config (refusing to wipe /models)")
+        return
+
+    if MODELS_DIR.is_symlink() or MODELS_DIR.resolve() != MODELS_DIR:
+        log(f"REFUSING cleanup: {MODELS_DIR} is a symlink or non-canonical")
+        return
+
+    models_root = MODELS_DIR.resolve()
+    removed = []
+    for entry in MODELS_DIR.iterdir():
+        if entry.is_symlink():
+            continue
+        if not entry.is_dir():
+            continue
+        resolved = entry.resolve()
+        if resolved.parent != models_root:
+            log(f"REFUSING to remove {entry}: resolves to {resolved}, outside {models_root}")
+            continue
+        if resolved in kept_dirs:
+            continue
+        log(f"Removing stale model directory: {entry}")
+        shutil.rmtree(entry)
+        removed.append(entry.name)
+    if removed:
+        log(f"Removed {len(removed)} stale model dir(s): {', '.join(removed)}")
 
 
 def main():
@@ -339,17 +380,22 @@ def main():
 
     # Track model processing results
     model_results = []
+    kept_dirs: set[Path] = set()
 
     # Process each model
     for config in models_config:
-        if not download_model(config):
+        model_dir = download_model(config)
+        if model_dir is None:
             log(f"ERROR: Failed to download model {config.get('name')}")
             sys.exit(1)
+        kept_dirs.add(model_dir.resolve())
         model_results.append({
             "name": config.get("name"),
             "repo": config.get("repo"),
             "filter": config.get("filter")
         })
+
+    cleanup_stale(kept_dirs)
 
     # Print summary
     log("=" * 60)
