@@ -24,6 +24,16 @@ in
 
   homelab.network.enable = true;
 
+  homelab.llama-cpp = {
+    enable = true;
+    backend = "vulkan";
+    models = [
+      { name = "qwen3.5-27b"; repo = "unsloth/Qwen3.5-27B-GGUF"; filter = "UD-Q4_K_XL"; }
+      { name = "qwen3.5-9b";  repo = "unsloth/Qwen3.5-9B-GGUF";  filter = "UD-Q4_K_XL"; }
+      { name = "qwen3.5-4b";  repo = "unsloth/Qwen3.5-4B-GGUF";  filter = "UD-Q4_K_XL"; }
+    ];
+  };
+
   networking.hostName = "framework-desktop";
 
   boot.loader.systemd-boot.enable = true;

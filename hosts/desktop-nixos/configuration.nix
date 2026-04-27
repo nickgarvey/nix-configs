@@ -12,11 +12,20 @@
     ../../modules/steam.nix
     ../../modules/nix-binary-cache.nix
     ../../modules/whisper-gpu.nix
+    ../../modules/containers/llama-cpp.nix
   ];
 
   services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
+
+  homelab.llama-cpp = {
+    enable = true;
+    backend = "cuda";
+    models = [
+      { name = "qwen3.6-27b"; repo = "unsloth/Qwen3.6-27B-GGUF"; filter = "UD-Q4_K_XL"; }
+    ];
+  };
 
   networking = {
     hostName = "desktop-nixos";
