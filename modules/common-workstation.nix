@@ -24,6 +24,7 @@ in
   ];
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelParams = [ "split_lock_detect=off" ];
 
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
