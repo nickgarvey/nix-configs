@@ -50,6 +50,13 @@ in
     pulse.enable = true;
   };
 
+  fonts.packages = with pkgs; [
+    noto-fonts
+    noto-fonts-cjk-sans
+    noto-fonts-cjk-serif
+    noto-fonts-color-emoji
+  ];
+
   # Enable Wayland for Chrome and VSCode
   environment.variables.NIXOS_OZONE_WL = "1";
 
