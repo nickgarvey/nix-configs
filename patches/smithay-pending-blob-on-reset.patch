@@ -1,0 +1,39 @@
+diff --git a/src/backend/drm/surface/atomic.rs b/src/backend/drm/surface/atomic.rs
+index 318aa9fef..5646e5a0f 100644
+--- a/src/backend/drm/surface/atomic.rs
++++ b/src/backend/drm/surface/atomic.rs
+@@ -1008,6 +1008,34 @@ impl AtomicDrmSurface {
+         } else {
+             State::current_state(&*self.fd, self.crtc, &mut self.prop_mapping.write().unwrap())?
+         };
++
++        // After a pause/activate cycle the kernel may have destroyed all
++        // property blobs (driver-dependent — observed on amdgpu Strix Point
++        // / Krackan; see pop-os/cosmic-comp#2191). The cached `pending.blob`
++        // is then a stale handle: the next commit using it can fail
++        // TEST_ONLY, and `destroy_property_blob` on the pre-pause handle
++        // returns ENOENT. Recreate `pending.blob` from `pending.mode` so
++        // the next commit references a valid kernel object. Best-effort
++        // destroy of the old handle first; if the kernel already cleaned
++        // it up the destroy returns ENOENT and we ignore it.
++        {
++            let mut pending = self.pending.write().unwrap();
++            if matches!(pending.blob, property::Value::Blob(_)) {
++                let _ = self.fd.destroy_property_blob(pending.blob.into());
++                let new_blob =
++                    self.fd
++                        .create_property_blob(&pending.mode)
++                        .map_err(|source| {
++                            Error::Access(AccessError {
++                                errmsg: "Failed to recreate Property Blob for mode on reset_state",
++                                dev: self.fd.dev_path(),
++                                source,
++                            })
++                        })?;
++                pending.blob = new_blob;
++            }
++        }
++
+         Ok(())
+     }
+ 

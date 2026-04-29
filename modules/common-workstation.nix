@@ -20,6 +20,7 @@ in
     ./nixos-common.nix
     ./pico-udev.nix
     ./smb-automount.nix
+    ./cosmic-comp-overlay.nix
     inputs.sops-nix.nixosModules.sops
   ];
 
@@ -36,11 +37,6 @@ in
       google-chrome = super.google-chrome.override {
         commandLineArgs = "--hide-crash-restore-bubble";
       };
-      cosmic-comp = super.cosmic-comp.overrideAttrs (old: {
-        patches = (old.patches or []) ++ [
-          ../patches/cosmic-comp-reduce-tiling-latency.patch
-        ];
-      });
     })
   ];
 
