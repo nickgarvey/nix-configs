@@ -12,6 +12,14 @@
 
   nixpkgs.config.allowUnfree = true;
 
+  # desktop-nixos has a Realtek 2.5G NIC that needs the out-of-tree r8125
+  # driver (the in-tree r8169 won't bind, or binds unreliably). Bake it
+  # into the live installer so the desktop can be installed/rescued
+  # without sneakernet.
+  boot.blacklistedKernelModules = [ "r8169" ];
+  boot.extraModulePackages = with config.boot.kernelPackages; [ r8125 ];
+  boot.kernelModules = [ "r8125" ];
+
   # Ensure sshd starts immediately (the ISO module may set startWhenNeeded)
   services.openssh = {
     enable = lib.mkForce true;
