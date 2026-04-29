@@ -19,8 +19,11 @@
 
   homelab.network.enable = true;
 
+  # Temporarily disabled to speed up the disk-rework rebuild — the CUDA
+  # llama-cpp compile dominates closure build time. Re-enable after the
+  # migration lands.
   homelab.llama-cpp = {
-    enable = true;
+    enable = false;
     backend = "cuda";
     models = [
       { name = "qwen3.6-27b"; repo = "unsloth/Qwen3.6-27B-GGUF"; filter = "UD-Q4_K_XL"; }
@@ -35,7 +38,7 @@
   nix.settings = {
     download-buffer-size = 524288000;
     max-jobs = 4;
-    cores = 6;
+    cores = 0;
   };
 
   # Auto-reboot if the box wedges while unattended (last hang lasted 3 days).
@@ -61,7 +64,6 @@
 
     loader.systemd-boot.enable = true;
     loader.efi.canTouchEfiVariables = true;
-    loader.efi.efiSysMountPoint = "/efi";
 
     blacklistedKernelModules = [ "r8169" "amdgpu" ];
 

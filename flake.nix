@@ -74,7 +74,9 @@
       desktop-nixos = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
+          disko.nixosModules.disko
           ./hosts/desktop-nixos/configuration.nix
+          ./hosts/desktop-nixos/disk-config.nix
         ];
       };
 
