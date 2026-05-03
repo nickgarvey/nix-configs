@@ -50,6 +50,8 @@ creation_rules:
       - *ngarvey
       - *workstation
       - *framework13-laptop
+      - *framework-desktop
+      - *microatx
   - path_regex: secrets/icmpv6-archive.yaml
     key_groups:
     - age:

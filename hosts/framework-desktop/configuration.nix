@@ -11,8 +11,16 @@ in
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/steam.nix
     ../../modules/containers/llama-cpp.nix
+    ../../modules/nix-remote-builder-client.nix
     ./hardware-configuration.nix
   ];
+
+  services.nixRemoteBuilderClient = {
+    enable = true;
+    hostName = "tarrasque";
+    cachePublicKey = "desktop-nixos-cache:dwK3Z7fL5Kfd3AMiWJhkKI1hSh5M8mm5nGeYeG2mSdE=";
+    sshKeySopsFile = ../../secrets/nix-builder.yaml;
+  };
 
   services.icmpv6-archive.enable = true;
 

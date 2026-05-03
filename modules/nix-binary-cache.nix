@@ -36,11 +36,15 @@ in
 
     nix.settings.trusted-users = [ "nix-builder" ];
 
-    services.nix-serve = {
+    services.harmonia.cache = {
       enable = true;
-      secretKeyFile = config.sops.secrets.nix-serve-signing-key.path;
+      signKeyPaths = [ config.sops.secrets.nix-serve-signing-key.path ];
+      settings = {
+        bind = "[::]:5000";
+        priority = 30;
+      };
     };
 
-    networking.firewall.allowedTCPPorts = [ config.services.nix-serve.port ];
+    networking.firewall.allowedTCPPorts = [ 5000 ];
   };
 }

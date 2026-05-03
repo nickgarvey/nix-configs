@@ -11,7 +11,15 @@
     ../../modules/containers/caddy-static.nix
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
+    ../../modules/nix-remote-builder-client.nix
   ];
+
+  services.nixRemoteBuilderClient = {
+    enable = true;
+    hostName = "tarrasque";
+    cachePublicKey = "desktop-nixos-cache:dwK3Z7fL5Kfd3AMiWJhkKI1hSh5M8mm5nGeYeG2mSdE=";
+    sshKeySopsFile = ../../secrets/nix-builder.yaml;
+  };
 
   services.icmpv6-archive.enable = true;
 

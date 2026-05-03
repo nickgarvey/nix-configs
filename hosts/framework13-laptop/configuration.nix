@@ -8,7 +8,15 @@
     ../../modules/esp-prog-udev.nix
     ../../modules/wifi.nix
     ../../modules/vector-db-learning.nix
+    ../../modules/nix-remote-builder-client.nix
   ];
+
+  services.nixRemoteBuilderClient = {
+    enable = true;
+    hostName = "tarrasque";
+    cachePublicKey = "desktop-nixos-cache:dwK3Z7fL5Kfd3AMiWJhkKI1hSh5M8mm5nGeYeG2mSdE=";
+    sshKeySopsFile = ../../secrets/nix-builder.yaml;
+  };
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
