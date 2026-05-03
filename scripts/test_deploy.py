@@ -338,11 +338,11 @@ class TestSafeDeploy(unittest.TestCase):
         args = self._make_args()
         result = deploy_safe(h, args)
         self.assertTrue(result)
-        mock_build.assert_called_once_with(h)
+        mock_build.assert_called_once_with(h, args)
         mock_arm.assert_called_once_with(h, 300)
         self.assertEqual(mock_deploy.call_count, 2)
-        mock_deploy.assert_any_call(h, mode="test", timeout=60)
-        mock_deploy.assert_any_call(h, mode="boot", timeout=60)
+        mock_deploy.assert_any_call(h, args, mode="test", timeout=60)
+        mock_deploy.assert_any_call(h, args, mode="boot", timeout=60)
         mock_disarm.assert_called_once_with(h, "deploy-watchdog-123")
 
     @patch("deploy.arm_watchdog", return_value=None)
@@ -485,8 +485,8 @@ class TestUnsafeDeploy(unittest.TestCase):
         args = build_parser().parse_args(["--no-safe"])
         result = deploy_unsafe(h, args)
         self.assertTrue(result)
-        mock_build.assert_called_once_with(h)
-        mock_deploy.assert_called_once_with(h, mode="switch", timeout=60)
+        mock_build.assert_called_once_with(h, args)
+        mock_deploy.assert_called_once_with(h, args, mode="switch", timeout=60)
 
     @patch("deploy.build_host", return_value=False)
     def test_build_failure(self, mock_build):

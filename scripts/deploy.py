@@ -154,6 +154,24 @@ VERIFY_RETRIES = 3
 VERIFY_RETRY_DELAY = 2
 DEPLOY_TIMEOUT = 60
 
+# Host to offload eval+build to via nixos-rebuild --build-host.
+# nixos-rebuild-ng evaluates and builds on this host, saving laptop CPU.
+# Used unconditionally (even when deploying BUILD_HOST itself); aarch64
+# targets are handled via tarrasque's existing binfmt emulation.
+BUILD_HOST = "tarrasque"
+
+
+def build_host_args(args: argparse.Namespace) -> list[str]:
+    """Return build-offload flags unless --no-build-host was passed.
+
+    --use-substitutes makes the target pull paths from its configured
+    substituters (harmonia on BUILD_HOST) instead of having this laptop
+    proxy them in the nix-copy step."""
+    if args.no_build_host:
+        return []
+    return ["--build-host", BUILD_HOST, "--use-substitutes"]
+
+
 def run_cmd(
     cmd: list[str],
     check: bool = True,
@@ -366,11 +384,12 @@ def handle_reboot(host: Host, force_reboot: bool, no_reboot: bool,
 
 
 def get_expected_system_path(host: Host) -> str | None:
-    """Get the expected system store path from the local build result."""
+    """Eval-only query for the expected system store path. Does not build or
+    fetch — relies on the eval cache populated by an earlier nixos-rebuild."""
     try:
         result = run_cmd(
-            ["nix", "build", "--print-out-paths", "--no-link",
-             f".#nixosConfigurations.{host.flake_name}.config.system.build.toplevel"],
+            ["nix", "eval", "--raw",
+             f".#nixosConfigurations.{host.flake_name}.config.system.build.toplevel.outPath"],
             capture_output=True, check=True,
         )
         return result.stdout.strip()
@@ -403,16 +422,23 @@ def verify_config_active(host: Host, expected_path: str) -> bool:
     return False
 
 
-def build_host(host: Host) -> str | None:
-    """Build the NixOS configuration for a host (local build only, no deploy).
-    Returns the expected system store path, or None on failure."""
+def build_host(host: Host, args: argparse.Namespace) -> str | None:
+    """Build the NixOS configuration for a host (no activation).
+    Returns the expected system store path, or None on failure.
+
+    When offloading to BUILD_HOST, also passes --target-host so the closure
+    is copied build-host -> target directly, instead of being pulled back to
+    this laptop. With --no-build-host, builds locally as before."""
     print(f"  Building config for {host.fqdn}...")
+    cmd = [
+        "nixos-rebuild", "build",
+        "--flake", f".#{host.flake_name}",
+        "--no-reexec",
+    ] + build_host_args(args)
+    if not args.no_build_host:
+        cmd += ["--target-host", host.fqdn, "--sudo"]
     try:
-        run_cmd([
-            "nixos-rebuild", "build",
-            "--flake", f".#{host.flake_name}",
-            "--no-reexec",
-        ])
+        run_cmd(cmd)
     except subprocess.CalledProcessError as e:
         print(f"  ✗ Build for {host.fqdn} failed: {e}")
         return None
@@ -436,7 +462,8 @@ def clear_nixos_rebuild_unit(host: Host) -> None:
             pass
 
 
-def deploy_host(host: Host, mode: str = "switch", timeout: int = DEPLOY_TIMEOUT) -> bool:
+def deploy_host(host: Host, args: argparse.Namespace,
+                mode: str = "switch", timeout: int = DEPLOY_TIMEOUT) -> bool:
     """Deploy NixOS configuration to a host with the given mode (switch/test/boot).
 
     Assumes the config is already built locally (via build_host). The timeout
@@ -453,14 +480,15 @@ def deploy_host(host: Host, mode: str = "switch", timeout: int = DEPLOY_TIMEOUT)
         # ~15s instead of waiting for the OS TCP timeout (~minutes).
         "NIX_SSHOPTS": "-o ServerAliveInterval=5 -o ServerAliveCountMax=3",
     }
+    cmd = ["nixos-rebuild", mode,
+           "--target-host", host.fqdn,
+           "--flake", f".#{host.flake_name}",
+           "--no-reexec",
+           "--sudo"] + build_host_args(args)
     try:
-        print(f"  Running: nixos-rebuild {mode} --target-host {host.fqdn} --flake .#{host.flake_name} --no-reexec --sudo")
+        print(f"  Running: {' '.join(cmd)}")
         subprocess.run(
-            ["nixos-rebuild", mode,
-             "--target-host", host.fqdn,
-             "--flake", f".#{host.flake_name}",
-             "--no-reexec",
-             "--sudo"],
+            cmd,
             check=True,
             timeout=timeout,
             env=env,
@@ -484,15 +512,15 @@ def deploy_host(host: Host, mode: str = "switch", timeout: int = DEPLOY_TIMEOUT)
         return False
 
 
-def build_flake(host: Host) -> bool:
+def build_flake(host: Host, args: argparse.Namespace) -> bool:
     """Build the flake for a host without deploying."""
     print(f"  Building flake for {host.flake_name}...")
     try:
         run_cmd([
-            "nix", "build",
-            f".#nixosConfigurations.{host.flake_name}.config.system.build.toplevel",
-            "--no-link",
-        ])
+            "nixos-rebuild", "build",
+            "--flake", f".#{host.flake_name}",
+            "--no-reexec",
+        ] + build_host_args(args))
         print(f"  ✓ Flake for {host.flake_name} builds successfully")
         return True
     except subprocess.CalledProcessError as e:
@@ -617,7 +645,7 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
     deploy_timeout = args.deploy_timeout
 
     print(f"\n  [1/8] Building locally...")
-    expected_path = build_host(host)
+    expected_path = build_host(host, args)
     if not expected_path:
         return False
 
@@ -631,7 +659,7 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
         return False
 
     print(f"\n  [3/8] Activating config (nixos-rebuild test)...")
-    if not deploy_host(host, mode="test", timeout=deploy_timeout):
+    if not deploy_host(host, args, mode="test", timeout=deploy_timeout):
         print(f"  'nixos-rebuild test' failed.")
         print(f"  Watchdog will reboot {host.hostname} in <={watchdog_timeout}s to restore old config")
         return False
@@ -650,7 +678,7 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
     print(f"\n  [6/8] Persisting config (nixos-rebuild boot)...")
     if getattr(host, '_test_timed_out', False):
         clear_nixos_rebuild_unit(host)
-    if not deploy_host(host, mode="boot", timeout=deploy_timeout):
+    if not deploy_host(host, args, mode="boot", timeout=deploy_timeout):
         print(f"  'nixos-rebuild boot' failed! Config is active but NOT persisted as boot default.")
         disarm_watchdog(host, unit_name)
         return False
@@ -673,10 +701,10 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
 
 def deploy_unsafe(host: Host, args: argparse.Namespace) -> bool:
     """Deploy without watchdog protection: raw nixos-rebuild switch."""
-    if not build_host(host):  # returns path or None
+    if not build_host(host, args):  # returns path or None
         return False
 
-    if not deploy_host(host, mode="switch", timeout=args.deploy_timeout):
+    if not deploy_host(host, args, mode="switch", timeout=args.deploy_timeout):
         return False
 
     if not handle_reboot(host, force_reboot=args.reboot, no_reboot=args.no_reboot,
@@ -702,14 +730,14 @@ def process_host(host: Host, args: argparse.Namespace) -> bool:
         return False
 
     if args.dry_run:
-        return process_host_dry_run(host)
+        return process_host_dry_run(host, args)
 
     if args.no_safe:
         return deploy_unsafe(host, args)
     return deploy_safe(host, args)
 
 
-def process_host_dry_run(host: Host) -> bool:
+def process_host_dry_run(host: Host, args: argparse.Namespace) -> bool:
     """Dry-run: verify SSH (already done), systemd-run, k8s health, flake build."""
     print(f"  [DRY-RUN] Checking {host.hostname}...")
 
@@ -732,7 +760,7 @@ def process_host_dry_run(host: Host) -> bool:
         print(f"  ✗ Could not check systemd-run on {host.hostname}: {e}")
         return False
 
-    if not build_flake(host):
+    if not build_flake(host, args):
         return False
 
     print(f"  ✓ [DRY-RUN] {host.hostname} passed all checks")
@@ -831,6 +859,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip the post-deploy k8s node health check",
     )
+    parser.add_argument(
+        "--no-build-host",
+        action="store_true",
+        help=f"Disable eval+build offload to {BUILD_HOST}; run everything locally",
+    )
     return parser
 
 
@@ -867,6 +900,21 @@ def main():
     if not args.skip_flake_check and not args.dry_run:
         if not run_flake_check():
             sys.exit(1)
+
+    # Verify build host is reachable; we offload eval+build to it.
+    if not args.no_build_host:
+        print(f"\nChecking build host {BUILD_HOST} is reachable...")
+        probe = subprocess.run(
+            ["ssh", "-o", f"ConnectTimeout={SSH_TIMEOUT}", "-o", "BatchMode=yes",
+             BUILD_HOST, "true"],
+            capture_output=True,
+        )
+        if probe.returncode != 0:
+            print(f"  ✗ Build host {BUILD_HOST} unreachable. Aborting.")
+            print(f"    stderr: {probe.stderr.decode().strip()}")
+            print(f"    (rerun with --no-build-host to build locally)")
+            sys.exit(1)
+        print(f"  ✓ Build host {BUILD_HOST} reachable")
 
     # Deploy
     failed_hosts = []
