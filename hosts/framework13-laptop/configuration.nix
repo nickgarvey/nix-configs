@@ -7,7 +7,7 @@
     ../../modules/steam.nix
     ../../modules/esp-prog-udev.nix
     ../../modules/wifi.nix
-    ../../modules/vector-db-learning.nix
+    # ../../modules/vector-db-learning.nix  # disabled: arxiv pins requests~=2.32, conflicts with nixpkgs 2.33
     ../../modules/nix-remote-builder-client.nix
   ];
 
