@@ -153,6 +153,16 @@ class TestArgParsing(unittest.TestCase):
         args = parser.parse_args([])
         self.assertFalse(args.no_safe)
 
+    def test_boot_only_flag(self):
+        parser = build_parser()
+        args = parser.parse_args(["--boot-only"])
+        self.assertTrue(args.boot_only)
+
+    def test_boot_only_default_false(self):
+        parser = build_parser()
+        args = parser.parse_args([])
+        self.assertFalse(args.boot_only)
+
     def test_skip_k8s_check_flag(self):
         parser = build_parser()
         args = parser.parse_args(["--skip-k8s-check"])
@@ -253,6 +263,28 @@ class TestHandleReboot(unittest.TestCase):
         self.assertEqual(len(deploy.deploy_warnings), 1)
         self.assertIn("NEVER", deploy.deploy_warnings[0])
 
+    @patch("deploy.reboot_host", return_value=True)
+    @patch("deploy.needs_reboot", return_value=False)
+    def test_assume_needed_bypasses_needs_check(self, mock_needs, mock_reboot):
+        # AUTO host with assume_needed=True should reboot even if needs_reboot==False
+        h = self._make_host(RebootPolicy.AUTO)
+        result = handle_reboot(h, force_reboot=False, no_reboot=False,
+                               force_reboot_prompt=False, assume_needed=True)
+        self.assertTrue(result)
+        mock_needs.assert_not_called()
+        mock_reboot.assert_called_once_with(h)
+
+    @patch("builtins.input", return_value="y")
+    @patch("deploy.reboot_host", return_value=True)
+    @patch("deploy.needs_reboot", return_value=False)
+    def test_assume_needed_still_prompts_for_prompt_policy(self, mock_needs, mock_reboot, mock_input):
+        h = self._make_host(RebootPolicy.PROMPT)
+        result = handle_reboot(h, force_reboot=False, no_reboot=False,
+                               force_reboot_prompt=False, assume_needed=True)
+        self.assertTrue(result)
+        mock_input.assert_called_once()
+        mock_reboot.assert_called_once()
+
 
 class TestProcessHostDispatch(unittest.TestCase):
     @patch("deploy.deploy_safe", return_value=True)
@@ -269,7 +301,15 @@ class TestProcessHostDispatch(unittest.TestCase):
         h = Host("test", "test", "home.arpa", RebootPolicy.AUTO)
         args = build_parser().parse_args(["--no-safe"])
         process_host(h, args)
-        mock_unsafe.assert_called_once()
+        mock_unsafe.assert_called_once_with(h, args, mode="switch")
+
+    @patch("deploy.deploy_unsafe", return_value=True)
+    @patch("deploy.check_ssh", return_value=True)
+    def test_boot_only_dispatches_with_boot_mode(self, mock_ssh, mock_unsafe):
+        h = Host("test", "test", "home.arpa", RebootPolicy.AUTO)
+        args = build_parser().parse_args(["--boot-only"])
+        process_host(h, args)
+        mock_unsafe.assert_called_once_with(h, args, mode="boot")
 
     @patch("deploy.check_ssh", return_value=False)
     def test_ssh_failure_stops(self, mock_ssh):
@@ -524,6 +564,38 @@ class TestUnsafeDeploy(unittest.TestCase):
         result = deploy_unsafe(h, args)
         self.assertTrue(result)
         mock_health.assert_not_called()
+
+    @patch("deploy.handle_reboot", return_value=True)
+    @patch("deploy.deploy_host", return_value=True)
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_boot_mode_uses_boot(self, mock_build, mock_deploy, mock_reboot):
+        h = self._make_host()
+        args = build_parser().parse_args(["--boot-only"])
+        result = deploy_unsafe(h, args, mode="boot")
+        self.assertTrue(result)
+        mock_deploy.assert_called_once_with(h, args, mode="boot", timeout=60)
+
+    @patch("deploy.handle_reboot", return_value=True)
+    @patch("deploy.deploy_host", return_value=True)
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_boot_mode_passes_assume_needed(self, mock_build, mock_deploy, mock_reboot):
+        h = self._make_host()
+        args = build_parser().parse_args(["--boot-only"])
+        deploy_unsafe(h, args, mode="boot")
+        # handle_reboot must get assume_needed=True so the dbus-style change
+        # (which doesn't touch /run/current-system) still triggers a reboot.
+        _, kwargs = mock_reboot.call_args
+        self.assertTrue(kwargs.get("assume_needed"))
+
+    @patch("deploy.handle_reboot", return_value=True)
+    @patch("deploy.deploy_host", return_value=True)
+    @patch("deploy.build_host", return_value="/nix/store/fake-system-path")
+    def test_switch_mode_does_not_assume_needed(self, mock_build, mock_deploy, mock_reboot):
+        h = self._make_host()
+        args = build_parser().parse_args(["--no-safe"])
+        deploy_unsafe(h, args, mode="switch")
+        _, kwargs = mock_reboot.call_args
+        self.assertFalse(kwargs.get("assume_needed"))
 
 
 class TestConnectivityChecks(unittest.TestCase):

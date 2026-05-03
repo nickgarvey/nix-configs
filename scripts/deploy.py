@@ -343,16 +343,20 @@ def reboot_host(host: Host) -> bool:
 
 
 def handle_reboot(host: Host, force_reboot: bool, no_reboot: bool,
-                  force_reboot_prompt: bool) -> bool:
+                  force_reboot_prompt: bool, assume_needed: bool = False) -> bool:
     """Decide whether to reboot based on host policy and flags.
 
     Returns False only if a reboot was attempted and failed.
-    """
+
+    assume_needed: skip the needs_reboot() check and treat reboot as required.
+    Used by --boot-only mode where /run/current-system isn't updated, so the
+    kernel-vs-running comparison can't detect that the new generation needs a
+    reboot to take effect."""
     if force_reboot:
         print(f"  Forcing reboot due to --reboot flag")
         return reboot_host(host)
 
-    if not needs_reboot(host):
+    if not assume_needed and not needs_reboot(host):
         print(f"  No reboot needed for {host.hostname}")
         return True
 
@@ -699,29 +703,37 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
     return True
 
 
-def deploy_unsafe(host: Host, args: argparse.Namespace) -> bool:
-    """Deploy without watchdog protection: raw nixos-rebuild switch."""
+def deploy_unsafe(host: Host, args: argparse.Namespace, mode: str = "switch") -> bool:
+    """Deploy without watchdog protection. mode is 'switch' (build+activate+
+    persist) or 'boot' (build+persist only, no activation — for changes that
+    require a reboot to take effect, e.g. dbus implementation switch)."""
     if not build_host(host, args):  # returns path or None
         return False
 
-    if not deploy_host(host, args, mode="switch", timeout=args.deploy_timeout):
+    if not deploy_host(host, args, mode=mode, timeout=args.deploy_timeout):
         return False
 
     if not handle_reboot(host, force_reboot=args.reboot, no_reboot=args.no_reboot,
-                         force_reboot_prompt=args.force_reboot):
+                         force_reboot_prompt=args.force_reboot,
+                         assume_needed=(mode == "boot")):
         return False
 
     if host.k8s_health_check and not args.skip_k8s_check:
         if not wait_for_node_healthy(host):
             return False
 
-    print(f"  ✓ {host.hostname} deployed successfully (no-safe)")
+    print(f"  ✓ {host.hostname} deployed successfully (no-safe, {mode})")
     return True
 
 
 def process_host(host: Host, args: argparse.Namespace) -> bool:
-    """Deploy a host using the safe (watchdog) or unsafe (switch) flow."""
-    mode = "no-safe" if args.no_safe else "safe"
+    """Deploy a host using the safe (watchdog) or unsafe (switch/boot) flow."""
+    if args.boot_only:
+        mode = "no-safe boot"
+    elif args.no_safe:
+        mode = "no-safe switch"
+    else:
+        mode = "safe"
     print(f"\n{'=' * 60}")
     print(f"Processing {host.hostname} (mode={mode}, reboot={host.reboot_policy.value})")
     print(f"{'=' * 60}")
@@ -732,8 +744,10 @@ def process_host(host: Host, args: argparse.Namespace) -> bool:
     if args.dry_run:
         return process_host_dry_run(host, args)
 
+    if args.boot_only:
+        return deploy_unsafe(host, args, mode="boot")
     if args.no_safe:
-        return deploy_unsafe(host, args)
+        return deploy_unsafe(host, args, mode="switch")
     return deploy_safe(host, args)
 
 
@@ -843,6 +857,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Bypass watchdog protection; use raw nixos-rebuild switch",
     )
     parser.add_argument(
+        "--boot-only",
+        action="store_true",
+        help="Bypass watchdog and use nixos-rebuild boot (no activation, just persist as next boot). Use for changes that require a reboot to take effect, e.g. dbus implementation switch.",
+    )
+    parser.add_argument(
         "--watchdog-timeout",
         type=int,
         default=300,
@@ -874,6 +893,9 @@ def main():
     # Validate mutually exclusive reboot options
     if args.reboot and args.no_reboot:
         print("Error: --reboot and --no-reboot cannot be used together")
+        sys.exit(1)
+    if args.no_safe and args.boot_only:
+        print("Error: --no-safe and --boot-only cannot be used together")
         sys.exit(1)
 
     # Filter and sort hosts
