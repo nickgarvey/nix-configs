@@ -15,6 +15,7 @@
     enable = true;
     hostName = "tarrasque";
     cachePublicKey = "desktop-nixos-cache:dwK3Z7fL5Kfd3AMiWJhkKI1hSh5M8mm5nGeYeG2mSdE=";
+    hostPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPZcTP3OJYZenl8bb9fC9NTIvFCOaxs2gi1Mz4OhAByw";
     sshKeySopsFile = ../../secrets/nix-builder.yaml;
   };
 

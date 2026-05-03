@@ -27,6 +27,11 @@ in
       default = 5000;
       description = "Port the remote nix-serve instance listens on.";
     };
+
+    hostPublicKey = lib.mkOption {
+      type = lib.types.str;
+      description = "SSH host public key of the remote builder. Pinned so root's nix-daemon can connect non-interactively without TOFU.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -35,6 +40,11 @@ in
       key = "nix_builder_ssh_key";
       mode = "0400";
       owner = "root";
+    };
+
+    programs.ssh.knownHosts.${cfg.hostName} = {
+      hostNames = [ cfg.hostName "${cfg.hostName}.home.arpa" ];
+      publicKey = cfg.hostPublicKey;
     };
 
     systemd.services.nix-daemon.environment.NIX_SSHOPTS = "-o ConnectTimeout=5 -o BatchMode=yes";
