@@ -28,7 +28,7 @@
   };
 
   networking = {
-    hostName = "desktop-nixos";
+    hostName = "tarrasque";
     hostId = "a4c946db";
   };
 

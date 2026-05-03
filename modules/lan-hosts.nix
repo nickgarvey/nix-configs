@@ -9,7 +9,7 @@
 #   :100-:1ff = k8s pod CIDRs (/56, native routing, no masquerade), :3+ = future VLANs
 {
   lanHosts = [
-    { hostname = "desktop-nixos"; mac = "bc:fc:e7:1c:40:0f"; ipv4 = "10.28.8.80";    ipv6 = "2001:470:482f::10"; }
+    { hostname = "tarrasque";     mac = "bc:fc:e7:1c:40:0f"; ipv4 = "10.28.8.80";    ipv6 = "2001:470:482f::10"; }
     { hostname = "microatx";      mac = "9c:6b:00:af:e9:d0"; ipv4 = "10.28.12.108";  ipv6 = "2001:470:482f::11"; }
     { hostname = "homeassistant"; mac = "f4:4d:30:6e:98:42"; ipv4 = "10.28.1.100";   ipv6 = "2001:470:482f:0:ddc2:6cba:8b8e:69a6"; }
     { hostname = "lg-device";     mac = "28:0f:eb:91:76:fa"; ipv4 = "10.28.1.8";     ipv6 = null; }

@@ -71,12 +71,12 @@
     # These are all NixOS configurations
     nixosConfigurations = {
       # Desktop
-      desktop-nixos = nixpkgs.lib.nixosSystem {
+      tarrasque = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
-          ./hosts/desktop-nixos/configuration.nix
-          ./hosts/desktop-nixos/disk-config.nix
+          ./hosts/tarrasque/configuration.nix
+          ./hosts/tarrasque/disk-config.nix
         ];
       };
 

@@ -46,13 +46,14 @@ class TestHostConfig(unittest.TestCase):
         hosts = list(ALL_HOSTS)
         hosts.sort(key=lambda h: h.deploy_order)
         names = [h.hostname for h in hosts]
-        # k3s nodes first, then framework-desktop, microatx, router last
+        # k3s nodes first, then framework-desktop, tarrasque, microatx, router last
         self.assertEqual(names.index("k3s-node-1"), 0)
         self.assertEqual(names.index("k3s-node-3"), 2)
         self.assertEqual(names.index("framework-desktop"), 3)
-        self.assertEqual(names.index("microatx"), 4)
-        self.assertEqual(names.index("framework13-laptop"), 5)
-        self.assertEqual(names.index("router"), 6)
+        self.assertEqual(names.index("tarrasque"), 4)
+        self.assertEqual(names.index("microatx"), 5)
+        self.assertEqual(names.index("framework13-laptop"), 6)
+        self.assertEqual(names.index("router"), 7)
 
     def test_all_hosts_have_unique_hostnames(self):
         names = [h.hostname for h in ALL_HOSTS]

@@ -12,7 +12,7 @@
 
   nixpkgs.config.allowUnfree = true;
 
-  # desktop-nixos has a Realtek 2.5G NIC that needs the out-of-tree r8125
+  # tarrasque has a Realtek 2.5G NIC that needs the out-of-tree r8125
   # driver (the in-tree r8169 won't bind, or binds unreliably). Bake it
   # into the live installer so the desktop can be installed/rescued
   # without sneakernet.
