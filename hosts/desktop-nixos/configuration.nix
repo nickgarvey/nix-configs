@@ -19,11 +19,8 @@
 
   homelab.network.enable = true;
 
-  # Temporarily disabled to speed up the disk-rework rebuild — the CUDA
-  # llama-cpp compile dominates closure build time. Re-enable after the
-  # migration lands.
   homelab.llama-cpp = {
-    enable = false;
+    enable = true;
     backend = "cuda";
     models = [
       { name = "qwen3.6-27b"; repo = "unsloth/Qwen3.6-27B-GGUF"; filter = "UD-Q4_K_XL"; }
