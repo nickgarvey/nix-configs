@@ -7,7 +7,6 @@
     ../../modules/router
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
-    ../../modules/containers/unifi.nix
     ../../modules/containers/trmnl-proxy.nix
   ];
 
