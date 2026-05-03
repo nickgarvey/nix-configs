@@ -3,17 +3,23 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ../../modules/common-workstation.nix
+    ../../modules/nixos-common.nix
+    ../../modules/smb-automount.nix
     ../../modules/lan-network.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
-    ../../modules/qmk.nix
-    ../../modules/nrfconnect.nix
-    ../../modules/steam.nix
     ../../modules/nix-binary-cache.nix
     ../../modules/whisper-gpu.nix
     ../../modules/containers/llama-cpp.nix
+    inputs.sops-nix.nixosModules.sops
   ];
+
+  sops.age.keyFile = "/root/.config/sops/age/keys.txt";
+
+  nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.cudaSupport = true;
+
+  time.timeZone = "America/Los_Angeles";
 
   services.icmpv6-archive.enable = true;
 
@@ -54,10 +60,34 @@
     ];
   };
 
-  nixpkgs.config.cudaSupport = true;
+  virtualisation.docker = {
+    enable = true;
+    autoPrune.enable = true;
+    enableOnBoot = true;
+  };
+
+  # resolved handles split-DNS: Tailscale pushes its nameservers for ts.net
+  # domains, while DHCP-provided DNS is used for everything else.
+  services.resolved = {
+    enable = true;
+    settings.Resolve.DNSSEC = "false";
+  };
+  networking.networkmanager.dns = "systemd-resolved";
+
+  services.tailscale = {
+    enable = true;
+    useRoutingFeatures = "client";
+    extraSetFlags = [
+      "--accept-dns"
+      "--operator=ngarvey"
+      "--exit-node-allow-lan-access"
+    ];
+  };
 
   boot = {
     binfmt.emulatedSystems = [ "aarch64-linux" ];
+
+    kernelPackages = pkgs.linuxPackages_latest;
 
     loader.systemd-boot.enable = true;
     loader.efi.canTouchEfiVariables = true;
@@ -79,21 +109,15 @@
 
   };
 
-  users.users.ngarvey.packages = with pkgs; [
-    nvidia-container-toolkit
-    rsync
-    xca
-    remmina
-    moonlight-qt
-    insync
-  ];
-
-  services.xserver.videoDrivers = [ "nvidia" ];
-
-  # Allow NVIDIA to initialize without a connected monitor
-  services.xserver.deviceSection = ''
-    Option "AllowEmptyInitialConfiguration"
-  '';
+  users.users.ngarvey = {
+    uid = 1000;
+    extraGroups = [ "docker" ];
+    packages = with pkgs; [
+      inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
+      nvidia-container-toolkit
+      rsync
+    ];
+  };
 
   hardware = {
     nvidia = {
@@ -108,23 +132,10 @@
     nvidia-container-toolkit.enable = true;
   };
 
-  services.udev.packages = [
-    pkgs.openocd
-  ];
-
-  # Enable autologin
-  services.displayManager.autoLogin = {
-    enable = true;
-    user = "ngarvey";
-  };
-
-  # Disable due to graphical glitches (nvidia?)
-  systemd.sleep.settings.Sleep = {
-    AllowSuspend = "no";
-    AllowHibernation = "no";
-    AllowHybridSleep = "no";
-    AllowSuspendThenHibernate = "no";
-  };
+  # Satisfies nvidia-container-toolkit's driver-presence assertion. xserver
+  # itself is not enabled — this just declares which driver the toolkit can
+  # find for Docker GPU passthrough.
+  services.xserver.videoDrivers = [ "nvidia" ];
 
   # Most users should NEVER change this value after the initial install, for any reason,
   # even if you've upgraded your system to a new NixOS release.

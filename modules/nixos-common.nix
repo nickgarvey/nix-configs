@@ -2,6 +2,9 @@
 {
   environment.systemPackages = with pkgs; [
     btop
+    dig
+    dmidecode
+    efibootmgr
     file
     ghostty.terminfo  # For terminfo support when SSH'ing from Ghostty
     neovim
