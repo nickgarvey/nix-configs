@@ -36,6 +36,8 @@
 
   services.openssh.enable = true;
 
+  boot.zfs.forceImportRoot = false;
+
   # Suppress post-quantum key exchange warnings from SSH client
   programs.ssh.extraConfig = "WarnWeakCrypto no-pq-kex";
 
