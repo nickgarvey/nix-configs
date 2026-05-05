@@ -4,39 +4,44 @@ Deploy NixOS updates to all managed hosts with safe rollback.
 
 Overview
 --------
-Every host is deployed using a safe pattern: arm a systemd watchdog timer,
-activate the config with `nixos-rebuild test` (without persisting), verify
-connectivity, then persist with `nixos-rebuild boot` and disarm the watchdog.
-If any step fails, the watchdog reboots the host back to the last known-good
-config. Use --no-safe to bypass this and use raw `nixos-rebuild switch`.
+Every host is deployed using a safe pattern: build the config, arm a systemd
+watchdog timer, activate with `nixos-rebuild test` (without persisting),
+verify connectivity, verify the active system matches what we built, persist
+with `nixos-rebuild boot`, and disarm the watchdog. If any step fails, the
+watchdog reboots the host back to the last known-good config. Use --no-safe
+to bypass this and use raw `nixos-rebuild switch`, or --boot-only to bypass
+and use `nixos-rebuild boot` (persist without activating).
 
 Before any deployment, `nix flake check` is run to catch evaluation errors
-early (skip with --skip-flake-check). Then each host is deployed sequentially
-in a fixed order.
+early (skip with --skip-flake-check; auto-skipped under --dry-run). Then
+each host is deployed sequentially in a fixed order.
 
 Deploy order
 ------------
   1. k3s-lion, k3s-dragon, k3s-goat   (auto-reboot, k8s health check)
-  2. framework-desktop                     (prompt reboot, k8s health check)
-  3. microatx                              (prompt reboot)
-  4. framework13-laptop                    (prompt reboot, opt-in only)
-  5. router                                (never reboot, extended checks)
+  2. framework-desktop                (prompt reboot)
+  3. tarrasque                        (prompt reboot; also the build host)
+  4. microatx                         (prompt reboot)
+  5. framework13-laptop               (prompt reboot, opt-in only)
+  6. router                           (never reboot, extended checks)
 
 Safe deploy flow (all hosts)
 -----------------------------
-  1. Arm watchdog timer (systemd-run reboot on timeout)
-  2. `nixos-rebuild test` — activate config without persisting
-  3. Verify connectivity (with retries) — per-host checks:
+  1. Build config locally (offloaded to BUILD_HOST unless --no-build-host)
+  2. Arm watchdog timer (systemd-run reboot on timeout)
+  3. `nixos-rebuild test` — activate config without persisting
+  4. Verify connectivity (with retries) — per-host checks:
        Default: SSH reachable + ping gateway from host
        Router:  SSH + ping internet + DNS + IPv6 tunnel + IPv6 internet
-  4. `nixos-rebuild boot` — persist as boot default
-  5. Disarm watchdog
-  6. Handle reboot if kernel changed
-  7. Post-deploy checks (k8s health)
+  5. Verify active system path matches what we built (catches mid-deploy
+     watchdog reboots that would otherwise let us persist a stale config)
+  6. `nixos-rebuild boot` — persist as boot default
+  7. Disarm watchdog
+  8. Handle reboot if kernel/params changed; post-deploy k8s health check
 
-  If step 2 or 3 fails, the watchdog reboots to the previous config.
-  If step 4 fails, the config is active but not persisted; watchdog is
-  disarmed and a warning is shown.
+  If steps 3–5 fail, the watchdog reboots to the previous config.
+  If step 6 fails, the config is active but not persisted; watchdog is
+  disarmed.
 
 Failure handling
 ----------------
@@ -45,15 +50,15 @@ Failure handling
 
 Host groups
 -----------
-  k3s         k3s-lion, k3s-dragon, k3s-goat, framework-desktop
+  k3s         k3s-lion, k3s-dragon, k3s-goat
   infra       k3s-lion, k3s-dragon, k3s-goat, microatx, router
-  workstation framework-desktop, framework13-laptop*
+  workstation framework-desktop, tarrasque, framework13-laptop*
   router      router
 
 Examples
 --------
   deploy.py                              # deploy everything (safe mode)
-  deploy.py --group k3s                  # just the k3s cluster + framework-desktop
+  deploy.py --group k3s                  # just the k3s cluster
   deploy.py --hosts router               # just the router
   deploy.py --hosts microatx framework-desktop   # specific hosts
   deploy.py --no-safe                    # bypass watchdog, use raw switch
@@ -67,6 +72,7 @@ Examples
 
 import argparse
 import builtins
+import os
 import subprocess
 import sys
 import time
@@ -101,6 +107,7 @@ class Host:
     groups: list[str] = field(default_factory=list)
     default: bool = True
     connectivity_checks: list[str] = field(default_factory=lambda: list(DEFAULT_CONNECTIVITY_CHECKS))
+    _test_timed_out: bool = False
 
     @property
     def fqdn(self) -> str:
@@ -131,7 +138,7 @@ ALL_HOSTS = [
     Host("microatx", "microatx", "home.arpa",
          RebootPolicy.PROMPT,
          deploy_order=30, groups=["infra"]),
-Host("router", "router", "",
+    Host("router", "router", "",
          RebootPolicy.NEVER,
          ssh_address="10.28.0.1", deploy_order=99, groups=["infra", "router"],
          connectivity_checks=["ssh", "ping_internet", "dns", "ipv6_tunnel", "ipv6_internet"]),
@@ -456,7 +463,10 @@ def build_host(host: Host, args: argparse.Namespace) -> str | None:
 
 def clear_nixos_rebuild_unit(host: Host) -> None:
     """Clear the nixos-rebuild-switch-to-configuration unit on a remote host.
-    Called after a timed-out 'test' leaves a stale unit that blocks subsequent runs."""
+    Called prophylactically before each 'test' to clear any stale unit from a
+    prior failed deploy, and again before 'boot' if the preceding 'test'
+    disconnected mid-activation (which can leave the unit in a failed state
+    that blocks subsequent runs)."""
     print(f"  Clearing stale nixos-rebuild unit on {host.hostname}...")
     for action in ["stop", "reset-failed"]:
         try:
@@ -479,7 +489,7 @@ def deploy_host(host: Host, args: argparse.Namespace,
     """
     print(f"  Deploying ({mode}) to {host.fqdn}...")
     env = {
-        **__import__('os').environ,
+        **os.environ,
         # ServerAliveInterval causes SSH to detect a dead control socket in
         # ~15s instead of waiting for the OS TCP timeout (~minutes).
         "NIX_SSHOPTS": "-o ServerAliveInterval=5 -o ServerAliveCountMax=3",
@@ -680,7 +690,7 @@ def deploy_safe(host: Host, args: argparse.Namespace) -> bool:
         return False
 
     print(f"\n  [6/8] Persisting config (nixos-rebuild boot)...")
-    if getattr(host, '_test_timed_out', False):
+    if host._test_timed_out:
         clear_nixos_rebuild_unit(host)
     if not deploy_host(host, args, mode="boot", timeout=deploy_timeout):
         print(f"  'nixos-rebuild boot' failed! Config is active but NOT persisted as boot default.")
