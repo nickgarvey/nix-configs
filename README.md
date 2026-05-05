@@ -20,5 +20,5 @@ Command references:
 mkdir -p .extra-files/k3s/root/.config/sops/age
 cp ~/.config/sops/age/k3s-keys.txt .extra-files/k3s/root/.config/sops/age
 
-nix run github:nix-community/nixos-anywhere -- --flake ~/nix-configs#k3s-node-1 --generate-hardware-config nixos-generate-config hosts/k3s-node-1/hardware-configuration.nix --target-host root@10.28.9.174 --extra-files .extra-files/k3s
+nix run github:nix-community/nixos-anywhere -- --flake ~/nix-configs#k3s-lion --generate-hardware-config nixos-generate-config hosts/k3s-lion/hardware-configuration.nix --target-host root@10.28.9.174 --extra-files .extra-files/k3s
 ```

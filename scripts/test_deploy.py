@@ -27,9 +27,9 @@ from deploy import (
 
 class TestHostConfig(unittest.TestCase):
     def test_fqdn_with_domain(self):
-        h = Host("k3s-node-1", "k3s-node-1", "home.arpa",
+        h = Host("k3s-lion", "k3s-lion", "home.arpa",
                  RebootPolicy.AUTO)
-        self.assertEqual(h.fqdn, "k3s-node-1.home.arpa")
+        self.assertEqual(h.fqdn, "k3s-lion.home.arpa")
 
     def test_fqdn_without_domain(self):
         h = Host("framework-desktop", "framework-desktop", "home.arpa",
@@ -47,8 +47,8 @@ class TestHostConfig(unittest.TestCase):
         hosts.sort(key=lambda h: h.deploy_order)
         names = [h.hostname for h in hosts]
         # k3s nodes first, then framework-desktop, tarrasque, microatx, router last
-        self.assertEqual(names.index("k3s-node-1"), 0)
-        self.assertEqual(names.index("k3s-node-3"), 2)
+        self.assertEqual(names.index("k3s-lion"), 0)
+        self.assertEqual(names.index("k3s-goat"), 2)
         self.assertEqual(names.index("framework-desktop"), 3)
         self.assertEqual(names.index("tarrasque"), 4)
         self.assertEqual(names.index("microatx"), 5)
@@ -106,14 +106,14 @@ class TestFilterHosts(unittest.TestCase):
     def test_filter_by_group(self):
         result = filter_hosts(ALL_HOSTS, None, ["k3s"])
         names = [h.hostname for h in result]
-        self.assertIn("k3s-node-1", names)
+        self.assertIn("k3s-lion", names)
         self.assertNotIn("framework-desktop", names)  # framework-desktop is no longer in k3s group
         self.assertNotIn("microatx", names)
 
     def test_filter_by_hostname_and_group(self):
-        result = filter_hosts(ALL_HOSTS, ["k3s-node-1"], ["k3s"])
+        result = filter_hosts(ALL_HOSTS, ["k3s-lion"], ["k3s"])
         names = [h.hostname for h in result]
-        self.assertEqual(names, ["k3s-node-1"])
+        self.assertEqual(names, ["k3s-lion"])
 
     def test_filter_no_match(self):
         result = filter_hosts(ALL_HOSTS, ["nonexistent"], None)
@@ -616,10 +616,10 @@ class TestConnectivityChecks(unittest.TestCase):
     @patch("deploy.run_cmd")
     def test_ping_check_via_host(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
-        self.assertTrue(ping_check("10.28.0.1", via_host="k3s-node-1.home.arpa"))
+        self.assertTrue(ping_check("10.28.0.1", via_host="k3s-lion.home.arpa"))
         cmd = mock_run.call_args[0][0]
         self.assertIn("ssh", cmd)
-        self.assertIn("k3s-node-1.home.arpa", cmd)
+        self.assertIn("k3s-lion.home.arpa", cmd)
 
     @patch("deploy.run_cmd")
     def test_dns_check_success(self, mock_run):

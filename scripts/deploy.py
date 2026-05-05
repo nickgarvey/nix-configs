@@ -16,7 +16,7 @@ in a fixed order.
 
 Deploy order
 ------------
-  1. k3s-node-1, k3s-node-2, k3s-node-3   (auto-reboot, k8s health check)
+  1. k3s-lion, k3s-dragon, k3s-goat   (auto-reboot, k8s health check)
   2. framework-desktop                     (prompt reboot, k8s health check)
   3. microatx                              (prompt reboot)
   4. framework13-laptop                    (prompt reboot, opt-in only)
@@ -45,8 +45,8 @@ Failure handling
 
 Host groups
 -----------
-  k3s         k3s-node-1, k3s-node-2, k3s-node-3, framework-desktop
-  infra       k3s-node-1, k3s-node-2, k3s-node-3, microatx, router
+  k3s         k3s-lion, k3s-dragon, k3s-goat, framework-desktop
+  infra       k3s-lion, k3s-dragon, k3s-goat, microatx, router
   workstation framework-desktop, framework13-laptop*
   router      router
 
@@ -110,15 +110,15 @@ class Host:
 
 
 ALL_HOSTS = [
-    Host("k3s-node-1", "k3s-node-1", "home.arpa",
+    Host("k3s-lion", "k3s-lion", "home.arpa",
          RebootPolicy.AUTO,
          k8s_health_check=True, deploy_order=10, groups=["k3s", "infra"],
          connectivity_checks=["ssh", "ping6_gateway"]),
-    Host("k3s-node-2", "k3s-node-2", "home.arpa",
+    Host("k3s-dragon", "k3s-dragon", "home.arpa",
          RebootPolicy.AUTO,
          k8s_health_check=True, deploy_order=11, groups=["k3s", "infra"],
          connectivity_checks=["ssh", "ping6_gateway"]),
-    Host("k3s-node-3", "k3s-node-3", "home.arpa",
+    Host("k3s-goat", "k3s-goat", "home.arpa",
          RebootPolicy.AUTO,
          k8s_health_check=True, deploy_order=12, groups=["k3s", "infra"],
          connectivity_checks=["ssh", "ping6_gateway"]),

@@ -1,1 +1,0 @@
-../k3s-node-1/disk-config.nix

@@ -37,9 +37,9 @@
   outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, claude-code-nix, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
-    # Generate the k3s nodes for 1 - 3
+    # Generate the k3s nodes
     # Actual configs for these nodes are in hosts/
-    k3sNodes = k3sHelpers.generateK3sNodes [ 1 2 3 ];
+    k3sNodes = k3sHelpers.generateK3sNodes [ "k3s-lion" "k3s-dragon" "k3s-goat" ];
 
     pkgs = import nixpkgs { system = "x86_64-linux"; };
 

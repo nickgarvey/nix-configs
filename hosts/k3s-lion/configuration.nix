@@ -8,13 +8,13 @@
     ./hardware-configuration.nix
   ];
 
-  networking.hostName = "k3s-node-2";
-  homelab.network.podCIDR = "2001:470:482f:101::/64";
+  networking.hostName = "k3s-lion";
+  homelab.network.podCIDR = "2001:470:482f:100::/64";
 
   services.icmpv6-archive.enable = true;
 
   # Prevent unused secondary NIC from being created
   services.udev.extraRules = ''
-    ACTION=="add", SUBSYSTEM=="net", ATTR{address}=="78:55:36:00:47:f3", ATTR{device/driver/unbind}="0000:02:00.0"
+    ACTION=="add", SUBSYSTEM=="net", ATTR{address}=="78:55:36:00:4c:c5", ATTR{device/driver/unbind}="0000:02:00.0"
   '';
 }
