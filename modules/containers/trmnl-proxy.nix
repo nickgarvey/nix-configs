@@ -31,6 +31,13 @@ in
           ];
           locations."/" = {
             proxyPass = "http://[2001:470:482f:2::5]:80";
+            # Preserve client Host header. Without this, nginx defaults
+            # Host to the proxy target literal "[2001:470:482f:2::5]:80",
+            # and trmnl-display echoes it into image_url — which the
+            # IPv4-only ESP32 then cannot dial.
+            extraConfig = ''
+              proxy_set_header Host $host;
+            '';
           };
         };
       };
