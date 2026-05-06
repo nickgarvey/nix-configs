@@ -30,6 +30,6 @@ in rec {
   cnames = {
     plex      = "plex.plex.k8s.home.arpa.";
     zot       = "zot.zot.k8s.home.arpa.";
-    llama-cpp = "framework-desktop.home.arpa.";
+    llama-cpp = "tarrasque.home.arpa.";
   };
 }
