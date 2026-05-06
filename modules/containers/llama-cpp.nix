@@ -56,9 +56,10 @@ let
     "--batch-size 4096"
     "--ubatch-size 512"
     "--jinja"
-    "--models-max 4"
     "--timeout 1800"
-    "--models-dir /models"
+    # Stable API-facing name decoupled from the GGUF filename, so consumers
+    # (e.g. trmnl-display) don't need updating when the model changes.
+    "--alias llama-cpp"
   ] ++ lib.optional (cfg.backend != "cpu") "--n-gpu-layers 99");
 in
 {
@@ -110,6 +111,11 @@ in
           description = "Download GGUF models for llama-cpp";
           wantedBy = [ "multi-user.target" ];
           before   = [ "llama-cpp-server.service" ];
+          # DNS must be ready: container has its own /etc/resolv.conf pointing
+          # at host's systemd-resolved; without these waits, boot-time download
+          # races resolved and fails with "Name or service not known".
+          after    = [ "network-online.target" "nss-lookup.target" ];
+          wants    = [ "network-online.target" "nss-lookup.target" ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
@@ -127,7 +133,18 @@ in
           wants    = [ "network-online.target" ];
           serviceConfig = {
             Type = "simple";
-            ExecStart = "${selectedPkg}/bin/llama-server ${llamaArgs}";
+            ExecStart = pkgs.writeShellScript "llama-cpp-start" ''
+              set -euo pipefail
+              shopt -s nullglob
+              files=(/models/*/*.gguf)
+              if [ ''${#files[@]} -eq 0 ]; then
+                echo "ERROR: no .gguf model found under /models/" >&2
+                exit 1
+              fi
+              MODEL="''${files[0]}"
+              echo "starting llama-server with model: $MODEL"
+              exec ${selectedPkg}/bin/llama-server --model "$MODEL" ${llamaArgs}
+            '';
             Restart = "on-failure";
             RestartSec = 10;
           };
