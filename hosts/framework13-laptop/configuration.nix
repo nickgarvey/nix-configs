@@ -36,6 +36,11 @@
 
   services.fwupd.enable = true;
 
+  services.fprintd.enable = true;
+  security.pam.services.login.fprintAuth = true;
+  security.pam.services.sudo.fprintAuth = true;
+  security.pam.services.cosmic-greeter.fprintAuth = true;
+
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
