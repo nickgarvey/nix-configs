@@ -44,6 +44,9 @@ domain=WORKGROUP
     where = "/shares/media";
     type = "cifs";
     options = lib.concatStringsSep "," (mountOptions ++ [ "ip=10.28.12.110" ]);
+    mountConfig = {
+      TimeoutStopSec = "5";
+    };
     wantedBy = [ ];
   }];
 
