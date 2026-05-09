@@ -26,9 +26,9 @@
 
   homelab.network.enable = true;
 
-  networking.hostName = "microatx";
+  networking.hostName = "aboleth";
 
-  sops.defaultSopsFile = ../../secrets/microatx.yaml;
+  sops.defaultSopsFile = ../../secrets/aboleth.yaml;
   sops.defaultSopsFormat = "yaml";
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 

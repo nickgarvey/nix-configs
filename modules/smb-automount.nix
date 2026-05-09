@@ -40,7 +40,7 @@ domain=WORKGROUP
   ];
 
   systemd.mounts = [{
-    what = "//microatx.home.arpa/media";
+    what = "//aboleth.home.arpa/media";
     where = "/shares/media";
     type = "cifs";
     options = lib.concatStringsSep "," (mountOptions ++ [ "ip=10.28.12.110" ]);

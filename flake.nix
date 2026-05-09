@@ -114,15 +114,15 @@
         ];
       };
 
-      # Microatx server
-      microatx = nixpkgs.lib.nixosSystem {
+      # Aboleth server
+      aboleth = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
           microvm.nixosModules.host
-          ./hosts/microatx/configuration.nix
-          ./hosts/microatx/disk-config.nix
+          ./hosts/aboleth/configuration.nix
+          ./hosts/aboleth/disk-config.nix
         ];
       };
 

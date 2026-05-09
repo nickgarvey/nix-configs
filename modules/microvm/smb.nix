@@ -133,7 +133,7 @@ in
           enable = true;
           settings = {
             global = {
-              "server string" = "microatx";
+              "server string" = "aboleth";
               security = "user";
               "map to guest" = "Bad User";
             };

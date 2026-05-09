@@ -21,7 +21,7 @@ Deploy order
   1. k3s-lion, k3s-dragon, k3s-goat   (auto-reboot, k8s health check)
   2. framework-desktop                (prompt reboot)
   3. tarrasque                        (prompt reboot; also the build host)
-  4. microatx                         (prompt reboot)
+  4. aboleth                          (prompt reboot)
   5. framework13-laptop               (prompt reboot, opt-in only)
   6. router                           (never reboot, extended checks)
 
@@ -51,7 +51,7 @@ Failure handling
 Host groups
 -----------
   k3s         k3s-lion, k3s-dragon, k3s-goat
-  infra       k3s-lion, k3s-dragon, k3s-goat, microatx, router
+  infra       k3s-lion, k3s-dragon, k3s-goat, aboleth, router
   workstation framework-desktop, tarrasque, framework13-laptop*
   router      router
 
@@ -60,7 +60,7 @@ Examples
   deploy.py                              # deploy everything (safe mode)
   deploy.py --group k3s                  # just the k3s cluster
   deploy.py --hosts router               # just the router
-  deploy.py --hosts microatx framework-desktop   # specific hosts
+  deploy.py --hosts aboleth framework-desktop    # specific hosts
   deploy.py --no-safe                    # bypass watchdog, use raw switch
   deploy.py --dry-run                    # verify without deploying
   deploy.py --force-reboot               # skip reboot prompts on PROMPT hosts
@@ -135,7 +135,7 @@ ALL_HOSTS = [
     Host("tarrasque", "tarrasque", "home.arpa",
          RebootPolicy.PROMPT,
          deploy_order=21, groups=["workstation"]),
-    Host("microatx", "microatx", "home.arpa",
+    Host("aboleth", "aboleth", "home.arpa",
          RebootPolicy.PROMPT,
          deploy_order=30, groups=["infra"]),
     Host("router", "router", "",

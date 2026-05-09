@@ -46,12 +46,12 @@ class TestHostConfig(unittest.TestCase):
         hosts = list(ALL_HOSTS)
         hosts.sort(key=lambda h: h.deploy_order)
         names = [h.hostname for h in hosts]
-        # k3s nodes first, then framework-desktop, tarrasque, microatx, router last
+        # k3s nodes first, then framework-desktop, tarrasque, aboleth, router last
         self.assertEqual(names.index("k3s-lion"), 0)
         self.assertEqual(names.index("k3s-goat"), 2)
         self.assertEqual(names.index("framework-desktop"), 3)
         self.assertEqual(names.index("tarrasque"), 4)
-        self.assertEqual(names.index("microatx"), 5)
+        self.assertEqual(names.index("aboleth"), 5)
         self.assertEqual(names.index("framework13-laptop"), 6)
         self.assertEqual(names.index("router"), 7)
 
@@ -99,16 +99,16 @@ class TestFilterHosts(unittest.TestCase):
         self.assertEqual(result[0].hostname, "framework13-laptop")
 
     def test_filter_by_hostname(self):
-        result = filter_hosts(ALL_HOSTS, ["router", "microatx"], None)
+        result = filter_hosts(ALL_HOSTS, ["router", "aboleth"], None)
         names = [h.hostname for h in result]
-        self.assertEqual(set(names), {"router", "microatx"})
+        self.assertEqual(set(names), {"router", "aboleth"})
 
     def test_filter_by_group(self):
         result = filter_hosts(ALL_HOSTS, None, ["k3s"])
         names = [h.hostname for h in result]
         self.assertIn("k3s-lion", names)
         self.assertNotIn("framework-desktop", names)  # framework-desktop is no longer in k3s group
-        self.assertNotIn("microatx", names)
+        self.assertNotIn("aboleth", names)
 
     def test_filter_by_hostname_and_group(self):
         result = filter_hosts(ALL_HOSTS, ["k3s-lion"], ["k3s"])
