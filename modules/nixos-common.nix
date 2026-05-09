@@ -1,5 +1,9 @@
 { config, lib, pkgs, inputs, ... }:
 {
+  imports = [
+    ./nspawn-cleanup.nix
+  ];
+
   environment.systemPackages = with pkgs; [
     btop
     dig
