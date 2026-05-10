@@ -136,6 +136,11 @@ in
         # needs the RTSP creds to expand ${FRIGATE_RTSP_USER}/${FRIGATE_RTSP_PASSWORD}.
         systemd.services.go2rtc.serviceConfig.EnvironmentFile = "/run/frigate-rtsp.env";
 
+        # Cap stop timeout: shutdown was hitting the 90s default and dominating
+        # host poweroff time.
+        systemd.services.frigate.serviceConfig.TimeoutStopSec = "5s";
+        systemd.services.go2rtc.serviceConfig.TimeoutStopSec = "5s";
+
         services.go2rtc = {
           enable = true;
           settings = {
