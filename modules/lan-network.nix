@@ -8,6 +8,7 @@ let
   hostEntry = lib.findFirst (h: h.hostname == hostname) null lanHosts;
 
   hasBridge = cfg.bridge != null;
+  hasMac = hostEntry != null && hostEntry.mac != "";
   hasIPv6 = hostEntry != null && hostEntry.ipv6 != null && hostEntry.mac != "";
 
   # Static routes for k3s pod CIDRs — each k3s node gets a /64 from the /56 pod range.
@@ -126,8 +127,12 @@ in
         };
       };
 
+      # Match by MAC when we know it (from lan-hosts.nix) so the bridge slave
+      # survives PCI renumbering when other cards are added/removed.
       systemd.network.networks."10-${br.interface}" = {
-        matchConfig.Name = br.interface;
+        matchConfig = if hasMac
+          then { MACAddress = hostEntry.mac; }
+          else { Name = br.interface; };
         networkConfig.Bridge = br.name;
       };
 
