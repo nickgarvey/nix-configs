@@ -22,7 +22,7 @@ Services running on that cluster are found in the [k8s-gitops](https://github.co
 
 `tarrasque` is truly [a monster](https://www.aidedd.org/dnd/monstres.php?vo=tarrasque) with a 9950x3d and RTX 5090. This runs LLMs, performs Nix builds for other hosts, and serves the Nix cache.
 
-`aboleth` is an [ancient hoarder of memories](https://www.aidedd.org/dnd/monstres.php?vo=aboleth) with 128GB of DDR4 ECC RAM, so it acts as a storage and VM server.
+`aboleth` has 128GB of DDR4 ECC RAM, so it acts as a storage and VM server to [hoard its memories](https://www.aidedd.org/dnd/monstres.php?vo=aboleth).
 
 `framework-desktop` is a 128GB model of the Framework Desktop. LLM performance was underwhelming, so it largely acts as a surprisingly quiet TV computer.
 
