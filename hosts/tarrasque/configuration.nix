@@ -92,10 +92,7 @@
     loader.systemd-boot.enable = true;
     loader.efi.canTouchEfiVariables = true;
 
-    blacklistedKernelModules = [ "r8169" ];
-
-    extraModulePackages = with config.boot.kernelPackages; [ r8125 ];
-    kernelModules = [ "r8125" "nvidia" "nvidia_drm" "nvidia_uvm" "nvidia_modeset" ];
+    kernelModules = [ "nvidia" "nvidia_drm" "nvidia_uvm" "nvidia_modeset" ];
     kernelParams = [
       "pcie_aspm=off"
     ];
