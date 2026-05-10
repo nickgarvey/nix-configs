@@ -25,6 +25,20 @@
 
   homelab.network.enable = true;
 
+  # Direct 25G link to aboleth (ConnectX-4 Lx port 0).
+  # /128 host route shifts traffic addressed to aboleth's regular LAN IPv6
+  # onto this link. networkd tears down the route automatically when the
+  # link loses carrier, so the LAN /64 route takes over without intervention.
+  systemd.network.networks."30-mlx-direct" = {
+    matchConfig.MACAddress = "24:8a:07:3b:eb:ec";
+    networkConfig.DHCP = "no";
+    linkConfig.MTUBytes = "9000";
+    address = [ "fd28::1/64" ];
+    routes = [
+      { Destination = "2001:470:482f::11/128"; Gateway = "fd28::2"; }
+    ];
+  };
+
   homelab.llama-cpp = {
     enable = true;
     backend = "cuda";
