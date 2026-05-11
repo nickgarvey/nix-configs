@@ -2,3 +2,4 @@ result/
 .extra-files
 result
 scripts/__pycache__
+.claude/
