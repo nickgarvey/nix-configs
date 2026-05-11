@@ -47,6 +47,7 @@
   };
 
   users.users.ngarvey.packages = with pkgs; [
+    signal-desktop
     vlc
   ];
 
