@@ -42,6 +42,17 @@
   homelab.llama-cpp = {
     enable = true;
     backend = "cuda";
+    # Default to instruct/non-thinking mode for lower latency; clients pass
+    # chat_template_kwargs.enable_thinking=true to opt back in.
+    # Sampling matches Qwen3.6 instruct-mode recommendation (HF/Unsloth).
+    extraArgs = [
+      ''--chat-template-kwargs '{"enable_thinking":false}' ''
+      "--temp 0.7"
+      "--top-p 0.8"
+      "--top-k 20"
+      "--min-p 0.0"
+      "--presence-penalty 1.5"
+    ];
     models = [
       { name = "qwen3.6-27b"; repo = "unsloth/Qwen3.6-27B-GGUF"; filter = "UD-Q4_K_XL"; }
     ];

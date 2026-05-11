@@ -60,7 +60,8 @@ let
     # Stable API-facing name decoupled from the GGUF filename, so consumers
     # (e.g. trmnl-display) don't need updating when the model changes.
     "--alias llama-cpp"
-  ] ++ lib.optional (cfg.backend != "cpu") "--n-gpu-layers 99");
+  ] ++ lib.optional (cfg.backend != "cpu") "--n-gpu-layers 99"
+    ++ cfg.extraArgs);
 in
 {
   options.homelab.llama-cpp = {
@@ -69,6 +70,12 @@ in
     backend = lib.mkOption {
       type = lib.types.enum [ "vulkan" "cuda" "cpu" ];
       description = "llama-cpp build and matching GPU device passthrough.";
+    };
+
+    extraArgs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra flags appended to llama-server (e.g. sampling overrides).";
     };
 
     models = lib.mkOption {

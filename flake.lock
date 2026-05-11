@@ -110,11 +110,11 @@
       },
       "locked": {
         "dir": "llama-cpp",
-        "lastModified": 1777254813,
-        "narHash": "sha256-EHTEBvw5trXTrkI0VitsDOMkypWTeJ3jhkc6mNiRFJk=",
+        "lastModified": 1778537297,
+        "narHash": "sha256-l4eTKK65yCHdxDsQIhuOz/8lvSCD8c507g0vdVY9FiY=",
         "owner": "nickgarvey",
         "repo": "homelab-nixpkgs",
-        "rev": "18bf106eb950eb4c93ab8c3754b9ee842af8b9ed",
+        "rev": "366282404d881378dcf196edd1dc5d2d1ede56dd",
         "type": "github"
       },
       "original": {
