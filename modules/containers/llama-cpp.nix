@@ -128,9 +128,12 @@ in
         systemd.services.llama-cpp-server = {
           description = "llama.cpp inference server";
           wantedBy = [ "multi-user.target" ];
+          # `wants` (not `requires`): if the download retry fails (e.g. DNS
+          # race against the host's resolved, which has happened on boot),
+          # still bring up the server against whatever GGUFs are already on
+          # /models. The ExecStart script errors out if none exist.
           after    = [ "llama-cpp-download.service" "network-online.target" ];
-          requires = [ "llama-cpp-download.service" ];
-          wants    = [ "network-online.target" ];
+          wants    = [ "llama-cpp-download.service" "network-online.target" ];
           serviceConfig = {
             Type = "simple";
             ExecStart = pkgs.writeShellScript "llama-cpp-start" ''
