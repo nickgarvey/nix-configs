@@ -69,6 +69,16 @@ in
             };
           };
           # IPv6 is auto-derived from lan-hosts.nix and added to the bridge if available
+          ipv6.suppressSlaac = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = ''
+              Suppress SLAAC address autoconfiguration on this bridge while
+              still using RA-derived on-link prefix and route information.
+              Set true for hosts whose static IPv6 is outside the LAN /64
+              (e.g. in a delegated per-host prefix).
+            '';
+          };
         };
       });
       default = null;
@@ -143,6 +153,9 @@ in
         gateway = [ br.ipv4.gateway ];
         dns = br.ipv4.dns ++ [ "2001:470:482f::1" ];
         networkConfig.DHCP = "no";
+        ipv6AcceptRAConfig = lib.mkIf br.ipv6.suppressSlaac {
+          UseAutonomousPrefix = false;
+        };
         routes = lib.optionals (hasIPv6 && !isK3sNode) (podRoutes ++ lbRoutes);
       };
     }))
