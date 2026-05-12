@@ -128,12 +128,19 @@ in
             iifname "jool0" oifname "${cfg.wanInterface}" accept
             iifname "jool0" oifname "${cfg.lanInterface}" accept
 
-            # LAN <-> HE tunnel: fully open in both directions.
-            # Clients don't get a default IPv6 route (RouterLifetimeSec=0 in RA)
-            # so outbound IPv6 only happens when a host opts in manually.
+            # LAN -> HE tunnel: outbound IPv6 from LAN allowed.
+            # HE tunnel -> LAN: default-deny. Hosts on the LAN are reachable
+            # from the public IPv6 internet by routing, so without this drop
+            # every IPv6 listener (including ones with weak/no host firewall,
+            # like nspawn containers) would be exposed. Add explicit
+            # exposures below as needed. ICMPv6 is allowed for PMTUD / ND.
             ${lib.optionalString heCfg.enable ''
               iifname "${cfg.lanInterface}" oifname "he-ipv6" accept
-              iifname "he-ipv6" oifname "${cfg.lanInterface}" ct state new accept
+              iifname "he-ipv6" oifname "${cfg.lanInterface}" meta l4proto ipv6-icmp counter accept
+              # (no inbound services currently exposed — anything reaching the
+              # final drop below is a denied inbound from the public IPv6
+              # internet)
+              iifname "he-ipv6" oifname "${cfg.lanInterface}" counter drop
             ''}
 
             # LAN <-> Tailscale
