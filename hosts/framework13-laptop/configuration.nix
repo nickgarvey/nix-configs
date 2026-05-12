@@ -58,5 +58,5 @@
     AllowSuspendThenHibernate = "no";
   };
 
-  system.stateVersion = "25.11"; # Do not change!
+  system.stateVersion = "25.11";
 }

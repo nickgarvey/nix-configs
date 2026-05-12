@@ -87,22 +87,20 @@ in
   };
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
-    # --- Base: always systemd-networkd ---
     {
       networking.useNetworkd = true;
     }
 
-    # --- IPv4 forwarding ---
     (lib.mkIf cfg.ipv4Forward {
       boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
     })
 
-    # --- IPv6 forwarding ---
     (lib.mkIf cfg.ipv6Forward {
       boot.kernel.sysctl."net.ipv6.conf.all.forwarding" = 1;
     })
 
-    # --- IPv6-only: static IPv6 address, no IPv4, gateway via router ---
+    # IPv6-only host: static IPv6 from lan-hosts.nix, no IPv4, default
+    # gateway via router.
     (lib.mkIf (cfg.ipv6Only && hasIPv6) {
       systemd.network.networks."25-static" = {
         matchConfig.MACAddress = hostEntry.mac;
@@ -116,7 +114,8 @@ in
       };
     })
 
-    # --- Dual-stack: IPv4 via DHCP + static IPv6 (no bridge) ---
+    # Dual-stack host without a bridge: IPv4 via DHCP, static IPv6 from
+    # lan-hosts.nix.
     (lib.mkIf (!cfg.ipv6Only && !hasBridge && hasIPv6) {
       systemd.network.networks."25-static" = {
         matchConfig.MACAddress = hostEntry.mac;
@@ -128,7 +127,6 @@ in
       };
     })
 
-    # --- Bridge ---
     (lib.mkIf hasBridge (let br = cfg.bridge; in {
       systemd.network.netdevs."10-${br.name}" = {
         netdevConfig = {

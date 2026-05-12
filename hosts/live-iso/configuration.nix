@@ -33,7 +33,6 @@
   };
 
   environment.systemPackages = with pkgs; [
-    # Disk partitioning and filesystem tools
     parted
     gptfdisk
     dosfstools
@@ -41,12 +40,8 @@
     btrfs-progs
     ntfs3g
     cryptsetup
-
-    # Network and transfer
     rsync
     curl
-
-    # Hardware diagnostics
     smartmontools
     lshw
   ];

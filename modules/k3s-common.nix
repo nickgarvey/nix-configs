@@ -107,6 +107,6 @@ in
       BindPaths = "/run/current-system/sw/bin:/bin";
     };
 
-    system.stateVersion = "25.11"; # Do not change!
+    system.stateVersion = "25.11";
   };
 }

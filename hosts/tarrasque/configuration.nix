@@ -42,14 +42,13 @@
     # LAN /64 — suppress SLAAC so it doesn't autoconfig a LAN-/64 address.
     ipv6.suppressSlaac = true;
   };
-  # --- Storage: btrfs ---
+
   fileSystems."/fast/garage" = {
     device = "/dev/disk/by-label/fast";
     fsType = "btrfs";
     options = [ "compress=zstd" "subvol=@garage" "nofail" ];
   };
 
-  # --- Garage S3 (nspawn container, IPv6-only) ---
   nspawn.garage = {
     hostBridge = "vmbr0";
     localAddress6 = "2001:470:482f:201::2/64";
@@ -179,8 +178,5 @@
   # find for Docker GPU passthrough.
   services.xserver.videoDrivers = [ "nvidia" ];
 
-  # Most users should NEVER change this value after the initial install, for any reason,
-  # even if you've upgraded your system to a new NixOS release.
-  # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
-  system.stateVersion = "25.05"; # Do not change!
+  system.stateVersion = "25.05";
 }

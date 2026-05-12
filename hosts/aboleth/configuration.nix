@@ -39,7 +39,6 @@
   sops.defaultSopsFormat = "yaml";
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
-  # --- Boot ---
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
@@ -51,8 +50,8 @@
 
   networking.nftables.enable = true;
 
-  # --- Networking ---
-  # Bridge for VMs/containers to get LAN access (IPv6 auto-derived from lan-hosts.nix)
+  # Bridge for VMs/containers to get LAN access (IPv6 auto-derived from
+  # lan-hosts.nix).
   homelab.network.bridge = {
     name = "vmbr0";
     interface = "enp5s0";
@@ -67,22 +66,22 @@
   # Tailscale
   services.tailscale.enable = true;
 
-  # --- NFS server (Longhorn backup target) ---
+  # NFS server: Longhorn backup target.
   services.nfs.server = {
     enable = true;
     exports = ''
       /slow/backups/longhorn 2001:470:482f::/48(rw,sync,no_subtree_check,no_root_squash)
     '';
   };
-  # --- Storage: btrfs ---
-  # SATA mirror (2x 8TB Seagate) — slow/bulk storage
+
+  # SATA mirror (2x 8TB Seagate) — slow/bulk storage.
   fileSystems."/slow/backups" = {
     device = "/dev/disk/by-label/slow";
     fsType = "btrfs";
     options = [ "compress=zstd" "subvol=@backups" "nofail" ];
   };
 
-  # Samsung 980 PRO NVMe — fast tier
+  # Samsung 980 PRO NVMe — fast tier.
   fileSystems."/fast/media" = {
     device = "/dev/disk/by-label/fast";
     fsType = "btrfs";
@@ -124,7 +123,6 @@
     };
   };
 
-  # --- Incus ---
   users.users.ngarvey.extraGroups = [ "incus-admin" ];
   virtualisation.incus = {
     enable = true;
@@ -151,7 +149,6 @@
     "d /slow/backups/longhorn 0755 root root - -"
   ];
 
-  # --- SMB (microvm) ---
   microvm-smb = {
     hostBridge = "vmbr0";
     address = "10.28.12.110/16";
@@ -164,7 +161,6 @@
     ];
   };
 
-  # --- Garage S3 (nspawn container, IPv6-only) ---
   fileSystems."/fast/garage" = {
     device = "/dev/disk/by-label/fast";
     fsType = "btrfs";
@@ -181,7 +177,6 @@
     peers = [ "90dd7a079aec5a9bead87277093390fbf4e66e018a946149af829cd85f875f0f@garage-tarrasque.home.arpa:3901" ];
   };
 
-  # --- Frigate NVR (nspawn container) ---
   nspawn.frigate = {
     hostBridge = "vmbr0";
     localAddress = "10.28.12.109/16";
@@ -190,7 +185,6 @@
   };
   networking.firewall.allowedTCPPorts = [ 2049 8443 ];
 
-  # --- Static file server (nspawn container) ---
   nspawn.caddy-static.enable = true;
 
   environment.systemPackages = with pkgs; [
