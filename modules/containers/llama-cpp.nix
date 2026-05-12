@@ -51,10 +51,11 @@ let
   llamaArgs = lib.concatStringsSep " " ([
     "--host ::"
     "--port 8080"
-    "--ctx-size 65536"
+    "--ctx-size 262144"
     "--metrics"
     "--batch-size 4096"
-    "--ubatch-size 512"
+    "--ubatch-size 1024"
+    "--parallel 1"
     "--jinja"
     "--timeout 1800"
     # Stable API-facing name decoupled from the GGUF filename, so consumers
