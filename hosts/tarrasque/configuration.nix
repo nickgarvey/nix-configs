@@ -45,14 +45,6 @@
     # LAN /64 — suppress SLAAC so it doesn't autoconfig a LAN-/64 address.
     ipv6.suppressSlaac = true;
   };
-  networking.firewall.trustedInterfaces = [ "vmbr0" ];
-  # Disable bridge netfilter — we use vmbr0 directly, not as a NAT bridge.
-  boot.kernel.sysctl = {
-    "net.bridge.bridge-nf-call-iptables" = 0;
-    "net.bridge.bridge-nf-call-ip6tables" = 0;
-    "net.bridge.bridge-nf-call-arptables" = 0;
-  };
-
   # --- Storage: btrfs ---
   fileSystems."/fast/garage" = {
     device = "/dev/disk/by-label/fast";

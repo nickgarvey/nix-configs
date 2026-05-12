@@ -82,17 +82,6 @@
     # LAN /64 — suppress SLAAC so it doesn't autoconfig a LAN-/64 address.
     ipv6.suppressSlaac = true;
   };
-  # Incus loads br_netfilter which causes bridge traffic (including ARP) to
-  # pass through netfilter, breaking DHCP and host connectivity on vmbr0.
-  # Disable bridge netfilter since we use vmbr0 directly, not an Incus NAT bridge.
-  networking.firewall.trustedInterfaces = [ "vmbr0" ];
-  boot.kernel.sysctl = {
-    "net.bridge.bridge-nf-call-iptables" = 0;
-    "net.bridge.bridge-nf-call-ip6tables" = 0;
-    "net.bridge.bridge-nf-call-arptables" = 0;
-  };
-
-
   # Tailscale
   services.tailscale.enable = true;
 

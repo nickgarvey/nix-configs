@@ -158,6 +158,17 @@ in
         };
         routes = lib.optionals (hasIPv6 && !isK3sNode) (podRoutes ++ lbRoutes);
       };
+
+      networking.firewall.trustedInterfaces = [ br.name ];
+
+      # br_netfilter (loaded by Incus on aboleth) would route bridge frames
+      # through ip/ip6/arp tables, breaking DHCP and host connectivity on
+      # vmbr0. Force-off so the bridge stays a pure L2 path.
+      boot.kernel.sysctl = {
+        "net.bridge.bridge-nf-call-iptables" = 0;
+        "net.bridge.bridge-nf-call-ip6tables" = 0;
+        "net.bridge.bridge-nf-call-arptables" = 0;
+      };
     }))
   ]);
 }
