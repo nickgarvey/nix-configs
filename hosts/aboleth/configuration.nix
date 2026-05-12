@@ -12,7 +12,13 @@
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
     ../../modules/nix-remote-builder-client.nix
+    ../../modules/mlx-firmware-recovery.nix
   ];
+
+  services.mlxFirmwareRecovery = {
+    enable = true;
+    pciAddresses = [ "0000:02:00.0" "0000:02:00.1" ];
+  };
 
   services.nixRemoteBuilderClient = {
     enable = true;

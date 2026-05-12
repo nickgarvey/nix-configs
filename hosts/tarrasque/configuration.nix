@@ -12,8 +12,14 @@
     ../../modules/whisper-gpu.nix
     ../../modules/containers/llama-cpp.nix
     ../../modules/containers/garage.nix
+    ../../modules/mlx-firmware-recovery.nix
     inputs.sops-nix.nixosModules.sops
   ];
+
+  services.mlxFirmwareRecovery = {
+    enable = true;
+    pciAddresses = [ "0000:11:00.0" "0000:11:00.1" ];
+  };
 
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
