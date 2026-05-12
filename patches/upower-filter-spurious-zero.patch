@@ -1,0 +1,37 @@
+--- a/src/linux/up-device-supply-battery.c	2026-05-11 21:33:58.108221436 -0700
++++ src/linux/up-device-supply-battery.c	2026-05-11 21:34:10.860339047 -0700
+@@ -81,6 +81,8 @@
+ 	gboolean		 charge_threshold_by_charge_type;
+ 	gboolean		 shown_invalid_voltage_warning;
+ 	gboolean		 ignore_system_percentage;
++	gdouble			 last_good_percentage;
++	gboolean		 saw_spurious_zero;
+ };
+ 
+ G_DEFINE_TYPE (UpDeviceSupplyBattery, up_device_supply_battery, UP_TYPE_DEVICE_BATTERY)
+@@ -530,6 +532,25 @@
+ 
+ 	values.temperature = g_udev_device_get_sysfs_attr_as_double_uncached (native, "temp") / 10.0;
+ 
++	/* QUIRK: Some embedded controllers (e.g. Framework 13 AMD) momentarily
++	 * report charge_now/capacity as 0 for a single polling cycle. Suppress
++	 * the report if we suddenly see ~0 after a healthy reading; accept it
++	 * the next cycle if the kernel is still reporting 0 (i.e. real). */
++	if ((values.percentage < 0.5 || values.energy.cur < 0.01) &&
++	    self->last_good_percentage > 5.0 &&
++	    !self->saw_spurious_zero) {
++		g_warning ("ignoring spurious zero battery reading "
++			   "(percentage=%.2f energy_cur=%.4f, last good=%.1f%%)",
++			   values.percentage, values.energy.cur,
++			   self->last_good_percentage);
++		self->saw_spurious_zero = TRUE;
++		return TRUE;
++	}
++	if (values.percentage > 0.5 && values.energy.cur > 0.01) {
++		self->last_good_percentage = values.percentage;
++		self->saw_spurious_zero = FALSE;
++	}
++
+ 	up_device_battery_report (battery, &values, reason);
+ 
+ 	return TRUE;
