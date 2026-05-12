@@ -12,13 +12,10 @@
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
     ../../modules/nix-remote-builder-client.nix
-    ../../modules/mlx-firmware-recovery.nix
+    ../../modules/mlx-direct-peer.nix
   ];
 
-  services.mlxFirmwareRecovery = {
-    enable = true;
-    pciAddresses = [ "0000:02:00.0" "0000:02:00.1" ];
-  };
+  services.mlxDirectPeer.enable = true;
 
   services.nixRemoteBuilderClient = {
     enable = true;
@@ -35,21 +32,6 @@
   # delegated /64 via the 25G mlx interface — crosses interfaces, needs
   # IPv6 forwarding.
   homelab.network.ipv6Forward = true;
-
-  # Direct 25G link to tarrasque (ConnectX-4 Lx port 0).
-  # /64 route to tarrasque's delegated prefix shifts all traffic for
-  # tarrasque (host + containers) onto this link. networkd tears down the
-  # route when the link loses carrier, so the LAN switch path via the
-  # router takes over without intervention.
-  systemd.network.networks."30-mlx-direct" = {
-    matchConfig.MACAddress = "24:8a:07:3b:eb:fc";
-    networkConfig.DHCP = "no";
-    linkConfig.MTUBytes = "9000";
-    address = [ "fd28::2/64" ];
-    routes = [
-      { Destination = "2001:470:482f:201::/64"; Gateway = "fd28::1"; }
-    ];
-  };
 
   networking.hostName = "aboleth";
 

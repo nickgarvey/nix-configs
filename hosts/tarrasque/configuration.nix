@@ -12,14 +12,11 @@
     ../../modules/whisper-gpu.nix
     ../../modules/containers/llama-cpp.nix
     ../../modules/containers/garage.nix
-    ../../modules/mlx-firmware-recovery.nix
+    ../../modules/mlx-direct-peer.nix
     inputs.sops-nix.nixosModules.sops
   ];
 
-  services.mlxFirmwareRecovery = {
-    enable = true;
-    pciAddresses = [ "0000:11:00.0" "0000:11:00.1" ];
-  };
+  services.mlxDirectPeer.enable = true;
 
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
@@ -62,21 +59,6 @@
     capacity = "1T";
     replicationFactor = 2;
     peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@garage-aboleth.home.arpa:3901" ];
-  };
-
-  # Direct 25G link to aboleth (ConnectX-4 Lx port 0).
-  # /64 route to aboleth's delegated prefix shifts all traffic for aboleth
-  # (host + containers) onto this link. networkd tears down the route when
-  # the link loses carrier, so the LAN switch path via the router takes
-  # over without intervention.
-  systemd.network.networks."30-mlx-direct" = {
-    matchConfig.MACAddress = "24:8a:07:3b:eb:ec";
-    networkConfig.DHCP = "no";
-    linkConfig.MTUBytes = "9000";
-    address = [ "fd28::1/64" ];
-    routes = [
-      { Destination = "2001:470:482f:200::/64"; Gateway = "fd28::2"; }
-    ];
   };
 
   homelab.llama-cpp = {
