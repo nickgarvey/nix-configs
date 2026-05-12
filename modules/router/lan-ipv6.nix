@@ -36,15 +36,24 @@ in
         # Advertising this prefix gives LAN hosts SLAAC addresses in :2::,
         # which breaks source address selection for LB destinations.
       ];
-      # Advertise a route for the pod /56 via RA so LAN clients (e.g. HA)
-      # can route reply traffic back to k8s pods through the router,
-      # without making the router the default IPv6 gateway.
+      # Advertise a route for the whole homelab /48 via RA so LAN clients
+      # learn to reach any delegated /64 (k3s pods, per-host delegations,
+      # future allocations) through the router. Longest-prefix-match keeps
+      # LAN-/64 and pod-CIDR static routes preferred where they exist.
+      # Lifetime 0 on the default route (RouterLifetimeSec above) means
+      # this is NOT a default IPv6 gateway.
       ipv6RoutePrefixes = [
-        { Route = "2001:470:482f:100::/56"; LifetimeSec = 3600; }
+        { Route = "2001:470:482f::/48"; LifetimeSec = 3600; }
       ];
-      # Kernel routes for pod CIDRs — needed so return traffic from the HE
-      # tunnel reaches the correct k3s node.
-      routes = podRoutes;
+      # Kernel routes:
+      #   - podRoutes (one /64 per k3s node) — return traffic from HE
+      #     tunnel reaches the correct k3s node.
+      #   - Per-host delegated /64s (aboleth, tarrasque) — on-link on
+      #     br-lan; NDP resolves to the host's vmbr0.
+      routes = podRoutes ++ [
+        { Destination = "2001:470:482f:200::/64"; }  # aboleth delegated /64
+        { Destination = "2001:470:482f:201::/64"; }  # tarrasque delegated /64
+      ];
     };
   };
 }
