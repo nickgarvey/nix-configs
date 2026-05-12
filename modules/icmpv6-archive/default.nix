@@ -117,7 +117,7 @@ in
     s3 = {
       endpoint = lib.mkOption {
         type = lib.types.str;
-        default = "http://[2001:470:482f::15]:3900";
+        default = "http://garage-aboleth.home.arpa:3900";
         description = "S3 endpoint URL (garage).";
       };
       bucket = lib.mkOption {

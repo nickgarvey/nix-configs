@@ -41,6 +41,9 @@
       address = "10.28.8.80/16";
       gateway = "10.28.0.1";
     };
+    # Tarrasque's IPv6 lives in 2001:470:482f:201::/64 (delegated), not the
+    # LAN /64 — suppress SLAAC so it doesn't autoconfig a LAN-/64 address.
+    ipv6.suppressSlaac = true;
   };
   networking.firewall.trustedInterfaces = [ "vmbr0" ];
   # Disable bridge netfilter — we use vmbr0 directly, not as a NAT bridge.
@@ -60,27 +63,27 @@
   # --- Garage S3 (nspawn container, IPv6-only) ---
   nspawn.garage = {
     hostBridge = "vmbr0";
-    localAddress6 = "2001:470:482f::16/64";
+    localAddress6 = "2001:470:482f:201::2/64";
+    hostBridgeAddress = "2001:470:482f:201::1";
     dataPath = "/fast/garage";
     hostname = "tarrasque";
     capacity = "1T";
-    # RF=1 initially to match aboleth's live cluster. Bump to 2 after this
-    # node joins (see plan twinkly-weaving-ullman.md).
     replicationFactor = 2;
     peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@garage-aboleth.home.arpa:3901" ];
   };
 
   # Direct 25G link to aboleth (ConnectX-4 Lx port 0).
-  # /128 host route shifts traffic addressed to aboleth's regular LAN IPv6
-  # onto this link. networkd tears down the route automatically when the
-  # link loses carrier, so the LAN /64 route takes over without intervention.
+  # /64 route to aboleth's delegated prefix shifts all traffic for aboleth
+  # (host + containers) onto this link. networkd tears down the route when
+  # the link loses carrier, so the LAN switch path via the router takes
+  # over without intervention.
   systemd.network.networks."30-mlx-direct" = {
     matchConfig.MACAddress = "24:8a:07:3b:eb:ec";
     networkConfig.DHCP = "no";
     linkConfig.MTUBytes = "9000";
     address = [ "fd28::1/64" ];
     routes = [
-      { Destination = "2001:470:482f::11/128"; Gateway = "fd28::2"; }
+      { Destination = "2001:470:482f:200::/64"; Gateway = "fd28::2"; }
     ];
   };
 

@@ -31,18 +31,23 @@
   services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
+  # Required so the garage container (on vmbr0) can route to its peer's
+  # delegated /64 via the 25G mlx interface — crosses interfaces, needs
+  # IPv6 forwarding.
+  homelab.network.ipv6Forward = true;
 
   # Direct 25G link to tarrasque (ConnectX-4 Lx port 0).
-  # /128 host route shifts traffic addressed to tarrasque's regular LAN IPv6
-  # onto this link. networkd tears down the route automatically when the
-  # link loses carrier, so the LAN /64 route takes over without intervention.
+  # /64 route to tarrasque's delegated prefix shifts all traffic for
+  # tarrasque (host + containers) onto this link. networkd tears down the
+  # route when the link loses carrier, so the LAN switch path via the
+  # router takes over without intervention.
   systemd.network.networks."30-mlx-direct" = {
     matchConfig.MACAddress = "24:8a:07:3b:eb:fc";
     networkConfig.DHCP = "no";
     linkConfig.MTUBytes = "9000";
     address = [ "fd28::2/64" ];
     routes = [
-      { Destination = "2001:470:482f::10/128"; Gateway = "fd28::1"; }
+      { Destination = "2001:470:482f:201::/64"; Gateway = "fd28::1"; }
     ];
   };
 
@@ -73,6 +78,9 @@
       address = "10.28.12.108/16";
       gateway = "10.28.0.1";
     };
+    # Aboleth's IPv6 lives in 2001:470:482f:200::/64 (delegated), not the
+    # LAN /64 — suppress SLAAC so it doesn't autoconfig a LAN-/64 address.
+    ipv6.suppressSlaac = true;
   };
   # Incus loads br_netfilter which causes bridge traffic (including ARP) to
   # pass through netfilter, breaking DHCP and host connectivity on vmbr0.
@@ -193,7 +201,8 @@
   };
   nspawn.garage = {
     hostBridge = "vmbr0";
-    localAddress6 = "2001:470:482f::15/64";
+    localAddress6 = "2001:470:482f:200::2/64";
+    hostBridgeAddress = "2001:470:482f:200::1";
     dataPath = "/fast/garage";
     hostname = "aboleth";
     capacity = "1T";

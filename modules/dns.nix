@@ -19,9 +19,9 @@ in rec {
     router        = { v4 = [ "10.28.0.1" ];    v6 = [ "2001:470:482f::1" ]; };
     frigate       = { v4 = [ "10.28.12.109" ]; v6 = []; };
     smb           = { v4 = [ "10.28.12.110" ]; v6 = [ "2001:470:482f::14" ]; };
-    garage           = { v4 = []; v6 = [ "2001:470:482f::15" "2001:470:482f::16" ]; };
-    garage-aboleth   = { v4 = []; v6 = [ "2001:470:482f::15" ]; };
-    garage-tarrasque = { v4 = []; v6 = [ "2001:470:482f::16" ]; };
+    garage           = { v4 = []; v6 = [ "2001:470:482f:200::2" "2001:470:482f:201::2" ]; };
+    garage-aboleth   = { v4 = []; v6 = [ "2001:470:482f:200::2" ]; };
+    garage-tarrasque = { v4 = []; v6 = [ "2001:470:482f:201::2" ]; };
     k3s-api       = { v4 = []; v6 = map hostV6 [ "k3s-lion" "k3s-dragon" "k3s-goat" ]; };
     # trmnl-display keeps A+AAAA: the ESP32 client is IPv4-only and hits an
     # IPv4→IPv6 proxy at 10.28.0.2. The AAAA is for dual-stack clients.

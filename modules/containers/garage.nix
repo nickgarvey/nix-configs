@@ -54,6 +54,16 @@ in
         this to 2 and redeploy.
       '';
     };
+
+    hostBridgeAddress = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        Host's vmbr0 IPv6 address in the same /64 as localAddress6. Used as
+        the container's IPv6 default gateway so container traffic exits via
+        the host and follows the host's routing table (including any
+        per-host delegated /64 setup for the 25G link).
+      '';
+    };
   };
 
   config = {
@@ -180,7 +190,7 @@ in
 
         networking = {
           defaultGateway6 = {
-            address = "2001:470:482f::1";
+            address = cfg.hostBridgeAddress;
             interface = "eth0";
           };
           nameservers = [ "2001:470:482f::1" ];

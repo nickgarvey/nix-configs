@@ -4,13 +4,19 @@
 #
 # Non-host DNS (service aliases, VIPs, CNAMEs) lives in dns.nix.
 #
-# IPv6 addresses are from 2001:470:482f::/64 (HE /48 subnet :0).
-# Subnet plan: :0 = main LAN, :1 = (reserved), :2 = k8s LB (Cilium L2),
-#   :100-:1ff = k8s pod CIDRs (/56, native routing, no masquerade), :3+ = future VLANs
+# Most IPv6 addresses are from the main LAN subnet 2001:470:482f::/64.
+# Some hosts have a dedicated per-host /64 carved from the HE /48 — used to
+# route inter-host traffic over private links (e.g. 25G mlx between aboleth
+# and tarrasque). Those hosts have their sole IPv6 in their delegated /64.
+# Subnet plan inside 2001:470:482f::/48:
+#   :0::/64       main LAN (most hosts SLAAC + static here)
+#   :2::/64       k8s LB pool (Cilium L2 announce)
+#   :100::/56     k3s pod CIDRs (/64 per node)
+#   :200::/56     per-host delegations (one /64 per host)
 {
   lanHosts = [
-    { hostname = "tarrasque";     mac = "34:5a:60:b6:5f:90"; ipv4 = "10.28.8.80";    ipv6 = "2001:470:482f::10"; }
-    { hostname = "aboleth";       mac = "9c:6b:00:af:e9:d0"; ipv4 = "10.28.12.108";  ipv6 = "2001:470:482f::11"; }
+    { hostname = "tarrasque";     mac = "34:5a:60:b6:5f:90"; ipv4 = "10.28.8.80";    ipv6 = "2001:470:482f:201::1"; }
+    { hostname = "aboleth";       mac = "9c:6b:00:af:e9:d0"; ipv4 = "10.28.12.108";  ipv6 = "2001:470:482f:200::1"; }
     { hostname = "homeassistant"; mac = "f4:4d:30:6e:98:42"; ipv4 = "10.28.1.100";   ipv6 = "2001:470:482f:0:ddc2:6cba:8b8e:69a6"; }
     { hostname = "lg-device";     mac = "28:0f:eb:91:76:fa"; ipv4 = "10.28.1.8";     ipv6 = null; }
     { hostname = "camera";        mac = "c4:3c:b0:f9:df:19"; ipv4 = "10.28.4.2";     ipv6 = null; }
