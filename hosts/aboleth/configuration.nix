@@ -189,6 +189,10 @@
     hostBridge = "vmbr0";
     localAddress6 = "2001:470:482f::15/64";
     dataPath = "/fast/garage";
+    hostname = "aboleth";
+    capacity = "1T";
+    replicationFactor = 2;
+    peers = [ "90dd7a079aec5a9bead87277093390fbf4e66e018a946149af829cd85f875f0f@garage-tarrasque.home.arpa:3901" ];
   };
 
   # --- Frigate NVR (nspawn container) ---

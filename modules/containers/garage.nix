@@ -19,6 +19,41 @@ in
       type = lib.types.str;
       description = "Host path for garage data (bind-mounted as /var/lib/garage).";
     };
+
+    hostname = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        Short identifier for this node. Used as the garage layout zone and
+        as the DNS suffix for rpc_public_addr (garage-<hostname>.home.arpa).
+      '';
+    };
+
+    capacity = lib.mkOption {
+      type = lib.types.str;
+      default = "1T";
+      description = "Capacity to advertise to the garage layout for this node.";
+    };
+
+    peers = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Peer entries of the form <node_id>@<dns-name>:3901. Used as
+        bootstrap_peers and re-asserted via `garage node connect` on startup.
+      '';
+    };
+
+    replicationFactor = lib.mkOption {
+      type = lib.types.int;
+      default = 2;
+      description = ''
+        Garage replication factor. Must match the cluster's persisted RF —
+        garage refuses to start on mismatch. To migrate an existing RF=1
+        cluster to RF=2: first deploy with this set to 1 on both hosts,
+        join the second node, run `garage layout config -r 2`, then bump
+        this to 2 and redeploy.
+      '';
+    };
   };
 
   config = {
@@ -72,9 +107,12 @@ in
             metadata_dir = "/var/lib/garage/meta";
             data_dir = "/var/lib/garage/data";
             db_engine = "lmdb";
-            replication_factor = 1;
+            replication_factor = cfg.replicationFactor;
+            consistency_mode = "consistent";
 
             rpc_bind_addr = "[::]:3901";
+            rpc_public_addr = "garage-${cfg.hostname}.home.arpa:3901";
+            bootstrap_peers = cfg.peers;
 
             s3_api = {
               s3_region = "garage";
@@ -104,22 +142,36 @@ in
             # Fails if garage isn't ready yet; systemd will retry.
             NODE_ID=$(garage node id | cut -c1-16)
 
-            CURRENT_VERSION=$(garage layout show | awk '/Current cluster layout version:/ {print $NF}')
+            # Re-assert peer connections (idempotent).
+            ${lib.concatMapStringsSep "\n" (p: ''
+              garage node connect ${p} || true
+            '') cfg.peers}
 
-            if garage layout show | grep -q "No nodes currently have a role"; then
-              garage layout assign -z dc1 -c 500G "$NODE_ID"
-              garage layout apply --version $(( CURRENT_VERSION + 1 ))
-            fi
+            ${if cfg.peers == [] then ''
+              # Standalone-bootstrap host: auto-assign self a role and seed
+              # buckets/keys if missing. Only safe when this node is the
+              # cluster origin (peers list empty).
+              if ! garage layout show | awk '/^==== CURRENT CLUSTER LAYOUT ====/{f=1;next} /^$/{f=0} f && /^[0-9a-f]/{print $1}' | grep -q "^$NODE_ID"; then
+                CURRENT_VERSION=$(garage layout show | awk '/Current cluster layout version:/ {print $NF}')
+                garage layout assign -z ${cfg.hostname} -c ${cfg.capacity} "$NODE_ID"
+                garage layout apply --version $(( CURRENT_VERSION + 1 ))
+              fi
 
-            if ! garage bucket list | grep -q "default"; then
-              garage bucket create default
-            fi
+              if ! garage bucket list | grep -q "default"; then
+                garage bucket create default
+              fi
 
-            if ! garage key list | grep -q "garage-key"; then
-              garage key import -n garage-key --yes "$GARAGE_S3_ACCESS_KEY" "$GARAGE_S3_SECRET_KEY"
-            fi
+              if ! garage key list | grep -q "garage-key"; then
+                garage key import -n garage-key --yes "$GARAGE_S3_ACCESS_KEY" "$GARAGE_S3_SECRET_KEY"
+              fi
 
-            garage bucket allow --read --write --owner default --key garage-key
+              garage bucket allow --read --write --owner default --key garage-key
+            '' else ''
+              # Joining an existing cluster — role/bucket/key setup is the
+              # responsibility of an operator running `garage layout assign`
+              # manually. Init only ensures peer connections.
+              echo "garage-init: peers configured, skipping layout/bucket/key bootstrap"
+            ''}
           '';
         };
 

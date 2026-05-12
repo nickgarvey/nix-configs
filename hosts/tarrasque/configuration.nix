@@ -11,6 +11,7 @@
     ../../modules/nix-binary-cache.nix
     ../../modules/whisper-gpu.nix
     ../../modules/containers/llama-cpp.nix
+    ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops
   ];
 
@@ -24,6 +25,44 @@
   services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
+
+  # Bridge for the garage nspawn container to get LAN access (IPv6 auto-derived
+  # from lan-hosts.nix). Mirrors aboleth's setup.
+  homelab.network.bridge = {
+    name = "vmbr0";
+    interface = "enp14s0";
+    ipv4 = {
+      address = "10.28.8.80/16";
+      gateway = "10.28.0.1";
+    };
+  };
+  networking.firewall.trustedInterfaces = [ "vmbr0" ];
+  # Disable bridge netfilter — we use vmbr0 directly, not as a NAT bridge.
+  boot.kernel.sysctl = {
+    "net.bridge.bridge-nf-call-iptables" = 0;
+    "net.bridge.bridge-nf-call-ip6tables" = 0;
+    "net.bridge.bridge-nf-call-arptables" = 0;
+  };
+
+  # --- Storage: btrfs ---
+  fileSystems."/fast/garage" = {
+    device = "/dev/disk/by-label/fast";
+    fsType = "btrfs";
+    options = [ "compress=zstd" "subvol=@garage" "nofail" ];
+  };
+
+  # --- Garage S3 (nspawn container, IPv6-only) ---
+  nspawn.garage = {
+    hostBridge = "vmbr0";
+    localAddress6 = "2001:470:482f::16/64";
+    dataPath = "/fast/garage";
+    hostname = "tarrasque";
+    capacity = "1T";
+    # RF=1 initially to match aboleth's live cluster. Bump to 2 after this
+    # node joins (see plan twinkly-weaving-ullman.md).
+    replicationFactor = 2;
+    peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@garage-aboleth.home.arpa:3901" ];
+  };
 
   # Direct 25G link to aboleth (ConnectX-4 Lx port 0).
   # /128 host route shifts traffic addressed to aboleth's regular LAN IPv6

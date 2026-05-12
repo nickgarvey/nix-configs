@@ -22,6 +22,7 @@ creation_rules:
     - age:
       - *ngarvey
       - *aboleth
+      - *workstation
   - path_regex: secrets/router.yaml
     key_groups:
     - age:
