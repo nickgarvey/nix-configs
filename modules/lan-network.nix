@@ -133,6 +133,12 @@ in
           Name = br.name;
           Kind = "bridge";
         };
+        # STP is off; without this, ports still sit in listening/learning for
+        # 15s, dropping the boot-time IPv6 RS so the LAN /64 RA route is missed.
+        bridgeConfig = {
+          STP = false;
+          ForwardDelaySec = 0;
+        };
       };
 
       # Match by MAC when we know it (from lan-hosts.nix) so the bridge slave
@@ -150,7 +156,11 @@ in
           ++ lib.optionals hasIPv6 [ "${hostEntry.ipv6}/64" ];
         gateway = [ br.ipv4.gateway ];
         dns = br.ipv4.dns ++ [ "2001:470:482f::1" ];
-        networkConfig.DHCP = "no";
+        networkConfig = {
+          DHCP = "no";
+          # networkd defaults IPv6AcceptRA off when IPv6 forwarding is on.
+          IPv6AcceptRA = true;
+        };
         ipv6AcceptRAConfig = lib.mkIf br.ipv6.suppressSlaac {
           UseAutonomousPrefix = false;
         };
