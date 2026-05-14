@@ -12,10 +12,7 @@
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
     ../../modules/nix-remote-builder-client.nix
-    ../../modules/mlx-direct-peer.nix
   ];
-
-  services.mlxDirectPeer.enable = true;
 
   services.nixRemoteBuilderClient = {
     enable = true;
@@ -29,8 +26,7 @@
 
   homelab.network.enable = true;
   # Required so the garage container (on vmbr0) can route to its peer's
-  # delegated /64 via the 25G mlx interface — crosses interfaces, needs
-  # IPv6 forwarding.
+  # delegated /64 — crosses interfaces, needs IPv6 forwarding.
   homelab.network.ipv6Forward = true;
 
   networking.hostName = "aboleth";

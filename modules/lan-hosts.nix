@@ -5,9 +5,8 @@
 # Non-host DNS (service aliases, VIPs, CNAMEs) lives in dns.nix.
 #
 # Most IPv6 addresses are from the main LAN subnet 2001:470:482f::/64.
-# Some hosts have a dedicated per-host /64 carved from the HE /48 — used to
-# route inter-host traffic over private links (e.g. 25G mlx between aboleth
-# and tarrasque). Those hosts have their sole IPv6 in their delegated /64.
+# Some hosts have a dedicated per-host /64 carved from the HE /48.
+# Those hosts have their sole IPv6 in their delegated /64.
 # Subnet plan inside 2001:470:482f::/48:
 #   :0::/64       main LAN (most hosts SLAAC + static here)
 #   :2::/64       k8s LB pool (Cilium L2 announce)

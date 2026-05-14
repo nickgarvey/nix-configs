@@ -12,11 +12,8 @@
     ../../modules/whisper-gpu.nix
     ../../modules/containers/llama-cpp.nix
     ../../modules/containers/garage.nix
-    ../../modules/mlx-direct-peer.nix
     inputs.sops-nix.nixosModules.sops
   ];
-
-  services.mlxDirectPeer.enable = true;
 
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
