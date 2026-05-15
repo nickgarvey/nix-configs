@@ -70,7 +70,7 @@
     '';
   };
 
-  # SATA mirror (2x 8TB Seagate) — slow/bulk storage.
+  # SATA mirror (2x 6TB WDC) — slow/bulk storage.
   fileSystems."/slow/backups" = {
     device = "/dev/disk/by-label/slow";
     fsType = "btrfs";

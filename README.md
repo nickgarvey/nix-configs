@@ -13,7 +13,7 @@ This is a mono-repo for all my nix settings. Here are the sections:
 | Host | Machine | CPU | RAM | GPU | Primary storage |
 |------|---------|-----|-----|-----|-----------------|
 | [`tarrasque`](hosts/tarrasque) | ASUS PRIME X870-P WIFI | AMD Ryzen 9 9950X3D | 64 GB | NVIDIA RTX 5090 | WD_BLACK SN850X 2 TB NVMe |
-| [`aboleth`](hosts/aboleth) | ASRock Industrial IMB-X1314 | Intel i5-12600K | 128 GB | iGPU (UHD 770) | Samsung 980 Pro 2 TB NVMe + 2× Seagate 8 TB HDD |
+| [`aboleth`](hosts/aboleth) | ASRock Industrial IMB-X1314 | Intel i5-12600K | 128 GB | iGPU (UHD 770) | Samsung 980 Pro 2 TB NVMe + 2× WDC 6 TB HDD |
 | [`k3s-lion`](hosts/k3s-lion) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`k3s-dragon`](hosts/k3s-dragon) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`k3s-goat`](hosts/k3s-goat) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
