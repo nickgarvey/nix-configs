@@ -9,6 +9,7 @@
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/nix-binary-cache.nix
+    ../../modules/flake-build-check.nix
     ../../modules/whisper-gpu.nix
     ../../modules/containers/llama-cpp.nix
     ../../modules/containers/garage.nix
@@ -92,6 +93,8 @@
   };
 
   zramSwap.enable = true;
+
+  services.flakeBuildCheck.enable = true;
 
   services.nixBinaryCache = {
     enable = true;
