@@ -59,6 +59,12 @@ in
             # TRMNL reverse proxy (nspawn container, host networking)
             iifname "${cfg.lanInterface}" tcp dport { 80 } ip daddr 10.28.0.2 accept
 
+            # Storj S3 gateway (nspawn container, host networking).
+            # Source-pinned to the k3s pod CIDR — no other source can
+            # reach this port. No DNAT/port-forward; LAN/Tailscale/WAN
+            # are excluded by the default-drop policy at the end.
+            iifname "${cfg.lanInterface}" ip6 saddr 2001:470:482f:100::/56 tcp dport 7777 accept
+
             iifname "${cfg.lanInterface}" udp dport { 546, 547 } accept
             iifname "${cfg.lanInterface}" icmp type echo-request accept
             iifname "${cfg.lanInterface}" icmpv6 type { echo-request, nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept

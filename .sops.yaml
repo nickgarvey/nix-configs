@@ -53,6 +53,11 @@ creation_rules:
       - *framework13-laptop
       - *framework-desktop
       - *aboleth
+  - path_regex: secrets/storj-gateway.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *router
   - path_regex: secrets/icmpv6-archive.yaml
     key_groups:
     - age:
