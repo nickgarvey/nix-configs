@@ -12,6 +12,7 @@
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
     ../../modules/nix-remote-builder-client.nix
+    ../../modules/aboleth-fancontrol.nix
   ];
 
   services.nixRemoteBuilderClient = {
@@ -42,7 +43,12 @@
     "intel_iommu=on"
     "iommu=pt"
     "split_lock_detect=off"
+    # Let f71882fg claim the Fintek F81866A SIO @ 0x290 despite ACPI's
+    # PNP0C02 reservation; required for fan tach/PWM control.
+    "acpi_enforce_resources=lax"
   ];
+
+  boot.kernelModules = [ "f71882fg" ];
 
   networking.nftables.enable = true;
 
