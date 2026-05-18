@@ -55,6 +55,7 @@
   users.users.ngarvey.packages = with pkgs; [
     signal-desktop
     vlc
+    orca-slicer
   ];
 
   systemd.sleep.settings.Sleep = {
