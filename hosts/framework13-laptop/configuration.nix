@@ -36,6 +36,10 @@
   networking.networkmanager.enable = true;
   networking.networkmanager.wifi.powersave = false;
 
+  # COSMIC display manager and desktop
+  services.displayManager.cosmic-greeter.enable = true;
+  services.desktopManager.cosmic.enable = true;
+
   services.fwupd.enable = true;
 
   services.fprintd.enable = true;

@@ -112,10 +112,6 @@ in
     logRefusedConnections = false;
   };
 
-  # COSMIC display manager and desktop
-  services.displayManager.cosmic-greeter.enable = true;
-  services.desktopManager.cosmic.enable = true;
-
   services.xserver.enable = true;
 
   virtualisation.docker = {

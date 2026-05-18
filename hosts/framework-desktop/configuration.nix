@@ -56,6 +56,10 @@ in
     "ttm.pages_limit=32505856"
   ];
 
+  # KDE Plasma display manager and desktop
+  services.displayManager.sddm.enable = true;
+  services.desktopManager.plasma6.enable = true;
+
   # Enable autologin
   services.displayManager.autoLogin = {
     enable = true;
