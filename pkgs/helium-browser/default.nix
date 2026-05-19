@@ -8,6 +8,7 @@ pkgs.symlinkJoin {
 
   postBuild = ''
     wrapProgram $out/bin/helium \
+      --add-flags "--password-store=basic" \
       --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform=wayland --ozone-platform-hint=wayland --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}"
 
     mkdir -p $out/share/applications
