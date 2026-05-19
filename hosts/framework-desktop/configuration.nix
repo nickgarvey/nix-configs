@@ -56,6 +56,11 @@ in
     "ttm.pages_limit=32505856"
   ];
 
+  systemd.targets.sleep.enable = false;
+  systemd.targets.suspend.enable = false;
+  systemd.targets.hibernate.enable = false;
+  systemd.targets.hybrid-sleep.enable = false;
+
   # KDE Plasma display manager and desktop
   services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
