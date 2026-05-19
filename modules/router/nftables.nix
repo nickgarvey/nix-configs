@@ -113,6 +113,16 @@ in
             iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" ip6 daddr 2001:470:482f:200::/56 accept
             iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" ip6 saddr 2001:470:482f:200::/56 accept
 
+            # LAN -> k8s LB pool (:2::/112). Known LAN hosts install ECMP
+            # /112 routes via the k3s nodes directly (see lan-network.nix
+            # lbRoutes) and never hairpin. Transient clients — laptops,
+            # phones, nspawn containers that only learn the /48 via RA —
+            # have no more-specific route, so their LB traffic arrives at
+            # the router and needs to be forwarded back out br-lan to the
+            # k3s node that Cilium L2-announces the LB IP. Reply path is
+            # direct k3s-node→client on-link, so only daddr is needed.
+            iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" ip6 daddr 2001:470:482f:2::/112 accept
+
             ct state established,related accept
             ct state invalid drop
 

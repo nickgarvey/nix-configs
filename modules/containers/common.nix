@@ -143,6 +143,17 @@ let
       localAddress6 = net.localAddress6;
     } // {
       config = { lib, pkgs, ... }: {
+        imports = [ ../ipv6-accept-ra-routes.nix ];
+
+        # systemd-nspawn creates the container's veth (renamed to eth0
+        # inside the netns) BEFORE the container's userspace systemd-sysctl
+        # runs. The per-interface accept_ra_rt_info_max_plen is snapshotted
+        # from `default` at iface creation, so eth0 keeps the boot-time
+        # value of 0 even after the shared module raises `default` to 64.
+        # Set the per-interface value explicitly so it applies after the
+        # interface exists.
+        boot.kernel.sysctl."net.ipv6.conf.eth0.accept_ra_rt_info_max_plen" = 64;
+
         networking = lib.mkMerge [
           {
             firewall.enable = lib.mkDefault false;

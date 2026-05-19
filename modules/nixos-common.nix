@@ -2,6 +2,7 @@
 {
   imports = [
     ./nspawn-cleanup.nix
+    ./ipv6-accept-ra-routes.nix
   ];
 
   environment.systemPackages = with pkgs; [
