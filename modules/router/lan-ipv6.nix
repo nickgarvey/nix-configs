@@ -17,9 +17,18 @@ in
         # Router's address on the main LAN (:0 subnet).
         # Use /64 so the router knows subnet :0 is on-link.
         "${heCfg.routedPrefix}1/64"
-        # k8s LB subnet (:2::/112) — router needs an address for return routing
-        # from HE tunnel, but use /112 to match the actual LB pool size.
-        "2001:470:482f:2::1/112"
+        # NOTE: the router deliberately does NOT claim an address inside
+        # the LB /112 (2001:470:482f:2::/112). LAN hosts install an ECMP
+        # /112 route to that prefix via the k3s nodes (Cilium L2-announce
+        # targets); a router-side address in the same /112 would be
+        # shadowed by that ECMP and break reply paths. The LB subnet is
+        # made on-link for the router via the interface route below.
+        #
+        # Router-side container delegated /64. Mirrors aboleth (200::/64)
+        # and tarrasque (201::/64): the router's bridge address acts as
+        # the /48 next-hop for nspawn containers running on the router
+        # (storj-gateway, trmnl-proxy, …).
+        "2001:470:482f:300::1/64"
       ];
       networkConfig.IPv6SendRA = true;
       ipv6SendRAConfig = {
@@ -53,6 +62,14 @@ in
       routes = podRoutes ++ [
         { Destination = "2001:470:482f:200::/64"; }  # aboleth delegated /64
         { Destination = "2001:470:482f:201::/64"; }  # tarrasque delegated /64
+        # 300::/64 is on-link via the router's own address above; no
+        # explicit route needed here (kernel installs it from the addr).
+        # Cilium LB pool — on-link via br-lan so the router can
+        # NDP-resolve LB IPs (announced from any k3s node via Cilium L2)
+        # when forwarding from HE / Tailscale / WAN. Deliberately a
+        # route, not an address: an address would shadow LAN hosts'
+        # ECMP /112 for this prefix. See address block above.
+        { Destination = "2001:470:482f:2::/112"; }
       ];
     };
   };

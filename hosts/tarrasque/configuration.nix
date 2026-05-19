@@ -26,6 +26,9 @@
   services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
+  # Required so the garage container (on vmbr0) can route to its peer's
+  # delegated /64 — crosses interfaces, needs IPv6 forwarding.
+  homelab.network.ipv6Forward = true;
 
   # Bridge for the garage nspawn container to get LAN access (IPv6 auto-derived
   # from lan-hosts.nix). Mirrors aboleth's setup.
@@ -142,7 +145,6 @@
     ];
 
     kernel.sysctl = {
-      "net.ipv6.conf.all.forwarding" = 1;
       "kernel.panic" = 10;
     };
 

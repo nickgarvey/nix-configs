@@ -4,6 +4,8 @@ let
   cfg = config.nspawn.garage;
 in
 {
+  imports = [ ./common.nix ];
+
   options.nspawn.garage = {
     localAddress6 = lib.mkOption {
       type = lib.types.str;
@@ -59,9 +61,10 @@ in
       type = lib.types.str;
       description = ''
         Host's vmbr0 IPv6 address in the same /64 as localAddress6. Used as
-        the container's IPv6 default gateway so container traffic exits via
-        the host and follows the host's routing table (including any
-        per-host delegated /64 setup for the 25G link).
+        the next-hop for the container's intra-site /48 IPv6 route, so the
+        container can reach the rest of 2001:470:482f::/48 (router, k3s
+        nodes, garage peers) via the host. NOT a default route — HE prefix
+        reputation; see modules/router/lan-ipv6.nix.
       '';
     };
   };
@@ -91,12 +94,14 @@ in
       GARAGE_S3_SECRET_KEY=${config.sops.placeholder.garage-s3-secret-key}
     '';
 
-    containers.garage = {
-      autoStart = true;
-      privateNetwork = true;
+    nspawn.network.garage = {
+      attachment = "bridge";
       hostBridge = cfg.hostBridge;
       localAddress6 = cfg.localAddress6;
+      hostBridgeAddress = cfg.hostBridgeAddress;
+    };
 
+    containers.garage = {
       bindMounts = {
         "/var/lib/garage" = {
           hostPath = cfg.dataPath;
@@ -188,17 +193,6 @@ in
         # DynamicUser (garage module default) conflicts with bind-mounted /var/lib/garage
         systemd.services.garage.serviceConfig.DynamicUser = lib.mkForce false;
 
-        networking = {
-          defaultGateway6 = {
-            address = cfg.hostBridgeAddress;
-            interface = "eth0";
-          };
-          nameservers = [ "2001:470:482f::1" ];
-          useHostResolvConf = false;
-          firewall.enable = false;
-        };
-
-        system.stateVersion = "25.05";
       };
     };
   };

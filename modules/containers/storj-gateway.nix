@@ -1,22 +1,31 @@
 { config, lib, pkgs, ... }:
 
 # Storj single-tenant S3 gateway (libuplink-backed). Runs inside a
-# systemd-nspawn container using host networking so libuplink has direct
-# dual-stack access — Storj storagenodes are predominantly IPv4 and
-# unreachable from the IPv6-only k3s cluster.
+# systemd-nspawn container on the router's "router-side container" /64
+# (2001:470:482f:300::/64). Dual-stack: libuplink needs native IPv4 to
+# reach Storj storagenodes (predominantly v4); k3s pods reach the
+# gateway over IPv6 via storj-gateway.home.arpa.
 #
-# Cluster pods reach this gateway on the router's LAN IPv6, port 7777.
-# Inbound is firewalled to the cluster pod CIDR only (see
-# modules/router/nftables.nix).
-#
-# The access grant holds the encryption passphrase, so encryption happens
-# here on the router before pieces are uploaded to the Storj satellites.
-# Storj never sees plaintext.
+# The access grant holds the encryption passphrase, so encryption
+# happens here on the router before pieces are uploaded to the Storj
+# satellites. Storj never sees plaintext.
 
 let
   storjGatewayPkg = pkgs.callPackage ../../pkgs/storj-gateway-st { };
 in
 {
+  imports = [ ./common.nix ];
+
+  nspawn.network.storj-gateway = {
+    attachment = "bridge";
+    hostBridge = "br-lan";
+    localAddress = "10.28.0.3/16";
+    localAddress6 = "2001:470:482f:300::2/64";
+    hostBridgeAddress = "2001:470:482f:300::1";
+    ipv4Gateway = "10.28.0.1";
+    ipv4Nameservers = [ "10.28.0.1" ];
+  };
+
   sops.secrets.storj-access-grant = {
     sopsFile = ../../secrets/storj-gateway.yaml;
     key = "storj_access_grant";
@@ -37,9 +46,6 @@ in
   '';
 
   containers.storj-gateway = {
-    autoStart = true;
-    privateNetwork = false; # host networking — needs native IPv4 to reach storagenodes
-
     bindMounts = {
       "/run/storj-gateway.env" = {
         hostPath = config.sops.templates."storj-gateway.env".path;
@@ -55,6 +61,26 @@ in
         createHome = true;
       };
       users.groups.storj-gateway = { };
+
+      # libuplink reaches Storj satellites by IP. DNS returns AAAA records
+      # synthesized via NAT64 (64:ff9b::/96 maps to the satellite's IPv4),
+      # which is the router's translator namespace. The container needs
+      # an explicit route to 64:ff9b::/96 via the host bridge — same
+      # mechanism as the intra-site /48 route, but a different prefix.
+      systemd.services."nspawn-nat64-route6" = {
+        description = "Route NAT64 prefix via host bridge for libuplink";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "storj-gateway.service" ];
+        after = [ "network-addresses-eth0.service" ];
+        wants = [ "network-addresses-eth0.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = ''
+          ${pkgs.iproute2}/bin/ip -6 route replace 64:ff9b::/96 via 2001:470:482f:300::1 dev eth0
+        '';
+      };
 
       systemd.services.storj-gateway = {
         description = "Storj single-tenant S3 gateway";
@@ -90,10 +116,6 @@ in
           ReadWritePaths = [ "/var/lib/storj-gateway" ];
         };
       };
-
-      networking.firewall.enable = false;
-
-      system.stateVersion = "25.05";
     };
   };
 }

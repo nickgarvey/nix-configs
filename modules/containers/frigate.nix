@@ -4,6 +4,8 @@ let
   cfg = config.nspawn.frigate;
 in
 {
+  imports = [ ./common.nix ];
+
   options.nspawn.frigate = {
     localAddress = lib.mkOption {
       type = lib.types.str;
@@ -62,13 +64,16 @@ in
       key = "tailscale_auth_key";
     };
 
-    containers.frigate = {
-      autoStart = true;
-      privateNetwork = true;
+    nspawn.network.frigate = {
+      attachment = "bridge";
       hostBridge = cfg.hostBridge;
       localAddress = cfg.localAddress;
-      localAddress6 = lib.mkIf (cfg.localAddress6 != null) cfg.localAddress6;
+      localAddress6 = cfg.localAddress6;
+      ipv4Gateway = "10.28.0.1";
+      ipv4Nameservers = [ "10.28.0.1" ];
+    };
 
+    containers.frigate = {
       bindMounts = {
         "/var/lib/frigate" = {
           hostPath = cfg.dataPath;
@@ -207,19 +212,10 @@ in
           };
         };
 
-        networking = {
-          defaultGateway = "10.28.0.1";
-          nameservers = [ "10.28.0.1" ];
-          useHostResolvConf = false;
-          firewall.enable = false;
-        };
-
         services.tailscale = {
           enable = true;
           authKeyFile = "/run/tailscale-authkey";
         };
-
-        system.stateVersion = "25.05";
       };
     };
   };

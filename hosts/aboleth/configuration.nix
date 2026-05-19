@@ -8,7 +8,6 @@
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/containers/frigate.nix
-    ../../modules/containers/caddy-static.nix
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
     ../../modules/nix-remote-builder-client.nix
@@ -185,8 +184,6 @@
     cachePath = "/fast/frigate/cache";
   };
   networking.firewall.allowedTCPPorts = [ 2049 8443 ];
-
-  nspawn.caddy-static.enable = true;
 
   environment.systemPackages = with pkgs; [
     ethtool
