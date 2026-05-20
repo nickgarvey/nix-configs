@@ -9,6 +9,7 @@
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/containers/trmnl-proxy.nix
     ../../modules/containers/storj-gateway.nix
+    ../../modules/containers/unifi.nix
   ];
 
   networking.hostName = "router";

@@ -90,7 +90,23 @@ let
         default = null;
         description = ''
           IPv4 default gateway. Required when localAddress is set in
-          bridge attachment.
+          bridge attachment. Note: this populates
+          `networking.defaultGateway` inside the container, but NixOS's
+          scripted-networking machinery does not run when nspawn assigns
+          the address itself, so the route isn't actually installed.
+          Set ipv4DefaultRoute = true to install it explicitly.
+        '';
+      };
+
+      ipv4DefaultRoute = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Install an IPv4 default route via ipv4Gateway inside the
+          container. Needed for containers that initiate outbound IPv4
+          traffic to the internet (e.g. Unifi reaching sso.ui.com).
+          Bridge-attached only — macvlan picks up a default route from
+          DHCP, and host attachment uses the host's routes.
         '';
       };
 
@@ -196,6 +212,25 @@ let
           '';
         };
 
+        # Install the IPv4 default route via ipv4Gateway. NixOS's
+        # `networking.defaultGateway` would normally do this, but the
+        # scripted-networking unit that installs it doesn't run when
+        # nspawn assigns eth0's address itself.
+        systemd.services."nspawn-default-route4" = lib.mkIf (isBridge && net.ipv4DefaultRoute) {
+          description = "Add IPv4 default route via host bridge";
+          wantedBy = [ "multi-user.target" ];
+          before = [ "network-online.target" ];
+          after = [ "sys-subsystem-net-devices-eth0.device" ];
+          wants = [ "sys-subsystem-net-devices-eth0.device" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+          script = ''
+            ${pkgs.iproute2}/bin/ip -4 route replace default via ${net.ipv4Gateway} dev eth0
+          '';
+        };
+
         system.stateVersion = lib.mkDefault "25.05";
       };
     };
@@ -255,6 +290,84 @@ in
         {
           assertion = isMacvlan -> net.macvlanInterface != null;
           message = "nspawn.network.${name}: attachment = \"macvlan\" requires macvlanInterface.";
+        }
+        # ipv4DefaultRoute is bridge-only: macvlan picks up a default
+        # route from DHCP, and host attachment uses the host's routes.
+        {
+          assertion = net.ipv4DefaultRoute -> isBridge;
+          message = "nspawn.network.${name}: ipv4DefaultRoute = true is only valid for attachment = \"bridge\" (macvlan gets a default route via DHCP; host shares the host's routes).";
+        }
+        {
+          assertion = net.ipv4DefaultRoute -> net.ipv4Gateway != null;
+          message = "nspawn.network.${name}: ipv4DefaultRoute = true requires ipv4Gateway.";
+        }
+        {
+          assertion = net.ipv4DefaultRoute -> hasV4;
+          message = "nspawn.network.${name}: ipv4DefaultRoute = true requires localAddress (no IPv4 address means no IPv4 stack to route on).";
+        }
+        # CIDR sanity: addresses must carry a prefix length. Without
+        # the `/N` suffix nspawn silently treats it as /32 / /128 and
+        # the connected-route prefix doesn't match the LAN, breaking
+        # reachability in confusing ways.
+        {
+          assertion = net.localAddress == null
+            || lib.hasInfix "/" net.localAddress;
+          message = "nspawn.network.${name}: localAddress = \"${toString net.localAddress}\" is missing a prefix length (e.g. \"10.28.0.4/16\").";
+        }
+        {
+          assertion = net.localAddress6 == null
+            || lib.hasInfix "/" net.localAddress6;
+          message = "nspawn.network.${name}: localAddress6 = \"${toString net.localAddress6}\" is missing a prefix length (e.g. \"2001:470:482f:200::2/64\").";
+        }
+        # Wrong-attachment-for-option footguns. Each of these knobs is
+        # only applied for one attachment; setting it elsewhere looks
+        # like config but is silently dropped.
+        {
+          assertion = (net.attachment == "host") -> (
+            net.hostBridge == null
+            && net.macvlanInterface == null
+            && net.localAddress == null
+            && net.localAddress6 == null
+            && net.hostBridgeAddress == null
+            && net.ipv4Gateway == null
+            && !net.ipv4DefaultRoute
+          );
+          message = "nspawn.network.${name}: attachment = \"host\" ignores all networking options (the container shares the host's netns). Remove hostBridge/macvlanInterface/localAddress*/ipv4*/hostBridgeAddress.";
+        }
+        {
+          assertion = isBridge -> net.macvlanInterface == null;
+          message = "nspawn.network.${name}: attachment = \"bridge\" doesn't use macvlanInterface — remove it.";
+        }
+        {
+          assertion = isMacvlan -> net.hostBridge == null;
+          message = "nspawn.network.${name}: attachment = \"macvlan\" doesn't use hostBridge — remove it (use macvlanInterface).";
+        }
+        # macvlan currently wires `useDHCP = true` and never applies a
+        # static address. The localAddress docstring mentions "set for
+        # static" but the code path isn't there; flag rather than fail
+        # silently.
+        {
+          assertion = isMacvlan -> net.localAddress == null;
+          message = "nspawn.network.${name}: attachment = \"macvlan\" with localAddress is not implemented (the module only wires DHCP). Either drop localAddress or extend common.nix to apply the static address.";
+        }
+        {
+          assertion = isMacvlan -> net.localAddress6 == null;
+          message = "nspawn.network.${name}: attachment = \"macvlan\" with localAddress6 is not implemented (the module only wires SLAAC via RA). Either drop localAddress6 or extend common.nix.";
+        }
+        {
+          assertion = isMacvlan -> net.ipv4Gateway == null;
+          message = "nspawn.network.${name}: attachment = \"macvlan\" doesn't use ipv4Gateway — macvlan picks up the default route from DHCP.";
+        }
+        {
+          assertion = isMacvlan -> net.hostBridgeAddress == null;
+          message = "nspawn.network.${name}: attachment = \"macvlan\" doesn't use hostBridgeAddress (no /48 intra-site route is installed; macvlan learns routes via RA).";
+        }
+        # hostBridgeAddress only matters when localAddress6 is set — it
+        # defines the next-hop for the /48 route. Setting it without
+        # localAddress6 is a silent no-op.
+        {
+          assertion = (net.hostBridgeAddress != null) -> hasV6;
+          message = "nspawn.network.${name}: hostBridgeAddress is set but localAddress6 isn't — hostBridgeAddress is only used as the next-hop for the /48 intra-site route, which is only installed when localAddress6 is set.";
         }
         # Macvlan children don't communicate with a Linux bridge's slave
         # ports (kernel-level isolation). Catch the footgun at eval time.

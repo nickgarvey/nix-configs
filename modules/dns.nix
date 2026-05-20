@@ -23,6 +23,7 @@ in rec {
     garage-aboleth   = { v4 = []; v6 = [ "2001:470:482f:200::2" ]; };
     garage-tarrasque = { v4 = []; v6 = [ "2001:470:482f:201::2" ]; };
     storj-gateway = { v4 = [ "10.28.0.3" ]; v6 = [ "2001:470:482f:300::2" ]; };
+    unifi         = { v4 = [ "10.28.0.4" ]; v6 = []; };
     k3s-api       = { v4 = []; v6 = map hostV6 [ "k3s-lion" "k3s-dragon" "k3s-goat" ]; };
     # trmnl-display keeps A+AAAA: the ESP32 client is IPv4-only and hits an
     # IPv4→IPv6 proxy at 10.28.0.2. The AAAA is for dual-stack clients.
