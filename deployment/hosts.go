@@ -122,7 +122,7 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
-		Name: "skyforge", FlakeName: "skyforge", Domain: "home.arpa",
+		Name: "skyforge", FlakeName: "skyforge",
 		Order: 50, Reboot: RebootPrompt,
 		Groups: []string{"printer"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH},

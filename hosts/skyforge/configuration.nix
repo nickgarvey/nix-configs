@@ -130,6 +130,8 @@
 
   networking.firewall.allowedTCPPorts = [ 80 7125 ];
 
+  services.tailscale.enable = true;
+
   security.polkit.enable = true;
 
   users.users.klipper = {
