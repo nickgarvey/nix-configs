@@ -33,8 +33,10 @@
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, claude-code-nix, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, claude-code-nix, nixos-raspberrypi, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes
@@ -111,6 +113,22 @@
           nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
           ./hosts/framework-desktop/configuration.nix
           ./hosts/framework-desktop/disk-config.nix
+        ];
+      };
+
+      # Skyforge: Raspberry Pi 5 running Klipper for the Voron Trident printer.
+      # Uses nvmd/nixos-raspberrypi's pinned nixpkgs (NOT our top-level
+      # `nixpkgs` input) because nvmd's vendor-kernel/firmware overlays expect
+      # matching userspace versions — mixing nixpkgs versions trips the
+      # "kernel module and userspace tooling versions are not matching"
+      # assertion (wireguard/zfs/etc).
+      skyforge = nixos-raspberrypi.lib.nixosSystem {
+        specialArgs = inputs // { inherit inputs; };
+        modules = [
+          sops-nix.nixosModules.sops
+          nixos-raspberrypi.nixosModules.raspberry-pi-5.base
+          nixos-raspberrypi.nixosModules.sd-image
+          ./hosts/skyforge/configuration.nix
         ];
       };
 

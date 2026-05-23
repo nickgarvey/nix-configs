@@ -53,7 +53,8 @@ class TestHostConfig(unittest.TestCase):
         self.assertEqual(names.index("tarrasque"), 4)
         self.assertEqual(names.index("aboleth"), 5)
         self.assertEqual(names.index("framework13-laptop"), 6)
-        self.assertEqual(names.index("router"), 7)
+        self.assertEqual(names.index("skyforge"), 7)
+        self.assertEqual(names.index("router"), 8)
 
     def test_all_hosts_have_unique_hostnames(self):
         names = [h.hostname for h in ALL_HOSTS]

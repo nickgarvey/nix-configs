@@ -147,6 +147,10 @@ ALL_HOSTS = [
          deploy_order=40, groups=["workstation"],
          connectivity_checks=["ssh"],
          default=False),
+    Host("skyforge", "skyforge", "home.arpa",
+         RebootPolicy.PROMPT,
+         deploy_order=50, groups=["printer"],
+         connectivity_checks=["ssh"]),
 ]
 
 deploy_warnings: list[str] = []
