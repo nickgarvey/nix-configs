@@ -45,6 +45,15 @@
 
     pkgs = import nixpkgs { system = "x86_64-linux"; };
 
+    # The deploy binary, built from ./deployment. buildGoModule runs `go test`
+    # as part of the build, so this derivation is also the test check.
+    deployPkg = pkgs.buildGoModule {
+      pname = "deploy";
+      version = "0.1.0";
+      src = ./deployment;
+      vendorHash = null; # no external deps
+    };
+
   in
   {
     # Development shells
@@ -52,22 +61,20 @@
       default = pkgs.mkShell {
         buildInputs = with pkgs; [
           python312
+          go
+          deployPkg
         ];
       };
 
       makernexus = import ./devshells/makernexus.nix { inherit pkgs; };
     };
 
+    # Packages
+    packages.x86_64-linux.deploy = deployPkg;
+
     # Checks
     checks.x86_64-linux = {
-      deploy-tests = pkgs.runCommand "deploy-tests" {
-        nativeBuildInputs = [ pkgs.python312 ];
-      } ''
-        cp ${./scripts/deploy.py} deploy.py
-        cp ${./scripts/test_deploy.py} test_deploy.py
-        python3 -m unittest test_deploy -v
-        touch $out
-      '';
+      deploy-tests = deployPkg;
     };
 
     # These are all NixOS configurations
