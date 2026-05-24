@@ -96,7 +96,7 @@
     "klipper/mainsail.cfg".source = ./klipper/mainsail.cfg;
     "klipper/macros.cfg".source = ./klipper/macros.cfg;
     "klipper/start.cfg".source = ./klipper/start.cfg;
-    "klipper/nozzle_scruber.cfg".source = ./klipper/nozzle_scruber.cfg;
+    "klipper/nozzle_scrubber.cfg".source = ./klipper/nozzle_scrubber.cfg;
     "klipper/filament_sensor.cfg".source = ./klipper/filament_sensor.cfg;
   };
 
@@ -110,7 +110,7 @@
     config.environment.etc."klipper/mainsail.cfg".source
     config.environment.etc."klipper/macros.cfg".source
     config.environment.etc."klipper/start.cfg".source
-    config.environment.etc."klipper/nozzle_scruber.cfg".source
+    config.environment.etc."klipper/nozzle_scrubber.cfg".source
     config.environment.etc."klipper/filament_sensor.cfg".source
   ];
 
