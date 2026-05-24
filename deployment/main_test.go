@@ -59,3 +59,14 @@ func TestParseArgsRejectsPositional(t *testing.T) {
 		t.Fatal("expected error for positional args")
 	}
 }
+
+func TestParseArgsForce(t *testing.T) {
+	def, err := parseArgs(nil)
+	if err != nil || def.Force {
+		t.Fatalf("default Force should be false, got %+v err=%v", def, err)
+	}
+	got, err := parseArgs([]string{"--force"})
+	if err != nil || !got.Force {
+		t.Fatalf("--force should set Force=true, got %+v err=%v", got, err)
+	}
+}

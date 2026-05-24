@@ -15,6 +15,7 @@ type CLIArgs struct {
 	Hosts  []string
 	Mode   Mode
 	Reboot RebootFlag
+	Force  bool
 }
 
 func parseArgs(argv []string) (CLIArgs, error) {
@@ -23,6 +24,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 	hostsCSV := fs.String("hosts", "", "Comma-separated host names (default: all default hosts)")
 	modeStr := fs.String("mode", "safe", "Deploy mode: safe|switch|boot")
 	rebootStr := fs.String("reboot", "auto", "Reboot behavior: auto|never|always|ask")
+	force := fs.Bool("force", false, "Skip safety pre-checks (e.g. active print on printer hosts)")
 	if err := fs.Parse(argv); err != nil {
 		return CLIArgs{}, err
 	}
@@ -47,7 +49,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 			}
 		}
 	}
-	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot}, nil
+	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force}, nil
 }
 
 func main() {
@@ -94,8 +96,22 @@ func main() {
 		Warnings:   &warnings,
 	}
 
-	var failed []string
+	var failed, skipped []string
 	for i, h := range hosts {
+		if h.InGroup("printer") && !args.Force {
+			idle, state, ok := CheckPrinterIdle(runner, h)
+			if !ok {
+				fmt.Printf("\n⊘ %s: moonraker unreachable, skipping (use --force to override)\n", h.Name)
+				skipped = append(skipped, h.Name)
+				continue
+			}
+			if !idle {
+				fmt.Printf("\n⊘ %s: print active (state=%s), skipping (use --force to override)\n", h.Name, state)
+				skipped = append(skipped, h.Name)
+				continue
+			}
+			fmt.Printf("\n✓ %s: printer idle (state=%s)\n", h.Name, state)
+		}
 		if !Deploy(ctx, h, args.Mode) {
 			failed = append(failed, h.Name)
 			if h.InGroup("k3s") {
@@ -119,6 +135,9 @@ func main() {
 		for _, w := range warnings {
 			fmt.Printf("  ⚠ %s\n", w)
 		}
+	}
+	if len(skipped) > 0 {
+		fmt.Printf("\nSkipped hosts: %v\n", skipped)
 	}
 	if len(failed) > 0 {
 		fmt.Printf("\nFailed hosts: %v\n", failed)
