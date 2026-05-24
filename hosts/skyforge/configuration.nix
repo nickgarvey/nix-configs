@@ -84,13 +84,82 @@
   # boot.loader.generic-extlinux-compatible; NVMe-first boot order is in the
   # Pi's EEPROM (already set on this unit).
 
-  services.klipper = {
+  # Klipper config layout: nix ships read-only fragments under /etc/klipper/,
+  # and a tiny wrapper printer.cfg is seeded once into
+  # /var/lib/moonraker/config/ so SAVE_CONFIG can append calibration
+  # (bed_mesh, scanner models, PID, input_shaper) without nix clobbering
+  # it on rebuild. Edits to fragments propagate on the next klipper restart.
+  # State lives under moonraker's unified data dir so moonraker's
+  # file_manager finds printer.cfg in its expected `config/` location.
+  environment.etc = {
+    "klipper/main.cfg".source = ./klipper/main.cfg;
+    "klipper/mainsail.cfg".source = ./klipper/mainsail.cfg;
+    "klipper/macros.cfg".source = ./klipper/macros.cfg;
+    "klipper/start.cfg".source = ./klipper/start.cfg;
+    "klipper/nozzle_scruber.cfg".source = ./klipper/nozzle_scruber.cfg;
+    "klipper/filament_sensor.cfg".source = ./klipper/filament_sensor.cfg;
+  };
+
+  # The nixos klipper module only sets restartTriggers when mutableConfig=false.
+  # We use mutableConfig=true (so SAVE_CONFIG survives), but still want a deploy
+  # that changes a nix-managed fragment to restart klipper — otherwise klippy
+  # keeps the old config in memory until manual restart. Mid-print deploys will
+  # interrupt; don't deploy mid-print.
+  systemd.services.klipper.restartTriggers = [
+    config.environment.etc."klipper/main.cfg".source
+    config.environment.etc."klipper/mainsail.cfg".source
+    config.environment.etc."klipper/macros.cfg".source
+    config.environment.etc."klipper/start.cfg".source
+    config.environment.etc."klipper/nozzle_scruber.cfg".source
+    config.environment.etc."klipper/filament_sensor.cfg".source
+  ];
+
+  systemd.tmpfiles.rules = [
+    "d /var/lib/moonraker/config 0755 klipper klipper - -"
+    "d /var/lib/moonraker/gcodes 0755 klipper klipper - -"
+  ];
+
+  # Stock klipper doesn't ship the Cartographer V3 probe plugin. Build the
+  # official cartographer3d-plugin python package (hatchling/hatch-vcs, so
+  # we pretend a version since the nix source has no .git), then wire it
+  # into klipper's python env via extraPythonPackages and drop the
+  # scaffolding stub that klipper's plugin loader expects at
+  # klippy/extras/cartographer.py (its single line re-exports
+  # cartographer.extra). Upstream install.sh does the same two-step.
+  services.klipper = let
+    pluginVersion = "1.6.0";
+    cartographer3dPlugin = pkgs.python3.pkgs.buildPythonPackage {
+      pname = "cartographer3d-plugin";
+      version = pluginVersion;
+      src = inputs.cartographer3d-plugin;
+      format = "pyproject";
+      nativeBuildInputs = (with pkgs.python3.pkgs; [ hatchling hatch-vcs typing-extensions ])
+        ++ [ pkgs.git ];  # hatch_build.py shells out to git unconditionally
+      propagatedBuildInputs = with pkgs.python3.pkgs; [ typing-extensions ];
+      env = {
+        # hatch-vcs / setuptools_scm version detection without .git
+        SETUPTOOLS_SCM_PRETEND_VERSION = pluginVersion;
+        # Plugin's custom hatch build hook reads these in CI guard mode
+        GIT_VERSION = "v${pluginVersion}";
+        COMMIT_SHA = "0000000000000000000000000000000000000000";
+      };
+      doCheck = false;
+    };
+  in {
     enable = true;
     user = "klipper";
     group = "klipper";
-    mutableConfig = false;
-    configFile = ./printer.cfg;
+    mutableConfig = true;
+    configDir = "/var/lib/moonraker/config";
+    configFile = ./printer-seed.cfg;
     firmwares = { };
+    package = (pkgs.klipper.override {
+      extraPythonPackages = ps: [ cartographer3dPlugin ];
+    }).overrideAttrs (old: {
+      postInstall = (old.postInstall or "") + ''
+        echo "from cartographer.extra import *" > $out/lib/klipper/extras/cartographer.py
+      '';
+    });
   };
 
   services.moonraker = {
@@ -101,22 +170,13 @@
     address = "0.0.0.0";
     port = 7125;
     settings = {
+      # Omitting [authorization] does NOT disable auth — moonraker loads
+      # the authorization component by default and defaults trusted_clients
+      # to []. Result: every request 401s. Explicitly trust everything
+      # since this is LAN/Tailscale-only with no public exposure.
       authorization = {
-        cors_domains = [
-          "http://*.home.arpa"
-          "http://*.local"
-          "http://*.lan"
-        ];
-        trusted_clients = [
-          "10.0.0.0/8"
-          "127.0.0.0/8"
-          "169.254.0.0/16"
-          "172.16.0.0/12"
-          "192.168.0.0/16"
-          "FE80::/10"
-          "::1/128"
-          "2001:470:482f::/48"
-        ];
+        cors_domains = [ "*" ];
+        trusted_clients = [ "0.0.0.0/0" "::/0" ];
       };
       octoprint_compat = { };
       history = { };

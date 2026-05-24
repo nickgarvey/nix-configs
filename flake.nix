@@ -35,8 +35,18 @@
     };
 
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
+
+    # Cartographer V3 klipper plugin (the current/active one — newer than
+    # the legacy Cartographer3D/cartographer-klipper loose-script repo,
+    # this is the pip-distributed proper python package that the official
+    # docs target). Consumed via overlay on services.klipper.package in
+    # hosts/skyforge/configuration.nix.
+    cartographer3d-plugin = {
+      url = "github:Cartographer3D/cartographer3d-plugin";
+      flake = false;
+    };
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, claude-code-nix, nixos-raspberrypi, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, claude-code-nix, nixos-raspberrypi, cartographer3d-plugin, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes

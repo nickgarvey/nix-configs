@@ -16,6 +16,22 @@
         "type": "github"
       }
     },
+    "cartographer3d-plugin": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1779389294,
+        "narHash": "sha256-BN24QfRGPiXbU1e1+CJkqMMog0XsI+qR9lu52co5wlQ=",
+        "owner": "Cartographer3D",
+        "repo": "cartographer3d-plugin",
+        "rev": "5d4440a4fc7b2c36e4f6f0c09bfd9af4fc79d61f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Cartographer3D",
+        "repo": "cartographer3d-plugin",
+        "type": "github"
+      }
+    },
     "claude-code-nix": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -274,6 +290,7 @@
     },
     "root": {
       "inputs": {
+        "cartographer3d-plugin": "cartographer3d-plugin",
         "claude-code-nix": "claude-code-nix",
         "disko": "disko",
         "helium-browser": "helium-browser",
