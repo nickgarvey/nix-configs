@@ -68,7 +68,7 @@
   };
 
   networking.wireless = {
-    enable = true;
+    enable = false;
     extraConfigFiles = [ config.sops.templates."wpa_supplicant-home.conf".path ];
   };
 
