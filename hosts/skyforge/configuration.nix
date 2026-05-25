@@ -105,6 +105,14 @@
   # that changes a nix-managed fragment to restart klipper — otherwise klippy
   # keeps the old config in memory until manual restart. Mid-print deploys will
   # interrupt; don't deploy mid-print.
+  # The NixOS moonraker module copies /etc/moonraker.cfg → moonraker-temp.cfg
+  # in an ExecStart script and never sets restartTriggers, so config changes
+  # land on disk but the running process keeps the old settings until manual
+  # restart. Trigger off the /etc template so deploys actually take effect.
+  systemd.services.moonraker.restartTriggers = [
+    config.environment.etc."moonraker.cfg".source
+  ];
+
   systemd.services.klipper.restartTriggers = [
     config.environment.etc."klipper/main.cfg".source
     config.environment.etc."klipper/mainsail.cfg".source
@@ -167,7 +175,7 @@
     user = "klipper";
     group = "klipper";
     allowSystemControl = true;
-    address = "0.0.0.0";
+    address = "::";
     port = 7125;
     settings = {
       # Omitting [authorization] does NOT disable auth — moonraker loads
@@ -180,15 +188,57 @@
       };
       octoprint_compat = { };
       history = { };
+      "webcam Cam1" = {
+        location = "printer";
+        service = "mjpegstreamer-adaptive";
+        target_fps = 15;
+        stream_url = "http://skyforge.home.arpa:8080/stream";
+        snapshot_url = "http://skyforge.home.arpa:8080/snapshot";
+      };
     };
   };
+
+  services.ustreamer = {
+    enable = true;
+    device = "/dev/video0";
+    listenAddress = "[::]:8080";
+    extraArgs = [
+      "--resolution=1920x1080"
+      "--desired-fps=60"
+      "--format=MJPEG"
+      "--allow-origin=*"
+    ];
+  };
+
+  # ustreamer's internal retry loop gives up after a single EPERM, which it
+  # hits at boot because it opens /dev/video0 before udev finishes applying
+  # the `video` group perms. Block startup until the device is actually
+  # openable from the service's runtime user/group context. Can't use
+  # dev-video0.device ordering — V4L2 devices aren't tagged with `systemd`
+  # by default, so that unit never activates and dependents time out.
+  systemd.services.ustreamer.serviceConfig.ExecStartPre = [
+    (pkgs.writeShellScript "wait-video0" ''
+      for i in $(seq 1 60); do
+        [ -r /dev/video0 ] && exit 0
+        sleep 0.5
+      done
+      exit 1
+    '')
+  ];
 
   services.mainsail = {
     enable = true;
     hostName = "skyforge.home.arpa";
   };
 
-  networking.firewall.allowedTCPPorts = [ 80 7125 ];
+  # The mainsail module builds its nginx upstream as `${moonraker.address}:${port}`,
+  # which produces an unbracketed `:::7125` when moonraker listens on `::`. Override
+  # to a bracketed v6 loopback so nginx parses it correctly.
+  services.nginx.upstreams.mainsail-apiserver.servers = lib.mkForce {
+    "[::1]:7125" = {};
+  };
+
+  networking.firewall.allowedTCPPorts = [ 80 7125 8080 ];
 
   services.tailscale.enable = true;
 
