@@ -85,7 +85,7 @@
 
   nix.settings = {
     download-buffer-size = 524288000;
-    max-jobs = 4;
+    max-jobs = 2;
     cores = 0;
   };
 
@@ -93,6 +93,15 @@
   systemd.settings.Manager = {
     RuntimeWatchdogSec = "30s";
     RebootWatchdogSec = "10min";
+  };
+
+  # Fence nix-daemon (and all build children) so a runaway build can't starve
+  # ssh/system. CPUQuota leaves 1 physical core (2 SMT threads) free; MemoryMax
+  # OOM-kills inside the build cgroup before the host wedges.
+  systemd.services.nix-daemon.serviceConfig = {
+    CPUQuota = "1500%";
+    MemoryHigh = "40G";
+    MemoryMax = "48G";
   };
 
   zramSwap.enable = true;
