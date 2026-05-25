@@ -59,6 +59,7 @@
     # but not GST_PLUGIN_SCANNER, causing playbin discovery to fail and segfaulting
     # wxMediaCtrl2 when opening the Monitor (printer camera) tab.
     (orca-slicer.overrideAttrs (old: {
+      patches = (old.patches or []) ++ [ ../../patches/orca-slicer-null-checks.patch ];
       preFixup = (old.preFixup or "") + ''
         gappsWrapperArgs+=(
           --set GST_PLUGIN_SCANNER "${gst_all_1.gstreamer}/libexec/gstreamer-1.0/gst-plugin-scanner"

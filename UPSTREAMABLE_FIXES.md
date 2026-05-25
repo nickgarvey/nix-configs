@@ -140,3 +140,48 @@ Adds a small helper and uses it for the server key:
 - `lib.hasInfix ":"` is a reasonable proxy for "is this an IPv6 literal" since
   hostnames and IPv4 addresses can't contain `:`. Alternatively, the helper
   could live in `lib` since this pattern recurs across nginx-using modules.
+
+---
+
+## OrcaSlicer: two NULL-deref crashes (upstream to OrcaSlicer, not nixpkgs)
+
+**Affected:** `SoftFever/OrcaSlicer` — verified against tag `v2.3.2`, partially still in `master`.
+**Local workaround:** `patches/orca-slicer-null-checks.patch`, applied via `overrideAttrs` in `hosts/framework13-laptop/configuration.nix`.
+
+### Bug 1: `Plater.cpp:6042` — unchecked `option<ConfigOptionStrings>("filament_colour")`
+
+```cpp
+project_filament_count = config_loaded.option<ConfigOptionStrings>("filament_colour")->size();
+```
+
+If a loaded 3mf project's parsed config doesn't expose `filament_colour` as a
+`ConfigOptionStrings` (e.g. a 3mf produced by Creality Print for a printer
+profile the user doesn't have installed locally), `option<...>(name, false)`
+returns `nullptr`, and the immediate `->size()` virtual call segfaults on the
+vtable load. Reproduced opening a Creality-Print-generated 3mf for an Ender-3
+V3 SE without that printer profile installed.
+
+**Status in master:** unchanged as of cloning (commit `c383587a`).
+
+### Bug 2: `wxMediaCtrl2.cpp:45` — unchecked `m_imp` and inner playbin
+
+```cpp
+auto playbin = reinterpret_cast<wxGStreamerMediaBackend *>(m_imp)->m_playbin;
+g_object_set (G_OBJECT (playbin), "audio-sink", NULL, NULL);
+```
+
+If `wxMediaCtrl::Create` can't construct a working GStreamer backend (e.g.
+`playbin` element missing from the registry, which happens on NixOS when the
+`GST_PLUGIN_SCANNER` env var isn't set — see the orca-slicer nixpkgs entry
+above), `m_imp` is `nullptr` and dereferencing it segfaults.
+
+**Status in master:** partially fixed (`m_imp` is now null-checked), but the
+inner `playbin` pointer is still dereferenced unconditionally. Our patch
+guards both.
+
+### Patch
+
+See `patches/orca-slicer-null-checks.patch`. Both hunks are minimal defensive
+null-checks; they don't try to recover or signal the user, just avoid the
+crash. A proper upstream fix would probably also surface a UI notification
+explaining the missing profile / missing GStreamer plugin.

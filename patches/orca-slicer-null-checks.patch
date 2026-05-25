@@ -1,0 +1,46 @@
+Avoid NULL-deref crashes when loading a 3mf without filament_colour, and
+when wxMediaCtrl's GStreamer backend fails to construct (e.g. playbin not
+found in the registry).
+
+Both bugs are present in OrcaSlicer 2.3.2. The wxMediaCtrl2 issue has been
+partially fixed in upstream master (m_imp null-check added) but the inner
+playbin pointer is still dereferenced unconditionally there. The Plater.cpp
+filament_colour lookup is unchanged in master.
+
+See UPSTREAMABLE_FIXES.md in nix-configs for full context.
+
+--- a/src/slic3r/GUI/Plater.cpp
++++ b/src/slic3r/GUI/Plater.cpp
+@@ -6039,7 +6039,10 @@
+                                 //set the size back
+                                 partplate_list.reset_size(current_width + Bed3D::Axes::DefaultTipRadius, current_depth + Bed3D::Axes::DefaultTipRadius, current_height, false);
+                             }
+-                            project_filament_count = config_loaded.option<ConfigOptionStrings>("filament_colour")->size();
++                            {
++                                auto *filament_colour_opt = config_loaded.option<ConfigOptionStrings>("filament_colour");
++                                project_filament_count    = filament_colour_opt ? filament_colour_opt->size() : 0;
++                            }
+                             partplate_list.load_from_3mf_structure(plate_data, project_filament_count);
+                             partplate_list.update_slice_context_to_current_plate(background_process);
+                             this->preview->update_gcode_result(partplate_list.get_current_slice_result());
+--- a/src/slic3r/GUI/wxMediaCtrl2.cpp
++++ b/src/slic3r/GUI/wxMediaCtrl2.cpp
+@@ -42,10 +42,14 @@
+     wxMediaCtrl::Create(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxMEDIACTRLPLAYERCONTROLS_NONE);
+ #ifdef __LINUX__
+     /* Register only after we have created the wxMediaCtrl, since only then are we guaranteed to have fired up Gstreamer's plugin registry. */
+-    auto playbin = reinterpret_cast<wxGStreamerMediaBackend *>(m_imp)->m_playbin;
+-    g_object_set (G_OBJECT (playbin),
+-                  "audio-sink", NULL,
+-                   NULL);
++    if (m_imp) {
++        auto playbin = reinterpret_cast<wxGStreamerMediaBackend *>(m_imp)->m_playbin;
++        if (playbin) {
++            g_object_set (G_OBJECT (playbin),
++                          "audio-sink", NULL,
++                           NULL);
++        }
++    }
+     gstbambusrc_register();
+     Bind(wxEVT_MEDIA_LOADED, [this](auto & e) {
+         m_loaded = true;
