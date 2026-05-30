@@ -238,6 +238,9 @@
     "[::1]:7125" = {};
   };
 
+  # Default nginx client_max_body_size (1M) rejects large gcode uploads with 413.
+  services.nginx.clientMaxBodySize = "2G";
+
   networking.firewall.allowedTCPPorts = [ 80 7125 8080 ];
 
   services.tailscale.enable = true;
