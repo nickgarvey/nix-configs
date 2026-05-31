@@ -57,7 +57,7 @@ func TestSelectHosts(t *testing.T) {
 			name:  "empty selects default hosts in order",
 			input: nil,
 			want: []string{
-				"k3s-lion", "k3s-dragon", "k3s-goat",
+				"fus", "ro", "dah",
 				"framework-desktop", "tarrasque", "aboleth",
 				"skyforge", "router",
 			},
@@ -74,13 +74,13 @@ func TestSelectHosts(t *testing.T) {
 		},
 		{
 			name:  "multi reorders by Order",
-			input: []string{"router", "k3s-lion", "tarrasque"},
-			want:  []string{"k3s-lion", "tarrasque", "router"},
+			input: []string{"router", "fus", "tarrasque"},
+			want:  []string{"fus", "tarrasque", "router"},
 		},
 		{
 			name:  "duplicates deduped",
-			input: []string{"k3s-lion", "k3s-lion"},
-			want:  []string{"k3s-lion"},
+			input: []string{"fus", "fus"},
+			want:  []string{"fus"},
 		},
 		{
 			name:      "unknown name errors",
@@ -117,7 +117,7 @@ func TestSelectHosts(t *testing.T) {
 }
 
 func TestSelectHostsResultIsSorted(t *testing.T) {
-	got, err := SelectHosts(AllHosts, []string{"router", "skyforge", "k3s-dragon"})
+	got, err := SelectHosts(AllHosts, []string{"router", "skyforge", "ro"})
 	if err != nil {
 		t.Fatal(err)
 	}

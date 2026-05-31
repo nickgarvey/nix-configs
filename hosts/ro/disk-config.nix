@@ -1,0 +1,1 @@
+../fus/disk-config.nix

@@ -22,11 +22,11 @@ func TestParseArgsDefaults(t *testing.T) {
 }
 
 func TestParseArgsHosts(t *testing.T) {
-	got, err := parseArgs([]string{"--hosts", "router,k3s-dragon, skyforge"})
+	got, err := parseArgs([]string{"--hosts", "router,ro, skyforge"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"router", "k3s-dragon", "skyforge"}
+	want := []string{"router", "ro", "skyforge"}
 	if strings.Join(got.Hosts, ",") != strings.Join(want, ",") {
 		t.Errorf("got %v, want %v", got.Hosts, want)
 	}

@@ -14,16 +14,16 @@ This is a mono-repo for all my nix settings. Here are the sections:
 |------|---------|-----|-----|-----|-----------------|
 | [`tarrasque`](hosts/tarrasque) | ASUS PRIME X870-P WIFI | AMD Ryzen 9 9950X3D | 64 GB | NVIDIA RTX 5090 | WD_BLACK SN850X 2 TB NVMe |
 | [`aboleth`](hosts/aboleth) | ASRock Industrial IMB-X1314 | Intel i5-12600K | 128 GB | iGPU (UHD 770) | Samsung 980 Pro 2 TB NVMe + 2× WDC 6 TB HDD |
-| [`k3s-lion`](hosts/k3s-lion) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
-| [`k3s-dragon`](hosts/k3s-dragon) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
-| [`k3s-goat`](hosts/k3s-goat) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
+| [`fus`](hosts/fus) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
+| [`ro`](hosts/ro) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
+| [`dah`](hosts/dah) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`framework-desktop`](hosts/framework-desktop) | Framework Desktop | AMD Ryzen AI Max+ 395 (Strix Halo) | 128 GB | Radeon 8060S iGPU | WD_BLACK SN7100 2 TB NVMe |
 | [`framework13-laptop`](hosts/framework13-laptop) | Framework Laptop 13 | AMD Ryzen AI 7 350 | 64 GB | Radeon 860M iGPU | KIOXIA 2 TB NVMe |
 | [`router`](hosts/router) | Topton Fanless PC| Intel N150 | 16 GB | iGPU (Alder Lake-N) | Samsung 870 QVO 1 TB SATA |
 
 ### Kubernetes Hosts
 
-`k3-lion`, `k3s-dragon` and `k3s-goat` are the three heads of the [chimera](https://www.aidedd.org/dnd/monstres.php?vo=chimera) which is the Kubernetes cluster.
+`fus`, `ro` and `dah` are the three nodes of the Kubernetes cluster.
 
 [`modules/k3s-common.nix`](modules/k3s-common.nix) contain the main configuration for those hosts.
 

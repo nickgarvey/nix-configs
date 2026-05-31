@@ -21,9 +21,9 @@
     { hostname = "skyforge";      mac = "2c:cf:67:0c:3c:08"; ipv4 = "10.28.1.4";     ipv6 = "2001:470:482f::4"; }
     { hostname = "camera";        mac = "c4:3c:b0:f9:df:19"; ipv4 = "10.28.4.2";     ipv6 = null; }
     { hostname = "glkvm";         mac = "94:83:c4:bb:1c:0d"; ipv4 = "10.28.9.145";   ipv6 = null; }
-    { hostname = "k3s-lion";      mac = "78:55:36:00:4c:c4"; ipv4 = "10.28.15.1";    ipv6 = "2001:470:482f::21"; podCIDR = "2001:470:482f:100::/64"; }
-    { hostname = "k3s-dragon";    mac = "78:55:36:00:47:f2"; ipv4 = "10.28.15.2";    ipv6 = "2001:470:482f::22"; podCIDR = "2001:470:482f:102::/64"; }
-    { hostname = "k3s-goat";      mac = "78:55:36:00:4d:80"; ipv4 = "10.28.15.3";    ipv6 = "2001:470:482f::23"; podCIDR = "2001:470:482f:101::/64"; }
+    { hostname = "fus";           mac = "78:55:36:00:4c:c4"; ipv4 = "10.28.15.1";    ipv6 = "2001:470:482f::21"; podCIDR = "2001:470:482f:100::/64"; }
+    { hostname = "ro";            mac = "78:55:36:00:47:f2"; ipv4 = "10.28.15.2";    ipv6 = "2001:470:482f::22"; podCIDR = "2001:470:482f:104::/64"; }
+    { hostname = "dah";           mac = "78:55:36:00:4d:80"; ipv4 = "10.28.15.3";    ipv6 = "2001:470:482f::23"; podCIDR = "2001:470:482f:103::/64"; }
     { hostname = "framework-desktop";     mac = "9c:bf:0d:01:0e:95"; ipv4 = "10.28.15.4";    ipv6 = "2001:470:482f::12"; }
   ];
 }

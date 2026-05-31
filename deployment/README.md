@@ -20,7 +20,7 @@ so the at-risk window contains only fast SSH RPCs.
 The flake's devShell builds the binary and puts `deploy` on your PATH:
 
 ```sh
-nix develop -c deploy --hosts k3s-dragon
+nix develop -c deploy --hosts ro
 nix develop -c deploy                              # all default hosts
 nix develop -c deploy --hosts router,tarrasque
 ```
@@ -29,13 +29,13 @@ Or inside the devshell:
 
 ```sh
 nix develop
-deploy --hosts k3s-dragon
+deploy --hosts ro
 ```
 
 Outside the devshell:
 
 ```sh
-nix run .#deploy -- --hosts k3s-dragon
+nix run .#deploy -- --hosts ro
 ```
 
 ## Flags
@@ -76,7 +76,7 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 
 | Host | Order | Reboot | k8s health | Default | Notes |
 |---|---|---|---|---|---|
-| k3s-lion / k3s-dragon / k3s-goat | 10–12 | auto | ✓ | ✓ | IPv6 gateway ping |
+| fus / ro / dah | 10–12 | auto | ✓ | ✓ | IPv6 gateway ping |
 | framework-desktop | 20 | prompt | – | ✓ | |
 | tarrasque | 21 | prompt | – | ✓ | also the build host |
 | aboleth | 30 | prompt | – | ✓ | |
@@ -137,7 +137,7 @@ machine is tested with a `FakeRunner` — no real ssh required.
 | `--no-reboot` | `--reboot never` |
 | `--force-reboot` | `--reboot ask` is the closest; or `--reboot always` |
 | `--hosts a b c` (space) | `--hosts a,b,c` (comma) |
-| `--group k3s` | `--hosts k3s-lion,k3s-dragon,k3s-goat` |
+| `--group k3s` | `--hosts fus,ro,dah` |
 | `--dry-run` | (removed; run `nix flake check` + `nix build` manually) |
 | `--skip-flake-check` | (removed; flake check no longer run by deploy) |
 | `--skip-k8s-check` | (removed; always runs) |

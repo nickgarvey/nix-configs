@@ -80,19 +80,19 @@ func (h Host) InGroup(g string) bool {
 // Order so the deploy plan is read top-to-bottom.
 var AllHosts = []Host{
 	{
-		Name: "k3s-lion", FlakeName: "k3s-lion", Domain: "home.arpa",
+		Name: "fus", FlakeName: "fus", Domain: "home.arpa",
 		Order: 10, Reboot: RebootAuto, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
-		Name: "k3s-dragon", FlakeName: "k3s-dragon", Domain: "home.arpa",
+		Name: "ro", FlakeName: "ro", Domain: "home.arpa",
 		Order: 11, Reboot: RebootAuto, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
-		Name: "k3s-goat", FlakeName: "k3s-goat", Domain: "home.arpa",
+		Name: "dah", FlakeName: "dah", Domain: "home.arpa",
 		Order: 12, Reboot: RebootAuto, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},

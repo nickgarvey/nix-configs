@@ -1,1 +1,0 @@
-../k3s-lion/disk-config.nix

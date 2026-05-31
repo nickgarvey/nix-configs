@@ -51,7 +51,7 @@
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes
     # Actual configs for these nodes are in hosts/
-    k3sNodes = k3sHelpers.generateK3sNodes [ "k3s-lion" "k3s-dragon" "k3s-goat" ];
+    k3sNodes = k3sHelpers.generateK3sNodes [ "fus" "ro" "dah" ];
 
     pkgs = import nixpkgs { system = "x86_64-linux"; };
 

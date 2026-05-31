@@ -40,7 +40,7 @@ func buildOKResponses(systemPath string) []FakeResponse {
 }
 
 func TestSafeDeployHappyPath(t *testing.T) {
-	host := AllHosts[1] // k3s-dragon
+	host := AllHosts[1] // ro
 	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
 	ctx := testCtx(fake)
 

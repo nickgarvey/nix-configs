@@ -40,7 +40,7 @@ func TestK8sHealthPollingReadyAfterRetries(t *testing.T) {
 			{Stdout: "True"},
 		},
 	}
-	host := Host{Name: "k3s-dragon"}
+	host := Host{Name: "ro"}
 	if !WaitForK8sReady(r, host, func(time.Duration) {}) {
 		t.Fatalf("expected ready; count=%d", r.count)
 	}
@@ -54,7 +54,7 @@ func TestK8sHealthPollingNeverReady(t *testing.T) {
 		match:   MatchContains("kubectl"),
 		results: []RunResult{{Stdout: "NotReady"}},
 	}
-	host := Host{Name: "k3s-dragon"}
+	host := Host{Name: "ro"}
 	if WaitForK8sReady(r, host, func(time.Duration) {}) {
 		t.Fatal("expected failure")
 	}

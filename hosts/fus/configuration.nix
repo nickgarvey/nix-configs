@@ -8,7 +8,7 @@
     ./hardware-configuration.nix
   ];
 
-  networking.hostName = "k3s-lion";
+  networking.hostName = "fus";
   homelab.network.podCIDR = "2001:470:482f:100::/64";
 
   services.icmpv6-archive.enable = true;
