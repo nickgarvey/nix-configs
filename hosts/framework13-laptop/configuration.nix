@@ -36,6 +36,13 @@
   networking.networkmanager.enable = true;
   networking.networkmanager.wifi.powersave = false;
 
+  # The MT7925 (RZ717) Wi-Fi 7 firmware mailbox hangs when the PCIe link
+  # enters ASPM L1, causing "Message ... timeout" firmware resets and dropped
+  # connections. Disable L1 ASPM for just this device.
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x14c3", ATTR{device}=="0x0717", ATTR{link/l1_aspm}="0"
+  '';
+
   # COSMIC display manager and desktop
   services.displayManager.cosmic-greeter.enable = true;
   services.desktopManager.cosmic.enable = true;
