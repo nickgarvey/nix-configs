@@ -52,10 +52,10 @@ type Host struct {
 	ConnChecks     []ConnCheck
 }
 
-// BuildHost is always tarrasque per the rewrite scope (the --no-build-host
-// escape hatch was dropped). aarch64 targets (skyforge) build via tarrasque's
-// binfmt emulation. Centralised here so a future move would be one constant.
-const BuildHost = "tarrasque"
+// BuildHost is always talos per the rewrite scope (the --no-build-host escape
+// hatch was dropped). aarch64 targets (skyforge) build via talos's binfmt
+// emulation. Centralised here so a future move would be one constant.
+const BuildHost = "talos"
 
 func (h Host) FQDN() string {
 	if h.SSHAddress != "" {
@@ -104,7 +104,7 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	},
 	{
-		Name: "tarrasque", FlakeName: "tarrasque", Domain: "home.arpa",
+		Name: "talos", FlakeName: "talos", Domain: "home.arpa",
 		Order: 21, Reboot: RebootPrompt,
 		Groups: []string{"workstation"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},

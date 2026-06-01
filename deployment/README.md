@@ -5,7 +5,7 @@ Go rewrite of the NixOS deploy orchestrator. Replaces `scripts/deploy.py`.
 ## What it does
 
 Deploys NixOS configs to managed hosts using a watchdog-protected flow:
-build on `tarrasque`, pre-copy the closure to the target, arm a
+build on `talos`, pre-copy the closure to the target, arm a
 `systemd-run` reboot timer, activate via `switch-to-configuration test`,
 verify connectivity + system path, persist via `switch-to-configuration boot`,
 disarm. If anything between arm and disarm fails (network breakage,
@@ -22,7 +22,7 @@ The flake's devShell builds the binary and puts `deploy` on your PATH:
 ```sh
 nix develop -c deploy --hosts ro
 nix develop -c deploy                              # all default hosts
-nix develop -c deploy --hosts router,tarrasque
+nix develop -c deploy --hosts router,talos
 ```
 
 Or inside the devshell:
@@ -78,16 +78,16 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 |---|---|---|---|---|---|
 | fus / ro / dah | 10–12 | auto | ✓ | ✓ | IPv6 gateway ping |
 | framework-desktop | 20 | prompt | – | ✓ | |
-| tarrasque | 21 | prompt | – | ✓ | also the build host |
+| talos | 21 | prompt | – | ✓ | also the build host |
 | lydia | 30 | prompt | – | ✓ | |
 | framework13-laptop | 40 | prompt | – | opt-in | only deploys when named explicitly |
-| skyforge | 50 | prompt | – | ✓ | aarch64; built via tarrasque binfmt |
+| skyforge | 50 | prompt | – | ✓ | aarch64; built via talos binfmt |
 | router | 99 | **never** | – | ✓ | extended connectivity (IPv6 tunnel, DNS, internet) |
 
 ## Safe deploy flow
 
 ```
-1. Build on tarrasque + copy closure to target   ─┐ pre-watchdog
+1. Build on talos + copy closure to target   ─┐ pre-watchdog
 2. Stop stale deploy-watchdog-* + nixos-rebuild   │ (slow OK)
    units from prior runs                          ─┘
 3. Arm watchdog (systemd-run, 2 min)              ─┐
@@ -109,7 +109,7 @@ stability).
 
 ### Why we don't use `nixos-rebuild test` / `nixos-rebuild boot` under the watchdog
 
-`nixos-rebuild` re-evals on tarrasque and re-checks the closure on every
+`nixos-rebuild` re-evals on talos and re-checks the closure on every
 invocation. The build at step 1 already populated the target's nix store
 (via `--target-host` + `--use-substitutes`), so we can call
 `switch-to-configuration` directly on the known store path. This keeps the
@@ -141,5 +141,5 @@ machine is tested with a `FakeRunner` — no real ssh required.
 | `--dry-run` | (removed; run `nix flake check` + `nix build` manually) |
 | `--skip-flake-check` | (removed; flake check no longer run by deploy) |
 | `--skip-k8s-check` | (removed; always runs) |
-| `--no-build-host` | (removed; tarrasque is always the build host) |
+| `--no-build-host` | (removed; talos is always the build host) |
 | `--watchdog-timeout`, `--deploy-timeout` | (removed; hardcoded in `deploy.go`) |

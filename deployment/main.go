@@ -67,7 +67,7 @@ func main() {
 
 	runner := ExecRunner{}
 
-	// Pre-flight: verify build host (tarrasque) is reachable. We always offload.
+	// Pre-flight: verify build host (talos) is reachable. We always offload.
 	fmt.Printf("Checking build host %s is reachable...\n", BuildHost)
 	probeCtx, cancel := WithTimeout(15 * time.Second)
 	probe := runner.Run(probeCtx, []string{

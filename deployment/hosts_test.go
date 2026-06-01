@@ -36,7 +36,7 @@ func TestHostFQDN(t *testing.T) {
 		want string
 	}{
 		{Host{Name: "router", SSHAddress: "10.28.0.1"}, "10.28.0.1"},
-		{Host{Name: "tarrasque", Domain: "home.arpa"}, "tarrasque.home.arpa"},
+		{Host{Name: "talos", Domain: "home.arpa"}, "talos.home.arpa"},
 		{Host{Name: "framework13-laptop"}, "framework13-laptop"},
 	}
 	for _, c := range cases {
@@ -58,7 +58,7 @@ func TestSelectHosts(t *testing.T) {
 			input: nil,
 			want: []string{
 				"fus", "ro", "dah",
-				"framework-desktop", "tarrasque", "lydia",
+				"framework-desktop", "talos", "lydia",
 				"skyforge", "router",
 			},
 		},
@@ -74,8 +74,8 @@ func TestSelectHosts(t *testing.T) {
 		},
 		{
 			name:  "multi reorders by Order",
-			input: []string{"router", "fus", "tarrasque"},
-			want:  []string{"fus", "tarrasque", "router"},
+			input: []string{"router", "fus", "talos"},
+			want:  []string{"fus", "talos", "router"},
 		},
 		{
 			name:  "duplicates deduped",

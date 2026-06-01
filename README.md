@@ -12,7 +12,7 @@ This is a mono-repo for all my nix settings. Here are the sections:
 
 | Host | Machine | CPU | RAM | GPU | Primary storage |
 |------|---------|-----|-----|-----|-----------------|
-| [`tarrasque`](hosts/tarrasque) | ASUS PRIME X870-P WIFI | AMD Ryzen 9 9950X3D | 64 GB | NVIDIA RTX 5090 | WD_BLACK SN850X 2 TB NVMe |
+| [`talos`](hosts/talos) | ASUS PRIME X870-P WIFI | AMD Ryzen 9 9950X3D | 64 GB | NVIDIA RTX 5090 | WD_BLACK SN850X 2 TB NVMe |
 | [`lydia`](hosts/lydia) | ASRock Industrial IMB-X1314 | Intel i5-12600K | 128 GB | iGPU (UHD 770) | Samsung 980 Pro 2 TB NVMe + 2× WDC 6 TB HDD |
 | [`fus`](hosts/fus) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`ro`](hosts/ro) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
@@ -31,7 +31,7 @@ Services running on that cluster are found in the [k8s-gitops](https://github.co
 
 ### Big Servers
 
-`tarrasque` is truly [a monster](https://www.aidedd.org/dnd/monstres.php?vo=tarrasque) with a 9950x3d and RTX 5090. This runs LLMs, performs Nix builds for other hosts, and serves the Nix cache.
+`talos` has a 9950x3d and RTX 5090. This runs LLMs, performs Nix builds for other hosts, and serves the Nix cache.
 
 `lydia` has 128GB of DDR4 ECC RAM, so it acts as a storage/VM server.
 

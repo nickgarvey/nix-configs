@@ -79,7 +79,7 @@
   };
 
   networking = {
-    hostName = "tarrasque";
+    hostName = "talos";
     hostId = "a4c946db";
   };
 

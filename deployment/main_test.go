@@ -45,11 +45,11 @@ func TestParseArgsInvalidReboot(t *testing.T) {
 }
 
 func TestParseArgsAllValues(t *testing.T) {
-	got, err := parseArgs([]string{"--mode", "boot", "--reboot", "always", "--hosts", "tarrasque"})
+	got, err := parseArgs([]string{"--mode", "boot", "--reboot", "always", "--hosts", "talos"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Mode != ModeBoot || got.Reboot != RebootFlagAlways || got.Hosts[0] != "tarrasque" {
+	if got.Mode != ModeBoot || got.Reboot != RebootFlagAlways || got.Hosts[0] != "talos" {
 		t.Errorf("got %+v", got)
 	}
 }

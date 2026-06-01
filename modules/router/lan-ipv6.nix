@@ -25,7 +25,7 @@ in
         # made on-link for the router via the interface route below.
         #
         # Router-side container delegated /64. Mirrors lydia (200::/64)
-        # and tarrasque (201::/64): the router's bridge address acts as
+        # and talos (201::/64): the router's bridge address acts as
         # the /48 next-hop for nspawn containers running on the router
         # (storj-gateway, trmnl-proxy, …).
         "2001:470:482f:300::1/64"
@@ -57,11 +57,11 @@ in
       # Kernel routes:
       #   - podRoutes (one /64 per k3s node) — return traffic from HE
       #     tunnel reaches the correct k3s node.
-      #   - Per-host delegated /64s (lydia, tarrasque) — on-link on
+      #   - Per-host delegated /64s (lydia, talos) — on-link on
       #     br-lan; NDP resolves to the host's vmbr0.
       routes = podRoutes ++ [
         { Destination = "2001:470:482f:200::/64"; }  # lydia delegated /64
-        { Destination = "2001:470:482f:201::/64"; }  # tarrasque delegated /64
+        { Destination = "2001:470:482f:201::/64"; }  # talos delegated /64
         # 300::/64 is on-link via the router's own address above; no
         # explicit route needed here (kernel installs it from the addr).
         # Cilium LB pool — on-link via br-lan so the router can

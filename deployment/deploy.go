@@ -85,7 +85,7 @@ func Deploy(ctx *DeployContext, host Host, mode Mode) bool {
 // watchdog we only call switch-to-configuration directly on the known system
 // path — no nix eval, no closure transfer.
 func deploySafe(ctx *DeployContext, host Host) bool {
-	fmt.Println("\n  [1/9] Building on tarrasque and copying closure to target...")
+	fmt.Println("\n  [1/9] Building on talos and copying closure to target...")
 	systemPath, ok := buildAndCopy(ctx, host)
 	if !ok {
 		return false
@@ -188,9 +188,9 @@ func deployUnsafe(ctx *DeployContext, host Host, nrMode string) bool {
 	return true
 }
 
-// buildAndCopy runs `nixos-rebuild build --build-host tarrasque --target-host
-// <host> --use-substitutes`. This evaluates+builds on tarrasque and has the
-// target pull the closure from tarrasque's harmonia substituter, populating
+// buildAndCopy runs `nixos-rebuild build --build-host talos --target-host
+// <host> --use-substitutes`. This evaluates+builds on talos and has the
+// target pull the closure from talos's harmonia substituter, populating
 // the target's nix store BEFORE we arm the watchdog. Returns the system path.
 func buildAndCopy(ctx *DeployContext, host Host) (string, bool) {
 	cctx, cancel := WithTimeout(30 * time.Minute) // builds can be slow

@@ -90,12 +90,12 @@
     # These are all NixOS configurations
     nixosConfigurations = {
       # Desktop
-      tarrasque = nixpkgs.lib.nixosSystem {
+      talos = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
-          ./hosts/tarrasque/configuration.nix
-          ./hosts/tarrasque/disk-config.nix
+          ./hosts/talos/configuration.nix
+          ./hosts/talos/disk-config.nix
         ];
       };
 
