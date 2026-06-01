@@ -34,6 +34,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    pi-nix = {
+      url = "github:lukasl-dev/pi.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
 
     # Cartographer V3 klipper plugin (the current/active one — newer than
