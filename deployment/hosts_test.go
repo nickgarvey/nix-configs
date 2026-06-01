@@ -35,7 +35,7 @@ func TestHostFQDN(t *testing.T) {
 		h    Host
 		want string
 	}{
-		{Host{Name: "router", SSHAddress: "10.28.0.1"}, "10.28.0.1"},
+		{Host{Name: "dragonsreach", SSHAddress: "10.28.0.1"}, "10.28.0.1"},
 		{Host{Name: "talos", Domain: "home.arpa"}, "talos.home.arpa"},
 		{Host{Name: "dovahkiin"}, "dovahkiin"},
 	}
@@ -59,13 +59,13 @@ func TestSelectHosts(t *testing.T) {
 			want: []string{
 				"fus", "ro", "dah",
 				"wabbajack", "talos", "lydia",
-				"skyforge", "router",
+				"skyforge", "dragonsreach",
 			},
 		},
 		{
 			name:  "explicit single",
-			input: []string{"router"},
-			want:  []string{"router"},
+			input: []string{"dragonsreach"},
+			want:  []string{"dragonsreach"},
 		},
 		{
 			name:  "explicit selects non-default host (dovahkiin)",
@@ -74,8 +74,8 @@ func TestSelectHosts(t *testing.T) {
 		},
 		{
 			name:  "multi reorders by Order",
-			input: []string{"router", "fus", "talos"},
-			want:  []string{"fus", "talos", "router"},
+			input: []string{"dragonsreach", "fus", "talos"},
+			want:  []string{"fus", "talos", "dragonsreach"},
 		},
 		{
 			name:  "duplicates deduped",
@@ -89,8 +89,8 @@ func TestSelectHosts(t *testing.T) {
 		},
 		{
 			name:  "whitespace trimmed",
-			input: []string{"  router  "},
-			want:  []string{"router"},
+			input: []string{"  dragonsreach  "},
+			want:  []string{"dragonsreach"},
 		},
 	}
 	for _, c := range cases {
@@ -117,7 +117,7 @@ func TestSelectHosts(t *testing.T) {
 }
 
 func TestSelectHostsResultIsSorted(t *testing.T) {
-	got, err := SelectHosts(AllHosts, []string{"router", "skyforge", "ro"})
+	got, err := SelectHosts(AllHosts, []string{"dragonsreach", "skyforge", "ro"})
 	if err != nil {
 		t.Fatal(err)
 	}

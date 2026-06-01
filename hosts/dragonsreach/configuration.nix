@@ -12,7 +12,7 @@
     ../../modules/containers/unifi.nix
   ];
 
-  networking.hostName = "router";
+  networking.hostName = "dragonsreach";
 
   services.icmpv6-archive = {
     enable = true;
@@ -41,7 +41,7 @@
     tcpdump
   ];
 
-  sops.defaultSopsFile = ../../secrets/router.yaml;
+  sops.defaultSopsFile = ../../secrets/dragonsreach.yaml;
   sops.defaultSopsFormat = "yaml";
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 

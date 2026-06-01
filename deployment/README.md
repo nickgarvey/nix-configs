@@ -22,7 +22,7 @@ The flake's devShell builds the binary and puts `deploy` on your PATH:
 ```sh
 nix develop -c deploy --hosts ro
 nix develop -c deploy                              # all default hosts
-nix develop -c deploy --hosts router,talos
+nix develop -c deploy --hosts dragonsreach,talos
 ```
 
 Or inside the devshell:
@@ -65,7 +65,7 @@ nix run .#deploy -- --hosts ro
 | `always`     | skip (warn)   | reboot             | reboot            |
 | `ask`        | skip          | prompt             | prompt            |
 
-`NEVER` (router) is hard policy and never reboots regardless of `--reboot`.
+`NEVER` (dragonsreach) is hard policy and never reboots regardless of `--reboot`.
 
 "Changed" = the running kernel version differs from
 `/run/current-system/kernel-modules/...`, or `/run/booted-system/kernel-params`
@@ -83,7 +83,7 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 | lydia | 30 | prompt | – | ✓ | SSH + gateway ping |
 | dovahkiin | 40 | prompt | – | opt-in | only deploys when named explicitly |
 | skyforge | 50 | prompt | – | ✓ | aarch64; built via talos binfmt; printer idle pre-check |
-| router | 99 | **never** | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
+| dragonsreach | 99 | **never** | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
 
 ### Printer pre-check (skyforge)
 

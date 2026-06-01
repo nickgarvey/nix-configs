@@ -66,7 +66,7 @@ in
 
     # Systemd service to update HE tunnel endpoint (for dynamic WAN IP)
     sops.secrets.he-tunnel-credentials = {
-      sopsFile = ../../secrets/router.yaml;
+      sopsFile = ../../secrets/dragonsreach.yaml;
     };
 
     systemd.services.he-tunnel-update = {

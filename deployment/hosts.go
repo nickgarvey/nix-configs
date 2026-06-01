@@ -43,7 +43,7 @@ type Host struct {
 	Name           string
 	FlakeName      string
 	Domain         string
-	SSHAddress     string // overrides FQDN if set (used by router)
+	SSHAddress     string // overrides FQDN if set (used by dragonsreach)
 	Order          int
 	Reboot         RebootPolicy
 	K8sHealthCheck bool
@@ -128,7 +128,7 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
-		Name: "router", FlakeName: "router",
+		Name: "dragonsreach", FlakeName: "dragonsreach",
 		SSHAddress: "10.28.0.1",
 		Order:      99, Reboot: RebootNever,
 		Groups:  []string{"infra", "router"},

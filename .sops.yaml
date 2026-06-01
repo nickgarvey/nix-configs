@@ -4,7 +4,7 @@ keys:
   - &workstation age1le67uqtvry52ch733vytmr7yjvjsna8u3k6a9n285ggmuzfv9q7s4rqufu
   - &wabbajack age1phmmhj7kfedel0uz052sj8glcevj6qgh5sdmq73ctm8qqlnxaarq4l9rvv
   - &dovahkiin age1m9l2ncrkg5zelkegwpa2ux2kw5cljay2m9sxuzf2eyz8qqje45vsmfn76k
-  - &router age1c3fwgyf6tm44gzhyvfjk5eyysef0shufd50kdg4t0w2rd9jylcusakgxpy
+  - &dragonsreach age1c3fwgyf6tm44gzhyvfjk5eyysef0shufd50kdg4t0w2rd9jylcusakgxpy
   - &lydia age1cz96x8w6653wruqxrwquczv3ulwe5gfnvyy6p3tzvs8mehc7gyas7hty0k
   - &skyforge age1z95v2ahfghn34yg2yl8k3crtqtraqg6mnvvzq2audzr96savcqxs5p7yfe
 creation_rules:
@@ -24,11 +24,11 @@ creation_rules:
       - *ngarvey
       - *lydia
       - *workstation
-  - path_regex: secrets/router.yaml
+  - path_regex: secrets/dragonsreach.yaml
     key_groups:
     - age:
       - *ngarvey
-      - *router
+      - *dragonsreach
   - path_regex: secrets/k3s.yaml
     key_groups:
     - age:
@@ -59,12 +59,12 @@ creation_rules:
     key_groups:
     - age:
       - *ngarvey
-      - *router
+      - *dragonsreach
   - path_regex: secrets/icmpv6-archive.yaml
     key_groups:
     - age:
       - *ngarvey
-      - *router
+      - *dragonsreach
       - *lydia
       - *k3s
       - *wabbajack

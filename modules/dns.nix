@@ -17,6 +17,7 @@ in rec {
   # A/AAAA records. v4/v6 are lists; empty list = no record of that family.
   records = {
     router        = { v4 = [ "10.28.0.1" ];    v6 = [ "2001:470:482f::1" ]; };
+    dragonsreach  = { v4 = [ "10.28.0.1" ];    v6 = [ "2001:470:482f::1" ]; };
     frigate       = { v4 = [ "10.28.12.109" ]; v6 = []; };
     smb           = { v4 = [ "10.28.12.110" ]; v6 = [ "2001:470:482f::14" ]; };
     garage           = { v4 = []; v6 = [ "2001:470:482f:200::2" "2001:470:482f:201::2" ]; };

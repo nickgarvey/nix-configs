@@ -64,8 +64,8 @@ func TestK8sHealthPollingNeverReady(t *testing.T) {
 }
 
 func TestVerifyConnectivityRouterUsesRouterChecks(t *testing.T) {
-	router := Host{
-		Name: "router", SSHAddress: "10.28.0.1",
+	dragonsreach := Host{
+		Name: "dragonsreach", SSHAddress: "10.28.0.1",
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingInternet, CheckDNS, CheckIPv6Tunnel, CheckIPv6Internet},
 	}
 	fake := &FakeRunner{
@@ -74,7 +74,7 @@ func TestVerifyConnectivityRouterUsesRouterChecks(t *testing.T) {
 			{Match: func([]string) bool { return true }, Result: RunResult{}},
 		},
 	}
-	if !VerifyConnectivity(fake, router, func(time.Duration) {}) {
+	if !VerifyConnectivity(fake, dragonsreach, func(time.Duration) {}) {
 		t.Fatal("expected verify to succeed with all-OK fake")
 	}
 	joined := joinedCalls(fake)
@@ -85,7 +85,7 @@ func TestVerifyConnectivityRouterUsesRouterChecks(t *testing.T) {
 		"ping -6 -c 3 -W 5 2001:4860:4860::8888",
 	} {
 		if !contains(joined, want) {
-			t.Errorf("router checks missing %q in: %v", want, joined)
+			t.Errorf("dragonsreach checks missing %q in: %v", want, joined)
 		}
 	}
 }

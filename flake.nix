@@ -112,13 +112,13 @@
       };
 
       # Router
-      router = nixpkgs.lib.nixosSystem {
+      dragonsreach = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
-          ./hosts/router/configuration.nix
-          ./hosts/router/disk-config.nix
+          ./hosts/dragonsreach/configuration.nix
+          ./hosts/dragonsreach/disk-config.nix
         ];
       };
 

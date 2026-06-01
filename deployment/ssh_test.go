@@ -7,7 +7,7 @@ import (
 )
 
 func TestSSHArgv(t *testing.T) {
-	host := Host{Name: "router", SSHAddress: "10.28.0.1"}
+	host := Host{Name: "dragonsreach", SSHAddress: "10.28.0.1"}
 	argv := SSHArgv(host, "uname -r", 0)
 
 	joined := strings.Join(argv, " ")
