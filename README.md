@@ -18,7 +18,7 @@ This is a mono-repo for all my nix settings. Here are the sections:
 | [`ro`](hosts/ro) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`dah`](hosts/dah) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`framework-desktop`](hosts/framework-desktop) | Framework Desktop | AMD Ryzen AI Max+ 395 (Strix Halo) | 128 GB | Radeon 8060S iGPU | WD_BLACK SN7100 2 TB NVMe |
-| [`framework13-laptop`](hosts/framework13-laptop) | Framework Laptop 13 | AMD Ryzen AI 7 350 | 64 GB | Radeon 860M iGPU | KIOXIA 2 TB NVMe |
+| [`dovahkiin`](hosts/dovahkiin) | Framework Laptop 13 | AMD Ryzen AI 7 350 | 64 GB | Radeon 860M iGPU | KIOXIA 2 TB NVMe |
 | [`router`](hosts/router) | Topton Fanless PC| Intel N150 | 16 GB | iGPU (Alder Lake-N) | Samsung 870 QVO 1 TB SATA |
 
 ### Kubernetes Hosts
@@ -42,7 +42,7 @@ Workstations run COSMIC Desktop with a few patches (applied via [`modules/cosmic
 
 `framework-desktop` is the 128GB model of the Framework Desktop. LLM performance was underwhelming, so it largely acts as a surprisingly quiet TV computer.
 
-`framework13-laptop` is a AMD Ryzen AI 7 350 mainboard laptop with 64GB RAM I got off eBay. Eager to upgrade to a Panther Lake mainboard but going to wait for RAM to come down.
+`dovahkiin` is a AMD Ryzen AI 7 350 mainboard laptop with 64GB RAM I got off eBay. Eager to upgrade to a Panther Lake mainboard but going to wait for RAM to come down.
 
 ### Router
 TopTon fanless PC with an Intel N150. 4x 2.5G NICs but I only use two of them (WAN/LAN).

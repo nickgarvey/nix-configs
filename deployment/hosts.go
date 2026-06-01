@@ -48,7 +48,7 @@ type Host struct {
 	Reboot         RebootPolicy
 	K8sHealthCheck bool
 	Groups         []string
-	Default        bool // false = opt-in only (framework13-laptop)
+	Default        bool // false = opt-in only (dovahkiin)
 	ConnChecks     []ConnCheck
 }
 
@@ -116,7 +116,7 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	},
 	{
-		Name: "framework13-laptop", FlakeName: "framework13-laptop",
+		Name: "dovahkiin", FlakeName: "dovahkiin",
 		Order: 40, Reboot: RebootPrompt,
 		Groups: []string{"workstation"}, Default: false,
 		ConnChecks: []ConnCheck{CheckSSH},

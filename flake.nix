@@ -100,14 +100,14 @@
       };
 
       # Framework 13 Laptop
-      framework13-laptop = nixpkgs.lib.nixosSystem {
+      dovahkiin = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
           nixos-hardware.nixosModules.framework-amd-ai-300-series
-          ./hosts/framework13-laptop/configuration.nix
-          ./hosts/framework13-laptop/disk-config.nix
+          ./hosts/dovahkiin/configuration.nix
+          ./hosts/dovahkiin/disk-config.nix
         ];
       };
 

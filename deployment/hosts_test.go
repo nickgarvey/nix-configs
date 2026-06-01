@@ -37,7 +37,7 @@ func TestHostFQDN(t *testing.T) {
 	}{
 		{Host{Name: "router", SSHAddress: "10.28.0.1"}, "10.28.0.1"},
 		{Host{Name: "talos", Domain: "home.arpa"}, "talos.home.arpa"},
-		{Host{Name: "framework13-laptop"}, "framework13-laptop"},
+		{Host{Name: "dovahkiin"}, "dovahkiin"},
 	}
 	for _, c := range cases {
 		if got := c.h.FQDN(); got != c.want {
@@ -68,9 +68,9 @@ func TestSelectHosts(t *testing.T) {
 			want:  []string{"router"},
 		},
 		{
-			name:  "explicit selects non-default host (framework13-laptop)",
-			input: []string{"framework13-laptop"},
-			want:  []string{"framework13-laptop"},
+			name:  "explicit selects non-default host (dovahkiin)",
+			input: []string{"dovahkiin"},
+			want:  []string{"dovahkiin"},
 		},
 		{
 			name:  "multi reorders by Order",

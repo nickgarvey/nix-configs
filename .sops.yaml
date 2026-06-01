@@ -3,7 +3,7 @@ keys:
   - &k3s age12dsw8c59tv758nkkk8j7gwenk4wcc9h6mcl509egn85pk2qvlsys7v8zc5
   - &workstation age1le67uqtvry52ch733vytmr7yjvjsna8u3k6a9n285ggmuzfv9q7s4rqufu
   - &framework-desktop age1phmmhj7kfedel0uz052sj8glcevj6qgh5sdmq73ctm8qqlnxaarq4l9rvv
-  - &framework13-laptop age1m9l2ncrkg5zelkegwpa2ux2kw5cljay2m9sxuzf2eyz8qqje45vsmfn76k
+  - &dovahkiin age1m9l2ncrkg5zelkegwpa2ux2kw5cljay2m9sxuzf2eyz8qqje45vsmfn76k
   - &router age1c3fwgyf6tm44gzhyvfjk5eyysef0shufd50kdg4t0w2rd9jylcusakgxpy
   - &lydia age1cz96x8w6653wruqxrwquczv3ulwe5gfnvyy6p3tzvs8mehc7gyas7hty0k
   - &skyforge age1z95v2ahfghn34yg2yl8k3crtqtraqg6mnvvzq2audzr96savcqxs5p7yfe
@@ -38,7 +38,7 @@ creation_rules:
     key_groups:
     - age:
       - *ngarvey
-      - *framework13-laptop
+      - *dovahkiin
       - *skyforge
   - path_regex: secrets/smb-credentials.yaml
     key_groups:
@@ -46,13 +46,13 @@ creation_rules:
       - *ngarvey
       - *workstation
       - *framework-desktop
-      - *framework13-laptop
+      - *dovahkiin
   - path_regex: secrets/nix-builder.yaml
     key_groups:
     - age:
       - *ngarvey
       - *workstation
-      - *framework13-laptop
+      - *dovahkiin
       - *framework-desktop
       - *lydia
   - path_regex: secrets/storj-gateway.yaml
@@ -69,4 +69,4 @@ creation_rules:
       - *k3s
       - *framework-desktop
       - *workstation
-      - *framework13-laptop
+      - *dovahkiin

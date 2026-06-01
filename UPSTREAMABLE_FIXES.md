@@ -9,7 +9,7 @@ the upstream fix should look like.
 ## orca-slicer: wrapper missing `GST_PLUGIN_SCANNER`, causing SIGSEGV in Monitor tab
 
 **Affected:** `pkgs/by-name/or/orca-slicer/package.nix` (nixpkgs)
-**Local workaround:** `hosts/framework13-laptop/configuration.nix` — `orca-slicer.overrideAttrs` adds `--set GST_PLUGIN_SCANNER` to `gappsWrapperArgs`.
+**Local workaround:** `hosts/dovahkiin/configuration.nix` — `orca-slicer.overrideAttrs` adds `--set GST_PLUGIN_SCANNER` to `gappsWrapperArgs`.
 
 ### Symptom
 
@@ -146,7 +146,7 @@ Adds a small helper and uses it for the server key:
 ## OrcaSlicer: two NULL-deref crashes (upstream to OrcaSlicer, not nixpkgs)
 
 **Affected:** `SoftFever/OrcaSlicer` — verified against tag `v2.3.2`, partially still in `master`.
-**Local workaround:** `patches/orca-slicer-null-checks.patch`, applied via `overrideAttrs` in `hosts/framework13-laptop/configuration.nix`.
+**Local workaround:** `patches/orca-slicer-null-checks.patch`, applied via `overrideAttrs` in `hosts/dovahkiin/configuration.nix`.
 
 ### Bug 1: `Plater.cpp:6042` — unchecked `option<ConfigOptionStrings>("filament_colour")`
 

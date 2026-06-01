@@ -42,9 +42,10 @@ nix run .#deploy -- --hosts ro
 
 | Flag | Values | Default | Notes |
 |---|---|---|---|
-| `--hosts` | comma list | (all default hosts) | Named hosts deploy even if `Default=false` (e.g. `framework13-laptop`). |
+| `--hosts` | comma list | (all default hosts) | Named hosts deploy even if `Default=false` (e.g. `dovahkiin`). |
 | `--mode` | `safe` \| `switch` \| `boot` | `safe` | See modes below. |
 | `--reboot` | `auto` \| `never` \| `always` \| `ask` | `auto` | See reboot table below. |
+| `--force` | flag | false | Skip safety pre-checks (e.g. active print on printer hosts). |
 
 ### Modes
 
@@ -76,13 +77,19 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 
 | Host | Order | Reboot | k8s health | Default | Notes |
 |---|---|---|---|---|---|
-| fus / ro / dah | 10–12 | auto | ✓ | ✓ | IPv6 gateway ping |
-| framework-desktop | 20 | prompt | – | ✓ | |
-| talos | 21 | prompt | – | ✓ | also the build host |
-| lydia | 30 | prompt | – | ✓ | |
-| framework13-laptop | 40 | prompt | – | opt-in | only deploys when named explicitly |
-| skyforge | 50 | prompt | – | ✓ | aarch64; built via talos binfmt |
-| router | 99 | **never** | – | ✓ | extended connectivity (IPv6 tunnel, DNS, internet) |
+| fus / ro / dah | 10–12 | auto | ✓ | ✓ | SSH + IPv6 gateway ping |
+| framework-desktop | 20 | prompt | – | ✓ | SSH + gateway ping |
+| talos | 21 | prompt | – | ✓ | also the build host; SSH + gateway ping |
+| lydia | 30 | prompt | – | ✓ | SSH + gateway ping |
+| dovahkiin | 40 | prompt | – | opt-in | only deploys when named explicitly |
+| skyforge | 50 | prompt | – | ✓ | aarch64; built via talos binfmt; printer idle pre-check |
+| router | 99 | **never** | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
+
+### Printer pre-check (skyforge)
+
+Before deploying to any host in the `printer` group, the deploy script queries
+moonraker to check if a print is active. If the printer is busy, the host is
+**skipped** (not failed). Pass `--force` to override and deploy regardless.
 
 ## Safe deploy flow
 
@@ -125,21 +132,3 @@ nix flake check                                   # runs the same go test
 
 All command invocations go through a `Runner` interface so the deploy state
 machine is tested with a `FakeRunner` — no real ssh required.
-
-## Migration from `scripts/deploy.py`
-
-| Old | New |
-|---|---|
-| (default) | `--mode safe` (default) |
-| `--no-safe` | `--mode switch` |
-| `--boot-only` | `--mode boot` |
-| `--reboot` | `--reboot always` |
-| `--no-reboot` | `--reboot never` |
-| `--force-reboot` | `--reboot ask` is the closest; or `--reboot always` |
-| `--hosts a b c` (space) | `--hosts a,b,c` (comma) |
-| `--group k3s` | `--hosts fus,ro,dah` |
-| `--dry-run` | (removed; run `nix flake check` + `nix build` manually) |
-| `--skip-flake-check` | (removed; flake check no longer run by deploy) |
-| `--skip-k8s-check` | (removed; always runs) |
-| `--no-build-host` | (removed; talos is always the build host) |
-| `--watchdog-timeout`, `--deploy-timeout` | (removed; hardcoded in `deploy.go`) |

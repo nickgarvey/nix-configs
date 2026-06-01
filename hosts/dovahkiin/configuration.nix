@@ -32,7 +32,7 @@
 
   boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
-  networking.hostName = "framework13-laptop";
+  networking.hostName = "dovahkiin";
   networking.networkmanager.enable = true;
   networking.networkmanager.wifi.powersave = false;
 
