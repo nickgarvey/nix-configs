@@ -133,7 +133,7 @@ in
           enable = true;
           settings = {
             global = {
-              "server string" = "aboleth";
+              "server string" = "lydia";
               security = "user";
               "map to guest" = "Bad User";
             };

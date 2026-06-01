@@ -110,7 +110,7 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	},
 	{
-		Name: "aboleth", FlakeName: "aboleth", Domain: "home.arpa",
+		Name: "lydia", FlakeName: "lydia", Domain: "home.arpa",
 		Order: 30, Reboot: RebootPrompt,
 		Groups: []string{"infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},

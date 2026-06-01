@@ -1,6 +1,6 @@
 { pkgs, ... }:
 let
-  fanctl = pkgs.writers.writePython3 "aboleth-fanctl" {
+  fanctl = pkgs.writers.writePython3 "lydia-fanctl" {
     # Disable all flake8 checks; we are not interested in style enforcement
     # for an embedded script.
     flakeIgnore = [ "E1" "E2" "E3" "E4" "E5" "E7" "W" ];
@@ -96,8 +96,8 @@ let
   '';
 in
 {
-  systemd.services.aboleth-fanctl = {
-    description = "aboleth fan curve controller (f71882fg / F81866A)";
+  systemd.services.lydia-fanctl = {
+    description = "lydia fan curve controller (f71882fg / F81866A)";
     wantedBy = [ "multi-user.target" ];
     after = [ "systemd-modules-load.service" ];
     serviceConfig = {
@@ -106,7 +106,7 @@ in
       Restart = "on-failure";
       RestartSec = 5;
       # Best-effort restore to BIOS auto curve if the unit stops or fails.
-      ExecStopPost = pkgs.writeShellScript "aboleth-fanctl-stop" ''
+      ExecStopPost = pkgs.writeShellScript "lydia-fanctl-stop" ''
         for d in /sys/devices/platform/f71882fg.*; do
           [ -e "$d/pwm1_enable" ] && echo 2 > "$d/pwm1_enable" || true
           [ -e "$d/pwm2_enable" ] && echo 2 > "$d/pwm2_enable" || true

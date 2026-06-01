@@ -149,15 +149,15 @@
         ];
       };
 
-      # Aboleth server
-      aboleth = nixpkgs.lib.nixosSystem {
+      # Lydia server
+      lydia = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
           microvm.nixosModules.host
-          ./hosts/aboleth/configuration.nix
-          ./hosts/aboleth/disk-config.nix
+          ./hosts/lydia/configuration.nix
+          ./hosts/lydia/disk-config.nix
         ];
       };
 

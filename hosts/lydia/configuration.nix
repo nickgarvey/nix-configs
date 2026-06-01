@@ -11,7 +11,7 @@
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
     ../../modules/nix-remote-builder-client.nix
-    ../../modules/aboleth-fancontrol.nix
+    ../../modules/lydia-fancontrol.nix
   ];
 
   services.nixRemoteBuilderClient = {
@@ -29,9 +29,9 @@
   # delegated /64 — crosses interfaces, needs IPv6 forwarding.
   homelab.network.ipv6Forward = true;
 
-  networking.hostName = "aboleth";
+  networking.hostName = "lydia";
 
-  sops.defaultSopsFile = ../../secrets/aboleth.yaml;
+  sops.defaultSopsFile = ../../secrets/lydia.yaml;
   sops.defaultSopsFormat = "yaml";
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 

@@ -169,7 +169,7 @@ in
 
       networking.firewall.trustedInterfaces = [ br.name ];
 
-      # br_netfilter (loaded by Incus on aboleth) would route bridge frames
+      # br_netfilter (loaded by Incus on lydia) would route bridge frames
       # through ip/ip6/arp tables, breaking DHCP and host connectivity on
       # vmbr0. Force-off so the bridge stays a pure L2 path.
       boot.kernel.sysctl = {

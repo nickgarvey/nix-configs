@@ -79,7 +79,7 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 | fus / ro / dah | 10–12 | auto | ✓ | ✓ | IPv6 gateway ping |
 | framework-desktop | 20 | prompt | – | ✓ | |
 | tarrasque | 21 | prompt | – | ✓ | also the build host |
-| aboleth | 30 | prompt | – | ✓ | |
+| lydia | 30 | prompt | – | ✓ | |
 | framework13-laptop | 40 | prompt | – | opt-in | only deploys when named explicitly |
 | skyforge | 50 | prompt | – | ✓ | aarch64; built via tarrasque binfmt |
 | router | 99 | **never** | – | ✓ | extended connectivity (IPv6 tunnel, DNS, internet) |

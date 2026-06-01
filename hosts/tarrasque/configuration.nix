@@ -31,7 +31,7 @@
   homelab.network.ipv6Forward = true;
 
   # Bridge for the garage nspawn container to get LAN access (IPv6 auto-derived
-  # from lan-hosts.nix). Mirrors aboleth's setup.
+  # from lan-hosts.nix). Mirrors lydia's setup.
   homelab.network.bridge = {
     name = "vmbr0";
     interface = "enp14s0";
