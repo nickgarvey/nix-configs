@@ -6,7 +6,13 @@ This is a mono-repo for all my nix settings. Here are the sections:
 * `lib/`: Helper functions
 * `modules/`: Reusable NixOS modules (e.g. nixos-common is applied to all hosts)
 * `pkgs/`: Custom packages for things not in nixpkgs
-* `scripts/`: Deployment automation (`deploy.py`)
+* `deployment/`: Go-based deployment tool (`deploy`)
+* `devshells/`: Project-specific Nix dev shells
+* `patches/`: Patches applied to upstream packages
+* `secrets/`: SOPS-encrypted secrets
+* `public_certs/`: Public CA certificates
+* `configs/`: Standalone application config files
+* `docs/`: Notes and troubleshooting docs
 
 ## Hardware
 
