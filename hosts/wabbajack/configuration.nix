@@ -43,7 +43,7 @@ in
     ];
   };
 
-  networking.hostName = "framework-desktop";
+  networking.hostName = "wabbajack";
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;

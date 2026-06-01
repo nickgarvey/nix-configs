@@ -78,7 +78,7 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 | Host | Order | Reboot | k8s health | Default | Notes |
 |---|---|---|---|---|---|
 | fus / ro / dah | 10–12 | auto | ✓ | ✓ | SSH + IPv6 gateway ping |
-| framework-desktop | 20 | prompt | – | ✓ | SSH + gateway ping |
+| wabbajack | 20 | prompt | – | ✓ | SSH + gateway ping |
 | talos | 21 | prompt | – | ✓ | also the build host; SSH + gateway ping |
 | lydia | 30 | prompt | – | ✓ | SSH + gateway ping |
 | dovahkiin | 40 | prompt | – | opt-in | only deploys when named explicitly |

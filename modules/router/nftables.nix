@@ -107,7 +107,7 @@ in
             iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" ip6 saddr 2001:470:482f:100::/56 accept
 
             # LAN <-> per-host delegated /64s (lydia, talos, future).
-            # LAN clients (e.g. framework-desktop) don't share a prefix with
+            # LAN clients (e.g. wabbajack) don't share a prefix with
             # these hosts, so the router has to forward br-lan→br-lan for
             # both request and reply.
             iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" ip6 daddr 2001:470:482f:200::/56 accept

@@ -98,7 +98,7 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
-		Name: "framework-desktop", FlakeName: "framework-desktop", Domain: "home.arpa",
+		Name: "wabbajack", FlakeName: "wabbajack", Domain: "home.arpa",
 		Order: 20, Reboot: RebootPrompt,
 		Groups: []string{"workstation"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},

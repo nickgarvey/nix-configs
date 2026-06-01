@@ -123,13 +123,13 @@
       };
 
       # Framework Desktop (llama-cpp inference server)
-      framework-desktop = nixpkgs.lib.nixosSystem {
+      wabbajack = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
           nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
-          ./hosts/framework-desktop/configuration.nix
-          ./hosts/framework-desktop/disk-config.nix
+          ./hosts/wabbajack/configuration.nix
+          ./hosts/wabbajack/disk-config.nix
         ];
       };
 
