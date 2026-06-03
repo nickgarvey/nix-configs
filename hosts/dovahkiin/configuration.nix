@@ -77,6 +77,7 @@
   users.users.ngarvey.packages = with pkgs; [
     signal-desktop
     vlc
+    openmw
     # See UPSTREAMABLE_FIXES.md: orca-slicer's wrapper sets GST_PLUGIN_SYSTEM_PATH_1_0
     # but not GST_PLUGIN_SCANNER, causing playbin discovery to fail and segfaulting
     # wxMediaCtrl2 when opening the Monitor (printer camera) tab.
