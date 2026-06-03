@@ -71,5 +71,9 @@ in
     user = "ngarvey";
   };
 
+  users.users.ngarvey.packages = with pkgs; [
+    openmw
+  ];
+
   system.stateVersion = "25.11";
 }
