@@ -43,6 +43,9 @@
 
   boot.supportedFilesystems.zfs = false;
 
+  # Cap kept boot generations so /boot doesn't fill up.
+  boot.loader.systemd-boot.configurationLimit = 5;
+
   # Suppress post-quantum key exchange warnings from SSH client
   programs.ssh.extraConfig = "WarnWeakCrypto no-pq-kex";
 
