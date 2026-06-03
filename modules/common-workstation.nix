@@ -19,6 +19,7 @@ in
   imports = [
     ./nixos-common.nix
     ./pico-udev.nix
+    ./keychron-udev.nix
     ./smb-automount.nix
     ./cosmic-comp-overlay.nix
     inputs.sops-nix.nixosModules.sops
