@@ -23,7 +23,6 @@
 
   programs.pi.coding-agent = {
     enable = true;
-    users = [ "ngarvey" ];
     environment.DEEPSEEK_API_KEY = config.sops.secrets.deepseek-api-key.path;
     extraArgs = [ "--provider" "deepseek" "--model" "deepseek-v4-pro" ];
   };
