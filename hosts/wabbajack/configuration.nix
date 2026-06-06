@@ -10,6 +10,7 @@ in
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/steam.nix
+    ../../modules/niri.nix
     ../../modules/containers/llama-cpp.nix
     ../../modules/nix-remote-builder-client.nix
     ./hardware-configuration.nix
@@ -60,16 +61,6 @@ in
   systemd.targets.suspend.enable = false;
   systemd.targets.hibernate.enable = false;
   systemd.targets.hybrid-sleep.enable = false;
-
-  # KDE Plasma display manager and desktop
-  services.displayManager.sddm.enable = true;
-  services.desktopManager.plasma6.enable = true;
-
-  # Enable autologin
-  services.displayManager.autoLogin = {
-    enable = true;
-    user = "ngarvey";
-  };
 
   users.users.ngarvey.packages = with pkgs; [
     openmw
