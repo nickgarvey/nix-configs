@@ -27,6 +27,9 @@ func buildOKResponses(systemPath string) []FakeResponse {
 		{Match: MatchContains("echo ok"), Result: RunResult{Stdout: "ok\n"}},
 		// nix eval -> system path
 		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: systemPath}},
+		// boot default starts stale so the happy path does NOT trip the
+		// already-deployed skip (must precede the generic readlink matcher)
+		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: "/nix/store/STALE-system\n"}},
 		// readlink /run/current-system returns expected path
 		{Match: MatchContains("readlink"), Result: RunResult{Stdout: systemPath + "\n"}},
 		// Kernel detection: no change
@@ -64,6 +67,79 @@ func TestSafeDeployHappyPath(t *testing.T) {
 		"systemctl stop deploy-watchdog-1700000000",                        // step 7
 	}
 	assertOrder(t, calls, wantOrder)
+}
+
+func TestSafeDeploySkipsIfAlreadyDeployed(t *testing.T) {
+	host := AllHosts[1] // ro
+	host.K8sHealthCheck = false
+
+	// Both the active system and the boot default already point at the built
+	// path, so deploySafe should short-circuit after the build.
+	resps := []FakeResponse{
+		{Match: MatchContains("echo ok"), Result: RunResult{Stdout: "ok\n"}},
+		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: fakeSystemPath}},
+		// readlink -f /nix/var/nix/profiles/system (boot default)
+		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
+		// readlink /run/current-system (active)
+		{Match: MatchContains("readlink"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
+		{Match: func([]string) bool { return true }, Result: RunResult{}},
+	}
+	fake := &FakeRunner{Responses: resps}
+	ctx := testCtx(fake)
+
+	if !Deploy(ctx, host, ModeSafe) {
+		t.Fatal("expected success via already-deployed skip")
+	}
+
+	calls := joinedCalls(fake)
+	for _, forbidden := range []string{
+		"systemd-run",                  // watchdog armed
+		"switch-to-configuration test", // activation
+		"nix-env --profile",            // persist profile
+		"switch-to-configuration boot", // persist boot
+	} {
+		if contains(calls, forbidden) {
+			t.Errorf("expected skip to avoid %q, but it ran.\nCalls:\n%s",
+				forbidden, strings.Join(calls, "\n"))
+		}
+	}
+}
+
+func TestSafeDeploySkipStillRebootsWhenOwed(t *testing.T) {
+	host := AllHosts[1] // ro, RebootAuto
+	host.K8sHealthCheck = false
+
+	// Active + boot already match the build (skip path), but the running
+	// kernel differs from the activated config, so a reboot is still owed.
+	resps := []FakeResponse{
+		{Match: MatchContains("echo ok"), Result: RunResult{Stdout: "ok\n"}},
+		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: fakeSystemPath}},
+		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
+		{Match: MatchContains("readlink"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
+		// running kernel != activated kernel -> reboot needed
+		{Match: MatchContains("uname -r"), Result: RunResult{Stdout: "6.6.50\n"}},
+		{Match: MatchContains("kernel-modules"), Result: RunResult{Stdout: "6.6.99\n"}},
+		{Match: func([]string) bool { return true }, Result: RunResult{}},
+	}
+	fake := &FakeRunner{Responses: resps}
+	ctx := testCtx(fake)
+	ctx.RebootFlag = RebootFlagAuto
+
+	if !Deploy(ctx, host, ModeSafe) {
+		t.Fatal("expected success (skip + reboot)")
+	}
+
+	calls := joinedCalls(fake)
+	// Skipped the redundant work...
+	for _, forbidden := range []string{"systemd-run", "switch-to-configuration test", "nix-env --profile"} {
+		if contains(calls, forbidden) {
+			t.Errorf("expected skip to avoid %q, but it ran", forbidden)
+		}
+	}
+	// ...but still rebooted.
+	if !contains(calls, "systemctl reboot") {
+		t.Errorf("expected an owed reboot to be issued.\nCalls:\n%s", strings.Join(calls, "\n"))
+	}
 }
 
 func TestSafeDeployActivationTimeoutHostReachable(t *testing.T) {
@@ -273,6 +349,10 @@ func (p *probeFailRunner) Run(_ context.Context, argv []string, _ RunOpts) RunRe
 	}
 	if strings.Contains(joined, "nix") && strings.Contains(joined, "eval") {
 		return RunResult{Stdout: p.systemPath}
+	}
+	if strings.Contains(joined, "profiles/system") {
+		// boot default is stale, so the already-deployed skip does not trip
+		return RunResult{Stdout: "/nix/store/STALE-system\n"}
 	}
 	if strings.Contains(joined, "readlink") {
 		return RunResult{Stdout: p.systemPath + "\n"}

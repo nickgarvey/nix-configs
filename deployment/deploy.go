@@ -91,6 +91,21 @@ func deploySafe(ctx *DeployContext, host Host) bool {
 		return false
 	}
 
+	if alreadyDeployed(ctx, host, systemPath) {
+		// Config is already active and persisted as boot default, so the
+		// watchdog/activate/persist steps are no-ops. But the host may still
+		// owe a reboot (e.g. a prior deploy changed the kernel and the box was
+		// never rebooted), so run the post-deploy reboot/health checks.
+		fmt.Printf("\n  ✓ %s already running and booting this config — skipping activation\n", host.Name)
+		if !handleReboot(ctx, host, false) {
+			return false
+		}
+		if host.K8sHealthCheck {
+			return WaitForK8sReady(ctx.Runner, host, ctx.Sleeper)
+		}
+		return true
+	}
+
 	fmt.Println("\n  [2/9] Cleaning up stale units from prior runs...")
 	cleanupStaleUnits(ctx, host)
 
@@ -297,6 +312,20 @@ func activate(ctx *DeployContext, host Host, systemPath, sub string, timedOut *b
 	}
 	fmt.Printf("  ✗ switch-to-configuration %s failed\n", sub)
 	return false
+}
+
+// alreadyDeployed reports whether the host's active system AND boot default
+// both already point at systemPath, meaning there is nothing to deploy.
+//
+// /run/current-system is a direct symlink to the toplevel store path (matching
+// what verifyActivePath relies on). /nix/var/nix/profiles/system points at a
+// system-N-link generation, so we resolve it with `readlink -f` to reach the
+// toplevel for comparison.
+func alreadyDeployed(ctx *DeployContext, host Host, systemPath string) bool {
+	active := SSHRun(ctx.Runner, host, "readlink /run/current-system", 15*time.Second)
+	boot := SSHRun(ctx.Runner, host, "readlink -f /nix/var/nix/profiles/system", 15*time.Second)
+	return strings.TrimSpace(active.Stdout) == systemPath &&
+		strings.TrimSpace(boot.Stdout) == systemPath
 }
 
 func verifyActivePath(ctx *DeployContext, host Host, expected string) bool {
