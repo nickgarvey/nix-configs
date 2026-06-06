@@ -62,11 +62,7 @@
   };
 
   homelab.llama-cpp = {
-    # Disabled 2026-06-06: the CUDA container auto-starting on boot loaded the
-    # RTX 5090 and the box hard-power-cut within seconds (PSU OCP / 12VHPWR
-    # transient suspected). Keep off until the power-delivery hardware is
-    # checked, then re-enable (consider a persistent GPU power cap first).
-    enable = false;
+    enable = true;
     backend = "cuda";
     # Thinking on by default; MoE active-3B keeps it fast enough.
     # Sampling matches Qwen3 thinking-mode recommendation (HF/Unsloth).
