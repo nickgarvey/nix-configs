@@ -114,7 +114,7 @@ in
             iifname "${cfg.lanInterface}" oifname "${cfg.lanInterface}" ip6 saddr 2001:470:482f:200::/56 accept
 
             # LAN -> k8s LB pool (:2::/112). Known LAN hosts install ECMP
-            # /112 routes via the k3s nodes directly (see lan-network.nix
+            # /112 routes via the k3s nodes directly (see networkd.nix
             # lbRoutes) and never hairpin. Transient clients — laptops,
             # phones, nspawn containers that only learn the /48 via RA —
             # have no more-specific route, so their LB traffic arrives at

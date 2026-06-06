@@ -14,7 +14,7 @@ let
   ];
 in
 {
-  imports = [ ./lan-network.nix ];
+  imports = [ ./networkd.nix ];
 
   options.k3sConfig = {
     isFirstNode = lib.mkOption {

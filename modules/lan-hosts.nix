@@ -1,6 +1,6 @@
 # Canonical source of static LAN host assignments (physical hosts with MACs).
 # Consumed by: kea DHCP (reservations), blocky DNS (A/AAAA records),
-# lan-network.nix (static IPv6), k3s-common.nix (node-ip).
+# networkd.nix (static IPv6), k3s-common.nix (node-ip).
 #
 # Non-host DNS (service aliases, VIPs, CNAMEs) lives in dns.nix.
 #
@@ -24,6 +24,5 @@
     { hostname = "fus";           mac = "78:55:36:00:4c:c4"; ipv4 = "10.28.15.1";    ipv6 = "2001:470:482f::21"; podCIDR = "2001:470:482f:100::/64"; }
     { hostname = "ro";            mac = "78:55:36:00:47:f2"; ipv4 = "10.28.15.2";    ipv6 = "2001:470:482f::22"; podCIDR = "2001:470:482f:104::/64"; }
     { hostname = "dah";           mac = "78:55:36:00:4d:80"; ipv4 = "10.28.15.3";    ipv6 = "2001:470:482f::23"; podCIDR = "2001:470:482f:103::/64"; }
-    { hostname = "wabbajack";             mac = "9c:bf:0d:01:0e:95"; ipv4 = "10.28.15.4";    ipv6 = "2001:470:482f::12"; }
   ];
 }

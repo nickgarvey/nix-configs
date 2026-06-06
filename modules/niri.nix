@@ -6,9 +6,10 @@
 
   # Niri ecosystem tooling: status bar, launcher, and X11 compatibility.
   environment.systemPackages = with pkgs; [
-    waybar             # status bar (spawned at niri startup)
-    fuzzel             # application launcher (Mod+D)
-    xwayland-satellite # provides DISPLAY for X11 apps (e.g. Steam) under niri
+    waybar              # status bar (spawned at niri startup)
+    fuzzel              # application launcher (Mod+D)
+    xwayland-satellite  # provides DISPLAY for X11 apps (e.g. Steam) under niri
+    networkmanagerapplet # nm-applet (tray) + nm-connection-editor (GUI) for waybar
   ];
 
   # greetd + tuigreet: a minimal text login on the monitor that launches niri.

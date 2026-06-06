@@ -2,7 +2,7 @@
 {
   imports = [
     ../../modules/nixos-common.nix
-    ../../modules/lan-network.nix
+    ../../modules/networkd.nix
     ./hardware-configuration.nix
   ];
 
@@ -45,39 +45,9 @@
     };
   in lib.mkForce crossPkgs.linuxPackages_rpi5;
 
-  # WiFi link: wpa_supplicant handles WPA association on wlan0.
-  # IP layer: lan-network.nix matches wlan0 by MAC (from lan-hosts.nix) and
-  # applies DHCPv4 + static IPv6 via systemd-networkd. The two layers
-  # compose cleanly because wpa_supplicant only touches link, not IP.
-  #
-  # SSID and PSK both come from sops. networking.wireless.secretsFile only
-  # supports substitution in PSK/auth fields (via `ext:`), not the SSID,
-  # so we render the whole network block via sops.templates and load it
-  # with extraConfigFiles.
-  sops.secrets.wifi_ssid.sopsFile = ../../secrets/wifi.yaml;
-  sops.secrets.wifi_psk.sopsFile = ../../secrets/wifi.yaml;
-
-  sops.templates."wpa_supplicant-home.conf" = {
-    content = ''
-      network={
-        ssid="${config.sops.placeholder.wifi_ssid}"
-        psk="${config.sops.placeholder.wifi_psk}"
-      }
-    '';
-    mode = "0400";
-  };
-
-  networking.wireless = {
-    enable = false;
-    extraConfigFiles = [ config.sops.templates."wpa_supplicant-home.conf".path ];
-  };
-
-  # The wpa_supplicant launcher always passes `-c /etc/wpa_supplicant.conf`,
-  # but the NixOS module only generates that file when `networks` is set
-  # inline. With sops-only config (extraConfigFiles via `-I`), provide an
-  # empty stub so wpa_supplicant doesn't abort before reading the include.
-  environment.etc."wpa_supplicant.conf".text = "";
-
+  # Hard-wired ethernet; no WiFi. The IP layer comes from networkd.nix
+  # (DHCPv4 + static IPv6 via systemd-networkd, matched by MAC from
+  # lan-hosts.nix).
   homelab.network.enable = true;
 
   # Pi 5: nixos-hardware raspberry-pi-5 module enables

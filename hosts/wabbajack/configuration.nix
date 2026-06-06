@@ -6,7 +6,7 @@ in
   imports = [
     ../../modules/common-workstation.nix
     ../../modules/nixos-common.nix
-    ../../modules/lan-network.nix
+    ../../modules/network-manager.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/steam.nix
@@ -31,8 +31,6 @@ in
 
   # Add Xbox dongle firmware (append to existing firmware, don't replace)
   hardware.firmware = [ xone-dongle-firmware ];
-
-  homelab.network.enable = true;
 
   homelab.llama-cpp = {
     enable = true;

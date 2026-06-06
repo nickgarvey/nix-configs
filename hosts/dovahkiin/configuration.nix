@@ -4,9 +4,9 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/common-workstation.nix
+    ../../modules/network-manager.nix
     ../../modules/steam.nix
     ../../modules/esp-prog-udev.nix
-    ../../modules/wifi.nix
     # ../../modules/vector-db-learning.nix  # disabled: arxiv pins requests~=2.32, conflicts with nixpkgs 2.33
     ../../modules/nix-remote-builder-client.nix
     ../../modules/upower-overlay.nix
@@ -47,7 +47,6 @@
   boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
   networking.hostName = "dovahkiin";
-  networking.networkmanager.enable = true;
   networking.networkmanager.wifi.powersave = false;
 
   # The MT7925 (RZ717) Wi-Fi 7 firmware mailbox hangs when the PCIe link

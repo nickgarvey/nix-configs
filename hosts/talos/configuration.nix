@@ -5,7 +5,7 @@
     ./hardware-configuration.nix
     ../../modules/nixos-common.nix
     ../../modules/smb-automount.nix
-    ../../modules/lan-network.nix
+    ../../modules/networkd.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/nix-binary-cache.nix
