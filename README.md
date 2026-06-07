@@ -42,9 +42,7 @@ Services running on that cluster are found in the [k8s-gitops](https://github.co
 `lydia` has 128GB of DDR4 ECC RAM, so it acts as a storage/VM server.
 
 ### Workstations
-Workstations run COSMIC Desktop with a few patches (applied via [`modules/cosmic-comp-overlay.nix`](modules/cosmic-comp-overlay.nix)):
-1. [Reduce animation time](patches/cosmic-comp-reduce-tiling-latency.patch) so everything feels snappier.
-2. [Fix a suspend issue](patches/smithay-pending-blob-on-reset.patch). There is an upstream PR.
+Workstations run [niri](https://github.com/YaLTeR/niri), a scrollable-tiling Wayland compositor, configured via [`modules/desktop/niri.nix`](modules/desktop/niri.nix) and [`configs/niri.kdl`](configs/niri.kdl). Each host pins its own monitor mode/scale through the `homelab.niri.outputs` option.
 
 `wabbajack` is the 128GB model of the Framework Desktop. LLM performance was underwhelming, so it largely acts as a surprisingly quiet TV computer.
 

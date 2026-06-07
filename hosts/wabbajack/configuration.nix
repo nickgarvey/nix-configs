@@ -42,6 +42,20 @@ in
     ];
   };
 
+  # ASUS XG27UQDMS (4K 240Hz OLED), direct-connected on DP-2. niri otherwise
+  # auto-picks the 60Hz "preferred" mode, so pin the full rate. VRR is on-demand:
+  # it only engages for windows opted in via a window-rule (see the mpv rule in
+  # configs/niri.kdl), which avoids OLED gamma flicker on the desktop.
+  homelab.niri.outputs = ''
+    output "DP-2" {
+        mode "3840x2160@240.000"
+        scale 1.5
+        transform "normal"
+        variable-refresh-rate on-demand=true
+        position x=0 y=0
+    }
+  '';
+
   networking.hostName = "wabbajack";
 
   boot.loader.systemd-boot.enable = true;

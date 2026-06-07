@@ -4,6 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/desktop/common-workstation.nix
+    ../../modules/desktop/niri.nix
     ../../modules/networking/network-manager.nix
     ../../modules/desktop/steam.nix
     ../../modules/nix/nix-remote-builder-client.nix
@@ -54,16 +55,15 @@
     ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x14c3", ATTR{device}=="0x0717", ATTR{link/l1_aspm}="0"
   '';
 
-  # COSMIC display manager and desktop
-  services.displayManager.cosmic-greeter.enable = true;
-  services.desktopManager.cosmic.enable = true;
+  # Framework 13 internal panel (13.5" 2256x1504). niri's auto-scale heuristic
+  # picks 2.0 for this DPI, which is oversized; pin 1.5 instead.
+  homelab.niri.outputs = ''
+    output "eDP-1" {
+        scale 1.5
+    }
+  '';
 
   services.fwupd.enable = true;
-
-  services.fprintd.enable = true;
-  security.pam.services.login.fprintAuth = true;
-  security.pam.services.sudo.fprintAuth = true;
-  security.pam.services.cosmic-greeter.fprintAuth = true;
 
   hardware.bluetooth = {
     enable = true;

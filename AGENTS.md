@@ -9,7 +9,7 @@ narrowest matching subdir; create a new one only when you have ≥2 related file
 |---|---|
 | `core/` | Baseline config applied to virtually every host (NixOS defaults, SSH, locale, CA certs). Currently: `nixos-common`, `nspawn-cleanup`. |
 | `networking/` | Network configuration and shared host-address data. Currently: `networkd`, `network-manager`, `dns`, `lan-hosts`, `ipv6-accept-ra-routes`. |
-| `desktop/` | Workstation/desktop features (Wayland compositors, audio, packages, udev rules for peripherals). Currently: `common-workstation`, `niri`, `steam`, `cosmic-comp-overlay`, `upower-overlay`, `opencloud-desktop`. |
+| `desktop/` | Workstation/desktop features (Wayland compositors, audio, packages, udev rules for peripherals). Currently: `common-workstation`, `niri`, `steam`, `upower-overlay`, `opencloud-desktop`. |
 | `nix/` | Nix-daemon tooling: binary caches, remote builders, flake checks. Currently: `nix-binary-cache`, `nix-remote-builder-client`, `flake-build-check`. |
 | `services/` | Host services that don't fit a tighter category. Currently: `whisper-gpu`, `smb-automount`, `fancontrol`. |
 | `k3s/` | Kubernetes cluster node configuration. Currently: `k3s-common`. |

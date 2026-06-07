@@ -75,18 +75,10 @@ input {
 // Find more information on the wiki:
 // https://niri-wm.github.io/niri/Configuration:-Outputs
 // Remember to uncomment the node by removing "/-"!
-// ASUS XG27UQDMS (4K 240Hz OLED), direct-connected on DP-2.
-// niri otherwise auto-picks the 60Hz "preferred" mode, so pin the full rate.
-// VRR is set to on-demand: it only engages for windows opted in via a
-// window-rule (see the mpv rule below), which avoids OLED gamma flicker on
-// the desktop. Run `niri msg outputs` to list outputs and their modes.
-output "DP-2" {
-    mode "3840x2160@240.000"
-    scale 1.5
-    transform "normal"
-    variable-refresh-rate on-demand=true
-    position x=0 y=0
-}
+// Per-host `output "..." { ... }` blocks are appended here at build time from
+// each host's `homelab.niri.outputs` (see modules/desktop/niri.nix); they are
+// not defined in this shared file. Run `niri msg outputs` to list outputs and
+// their modes.
 
 // Settings that influence how windows are positioned and sized.
 // Find more information on the wiki:

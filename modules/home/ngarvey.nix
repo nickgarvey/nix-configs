@@ -3,7 +3,7 @@
 # Imported by modules/desktop/common-workstation.nix, so it is active on every
 # workstation. All home-manager config lives here; desktop-environment-specific
 # blocks are gated on the relevant NixOS option (e.g. programs.niri.enable) so a
-# COSMIC host does not get niri config and vice versa.
+# host that does not run niri gets no niri config.
 { config, lib, inputs, ... }:
 
 {
@@ -30,9 +30,10 @@
       # dependency of the activated system, so the check cannot be skipped on
       # deploy.
       xdg.configFile."niri/config.kdl".source =
-        pkgs.runCommandLocal "niri-config.kdl" { nativeBuildInputs = [ pkgs.niri ]; } ''
-          niri validate -c ${../../configs/niri.kdl}
-          cp ${../../configs/niri.kdl} "$out"
+        let niriOutputs = pkgs.writeText "niri-outputs.kdl" config.homelab.niri.outputs;
+        in pkgs.runCommandLocal "niri-config.kdl" { nativeBuildInputs = [ pkgs.niri ]; } ''
+          cat ${../../configs/niri.kdl} ${niriOutputs} > "$out"
+          niri validate -c "$out"
         '';
 
       # Waybar status bar config, managed verbatim from the repo. The package
