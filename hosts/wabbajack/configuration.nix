@@ -4,15 +4,15 @@ let
 in
 {
   imports = [
-    ../../modules/common-workstation.nix
-    ../../modules/nixos-common.nix
-    ../../modules/network-manager.nix
+    ../../modules/desktop/common-workstation.nix
+    ../../modules/core/nixos-common.nix
+    ../../modules/networking/network-manager.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
-    ../../modules/steam.nix
-    ../../modules/niri.nix
+    ../../modules/desktop/steam.nix
+    ../../modules/desktop/niri.nix
     ../../modules/containers/llama-cpp.nix
-    ../../modules/nix-remote-builder-client.nix
+    ../../modules/nix/nix-remote-builder-client.nix
     ./hardware-configuration.nix
   ];
 

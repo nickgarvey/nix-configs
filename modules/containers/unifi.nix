@@ -2,7 +2,7 @@
 
 # UniFi Network Application controller (nspawn container, br-lan veth).
 #
-# Reachable as `unifi` / `unifi.home.arpa` (see modules/dns.nix) and also
+# Reachable as `unifi` / `unifi.home.arpa` (see modules/networking/dns.nix) and also
 # advertised via DHCP option 43 (see modules/router/kea-dhcp.nix). Switches
 # and APs adopt over IPv4 — the container is IPv4-only on purpose.
 #

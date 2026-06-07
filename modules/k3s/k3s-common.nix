@@ -6,7 +6,7 @@ let
   isFirstNode = cfg.isFirstNode;
 
   # Derive node IPv6 from lan-hosts.nix
-  inherit (import ./lan-hosts.nix) lanHosts;
+  inherit (import ../networking/lan-hosts.nix) lanHosts;
   hostname = config.networking.hostName;
   hostEntry = lib.findFirst (h: h.hostname == hostname) null lanHosts;
   nodeIpFlags = lib.optionals (hostEntry != null && hostEntry.ipv6 != null) [
@@ -14,7 +14,7 @@ let
   ];
 in
 {
-  imports = [ ./networkd.nix ];
+  imports = [ ../networking/networkd.nix ];
 
   options.k3sConfig = {
     isFirstNode = lib.mkOption {
@@ -34,7 +34,7 @@ in
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;
 
-    sops.defaultSopsFile = ../secrets/k3s.yaml;
+    sops.defaultSopsFile = ../../secrets/k3s.yaml;
     sops.defaultSopsFormat = "yaml";
     sops.age.keyFile = "/root/.config/sops/age/keys.txt";
     sops.secrets.cluster_token = { };

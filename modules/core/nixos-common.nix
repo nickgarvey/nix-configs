@@ -2,7 +2,7 @@
 {
   imports = [
     ./nspawn-cleanup.nix
-    ./ipv6-accept-ra-routes.nix
+    ../networking/ipv6-accept-ra-routes.nix
   ];
 
   environment.systemPackages = with pkgs; [
@@ -50,8 +50,8 @@
   programs.ssh.extraConfig = "WarnWeakCrypto no-pq-kex";
 
   security.pki.certificateFiles = [
-    ../public_certs/Garvey_Home_Root_CA.crt
-    ../public_certs/Garvey_Home_Intermediate_CA.crt
+    ../../public_certs/Garvey_Home_Root_CA.crt
+    ../../public_certs/Garvey_Home_Intermediate_CA.crt
   ];
 
   nix.optimise.automatic = true;

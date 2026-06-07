@@ -5,7 +5,7 @@
     (self: super: {
       cosmic-comp = super.cosmic-comp.overrideAttrs (old: {
         patches = (old.patches or []) ++ [
-          ../patches/cosmic-comp-reduce-tiling-latency.patch
+          ../../patches/cosmic-comp-reduce-tiling-latency.patch
         ];
 
         # Patch the vendored smithay crate for cosmic-comp #2191 (stale DRM
@@ -20,7 +20,7 @@
           smithay_dir=''${atomic%/src/backend/drm/surface/atomic.rs}
           echo "patching smithay at $smithay_dir"
           patch -p1 -d "$smithay_dir" \
-            < ${../patches/smithay-pending-blob-on-reset.patch}
+            < ${../../patches/smithay-pending-blob-on-reset.patch}
           # Empty files map => cargo skips per-file checksum verification.
           echo '{"package":null,"files":{}}' \
             > "$smithay_dir/.cargo-checksum.json"

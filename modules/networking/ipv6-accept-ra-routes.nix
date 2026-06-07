@@ -6,7 +6,7 @@
 # hosts and router-side nspawn containers learn intra-site routes
 # (LB pool :2::/112, pod CIDRs :100::/56, per-host /64 delegations) with
 # no static configuration. See modules/router/lan-ipv6.nix and
-# modules/lan-hosts.nix for the subnet plan.
+# modules/networking/lan-hosts.nix for the subnet plan.
 #
 # systemd-networkd parses RA in userspace and honors route-info
 # regardless of this sysctl. Kernel-managed interfaces (notably nspawn

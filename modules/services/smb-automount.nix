@@ -20,12 +20,12 @@ in
   boot.supportedFilesystems = [ "cifs" ];
 
   sops.secrets.smb-username = {
-    sopsFile = ../secrets/smb-credentials.yaml;
+    sopsFile = ../../secrets/smb-credentials.yaml;
     key = "smb_username";
   };
 
   sops.secrets.smb-password = {
-    sopsFile = ../secrets/smb-credentials.yaml;
+    sopsFile = ../../secrets/smb-credentials.yaml;
     key = "smb_password";
   };
 

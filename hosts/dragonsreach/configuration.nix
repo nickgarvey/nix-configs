@@ -3,7 +3,7 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ../../modules/nixos-common.nix
+    ../../modules/core/nixos-common.nix
     ../../modules/router
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix

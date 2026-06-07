@@ -1,8 +1,8 @@
 { config, lib, pkgs, inputs, ... }:
 {
   imports = [
-    ../../modules/k3s-common.nix
-    ../../modules/nixos-common.nix
+    ../../modules/k3s/k3s-common.nix
+    ../../modules/core/nixos-common.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
     ./hardware-configuration.nix

@@ -3,14 +3,14 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ../../modules/nixos-common.nix
-    ../../modules/smb-automount.nix
-    ../../modules/networkd.nix
+    ../../modules/core/nixos-common.nix
+    ../../modules/services/smb-automount.nix
+    ../../modules/networking/networkd.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
-    ../../modules/nix-binary-cache.nix
-    ../../modules/flake-build-check.nix
-    ../../modules/whisper-gpu.nix
+    ../../modules/nix/nix-binary-cache.nix
+    ../../modules/nix/flake-build-check.nix
+    ../../modules/services/whisper-gpu.nix
     ../../modules/containers/llama-cpp.nix
     ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops

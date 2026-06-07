@@ -1,7 +1,7 @@
 { config, lib, pkgs, inputs, ... }:
 
 let
-  helium-browser = pkgs.callPackage ../pkgs/helium-browser {
+  helium-browser = pkgs.callPackage ../../pkgs/helium-browser {
     helium-browser-pkg = inputs.helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default;
   };
   claude-code = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
@@ -17,13 +17,23 @@ let
 in
 {
   imports = [
-    ./nixos-common.nix
-    ./pico-udev.nix
-    ./keychron-udev.nix
-    ./smb-automount.nix
+    ../core/nixos-common.nix
+    ../services/smb-automount.nix
     ./cosmic-comp-overlay.nix
     inputs.sops-nix.nixosModules.sops
   ];
+
+  # Workstation peripheral udev rules (rules for absent devices are inert).
+  # Keychron: allow VIA / Keychron Launcher (WebHID) without root.
+  #   3434 - Keychron vendor ID; GROUP="users" + TAG+="uaccess" for seat access.
+  # Pico: unprivileged access to RP2040 in BOOTSEL mode (2e8a) and pico-dirtyJtag (1209:c0ca).
+  # ESP-Prog-2: Espressif USB JTAG adapter (303a:1002).
+  services.udev.extraRules = ''
+    KERNEL=="hidraw*", ATTRS{idVendor}=="3434", MODE="0660", GROUP="users", TAG+="uaccess"
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", MODE="0666"
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="c0ca", MODE="0666"
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1002", MODE="0666"
+  '';
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.kernelParams = [ "split_lock_detect=off" ];
@@ -124,7 +134,7 @@ in
   services.kanata = {
     enable = true;
     keyboards.keyboard = {
-      configFile = ../configs/kanata-linux.cfg;
+      configFile = ../../configs/kanata-linux.cfg;
       extraDefCfg = "process-unmapped-keys yes";
     };
   };

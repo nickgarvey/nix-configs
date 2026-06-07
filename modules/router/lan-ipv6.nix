@@ -4,7 +4,7 @@ let
   cfg = config.routerConfig;
   heCfg = cfg.heTunnel;
 
-  inherit (import ../lan-hosts.nix) lanHosts;
+  inherit (import ../networking/lan-hosts.nix) lanHosts;
   k3sNodes = builtins.filter (h: h.podCIDR or null != null && h.ipv6 != null) lanHosts;
   podRoutes = map (h: { Destination = h.podCIDR; Gateway = h.ipv6; }) k3sNodes;
 in

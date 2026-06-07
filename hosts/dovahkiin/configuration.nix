@@ -3,14 +3,12 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ../../modules/common-workstation.nix
-    ../../modules/network-manager.nix
-    ../../modules/steam.nix
-    ../../modules/esp-prog-udev.nix
-    # ../../modules/vector-db-learning.nix  # disabled: arxiv pins requests~=2.32, conflicts with nixpkgs 2.33
-    ../../modules/nix-remote-builder-client.nix
-    ../../modules/upower-overlay.nix
-    ../../modules/opencloud-desktop.nix
+    ../../modules/desktop/common-workstation.nix
+    ../../modules/networking/network-manager.nix
+    ../../modules/desktop/steam.nix
+    ../../modules/nix/nix-remote-builder-client.nix
+    ../../modules/desktop/upower-overlay.nix
+    ../../modules/desktop/opencloud-desktop.nix
     ./printer.nix
     inputs.pi-nix.nixosModules.default
   ];

@@ -159,7 +159,7 @@ let
       localAddress6 = net.localAddress6;
     } // {
       config = { lib, pkgs, ... }: {
-        imports = [ ../ipv6-accept-ra-routes.nix ];
+        imports = [ ../networking/ipv6-accept-ra-routes.nix ];
 
         # systemd-nspawn creates the container's veth (renamed to eth0
         # inside the netns) BEFORE the container's userspace systemd-sysctl

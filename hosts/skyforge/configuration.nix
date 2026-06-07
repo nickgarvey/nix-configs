@@ -1,8 +1,8 @@
 { config, lib, pkgs, inputs, ... }:
 {
   imports = [
-    ../../modules/nixos-common.nix
-    ../../modules/networkd.nix
+    ../../modules/core/nixos-common.nix
+    ../../modules/networking/networkd.nix
     ./hardware-configuration.nix
   ];
 

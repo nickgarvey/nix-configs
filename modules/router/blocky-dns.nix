@@ -2,8 +2,8 @@
 
 let
   cfg = config.routerConfig;
-  inherit (import ../lan-hosts.nix) lanHosts;
-  dns = import ../dns.nix { inherit lib; };
+  inherit (import ../networking/lan-hosts.nix) lanHosts;
+  dns = import ../networking/dns.nix { inherit lib; };
 
   # lanHosts uses single-string ipv4/ipv6 (one physical host = one IP per family).
   hostIpStr = h:

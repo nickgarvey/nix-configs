@@ -3,15 +3,15 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ../../modules/nixos-common.nix
-    ../../modules/networkd.nix
+    ../../modules/core/nixos-common.nix
+    ../../modules/networking/networkd.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/containers/frigate.nix
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
-    ../../modules/nix-remote-builder-client.nix
-    ../../modules/lydia-fancontrol.nix
+    ../../modules/nix/nix-remote-builder-client.nix
+    ../../modules/services/fancontrol.nix
   ];
 
   services.nixRemoteBuilderClient = {
