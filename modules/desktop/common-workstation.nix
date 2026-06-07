@@ -19,6 +19,7 @@ in
   imports = [
     ../core/nixos-common.nix
     ../services/smb-automount.nix
+    ../home/ngarvey.nix
     ./cosmic-comp-overlay.nix
     inputs.sops-nix.nixosModules.sops
   ];
