@@ -34,10 +34,10 @@ func TestSSHArgv(t *testing.T) {
 }
 
 func TestSSHArgvUsesFQDN(t *testing.T) {
-	host := Host{Name: "talos", Domain: "home.arpa"}
+	host := Host{Name: "talos"}
 	argv := SSHArgv(host, "true", 0)
-	if argv[len(argv)-2] != "talos.home.arpa" {
-		t.Errorf("argv host = %q, want talos.home.arpa", argv[len(argv)-2])
+	if argv[len(argv)-2] != "talos" {
+		t.Errorf("argv host = %q, want talos", argv[len(argv)-2])
 	}
 }
 
@@ -50,7 +50,7 @@ func TestSSHArgvCustomConnectTimeout(t *testing.T) {
 }
 
 func TestCheckSSHReachable(t *testing.T) {
-	host := Host{Name: "talos", Domain: "home.arpa"}
+	host := Host{Name: "talos"}
 	cases := []struct {
 		name string
 		resp RunResult

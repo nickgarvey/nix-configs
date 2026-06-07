@@ -92,7 +92,7 @@ func TestVerifyConnectivityRouterUsesRouterChecks(t *testing.T) {
 
 func TestVerifyConnectivityDefaultHostSkipsRouterChecks(t *testing.T) {
 	h := Host{
-		Name: "talos", Domain: "home.arpa",
+		Name: "talos",
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	}
 	fake := &FakeRunner{
@@ -113,7 +113,7 @@ func TestVerifyConnectivityDefaultHostSkipsRouterChecks(t *testing.T) {
 }
 
 func TestVerifyConnectivityRetriesOnFailure(t *testing.T) {
-	h := Host{Name: "x", Domain: "home.arpa", ConnChecks: []ConnCheck{CheckSSH}}
+	h := Host{Name: "x", ConnChecks: []ConnCheck{CheckSSH}}
 	r := &countingRunner{
 		// SSH check fails first call, succeeds second.
 		match: func([]string) bool { return true },

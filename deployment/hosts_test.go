@@ -36,7 +36,7 @@ func TestHostFQDN(t *testing.T) {
 		want string
 	}{
 		{Host{Name: "dragonsreach", SSHAddress: "10.28.0.1"}, "10.28.0.1"},
-		{Host{Name: "talos", Domain: "home.arpa"}, "talos.home.arpa"},
+		{Host{Name: "talos"}, "talos"},
 		{Host{Name: "dovahkiin"}, "dovahkiin"},
 	}
 	for _, c := range cases {

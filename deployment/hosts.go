@@ -80,37 +80,37 @@ func (h Host) InGroup(g string) bool {
 // Order so the deploy plan is read top-to-bottom.
 var AllHosts = []Host{
 	{
-		Name: "fus", FlakeName: "fus", Domain: "home.arpa",
+		Name: "fus", FlakeName: "fus",
 		Order: 10, Reboot: RebootAuto, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
-		Name: "ro", FlakeName: "ro", Domain: "home.arpa",
+		Name: "ro", FlakeName: "ro",
 		Order: 11, Reboot: RebootAuto, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
-		Name: "dah", FlakeName: "dah", Domain: "home.arpa",
+		Name: "dah", FlakeName: "dah",
 		Order: 12, Reboot: RebootAuto, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
-		Name: "wabbajack", FlakeName: "wabbajack", Domain: "home.arpa",
+		Name: "wabbajack", FlakeName: "wabbajack",
 		Order: 20, Reboot: RebootPrompt,
 		Groups: []string{"workstation"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	},
 	{
-		Name: "talos", FlakeName: "talos", Domain: "home.arpa",
+		Name: "talos", FlakeName: "talos",
 		Order: 21, Reboot: RebootPrompt,
 		Groups: []string{"workstation"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	},
 	{
-		Name: "lydia", FlakeName: "lydia", Domain: "home.arpa",
+		Name: "lydia", FlakeName: "lydia",
 		Order: 30, Reboot: RebootPrompt,
 		Groups: []string{"infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
