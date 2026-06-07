@@ -176,6 +176,17 @@ in
         "net.bridge.bridge-nf-call-iptables" = 0;
         "net.bridge.bridge-nf-call-ip6tables" = 0;
         "net.bridge.bridge-nf-call-arptables" = 0;
+
+        # Host's delegated /64 is reached via on-link NDP, so a uplink flap
+        # (igc resets link ~1min into boot) leaves the router with a stale
+        # neighbor entry and blackholes inbound IPv6 to the host until NUD
+        # re-resolves. ndisc_notify emits an unsolicited NA on link-up so the
+        # router refreshes immediately; arp_notify is the IPv4 analog. Set via
+        # `default` (inherited by the networkd-created bridge), not per-iface.
+        "net.ipv6.conf.all.ndisc_notify" = 1;
+        "net.ipv6.conf.default.ndisc_notify" = 1;
+        "net.ipv4.conf.all.arp_notify" = 1;
+        "net.ipv4.conf.default.arp_notify" = 1;
       };
     }))
   ]);
