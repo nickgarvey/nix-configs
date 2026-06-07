@@ -35,6 +35,13 @@
           cp ${../../configs/niri.kdl} "$out"
         '';
 
+      # Waybar status bar config, managed verbatim from the repo. The package
+      # itself is installed via environment.systemPackages in
+      # modules/desktop/niri.nix and launched by spawn-at-startup in
+      # configs/niri.kdl; home-manager only owns the config files here.
+      xdg.configFile."waybar/config.jsonc".source = ../../configs/waybar/config.jsonc;
+      xdg.configFile."waybar/style.css".source = ../../configs/waybar/style.css;
+
       # Notification daemon. NOTE: this module only installs+configures mako; it
       # does not create a systemd unit, so mako is launched via spawn-at-startup
       # in configs/niri.kdl.

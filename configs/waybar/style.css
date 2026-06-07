@@ -1,0 +1,56 @@
+* {
+    font-family: "DejaVu Sans Mono", "Font Awesome 6 Free", monospace;
+    font-size: 13px;
+    border: none;
+    border-radius: 0;
+}
+
+window#waybar {
+    background-color: rgba(24, 24, 28, 0.92);
+    color: #e0e0e0;
+}
+
+#workspaces button {
+    padding: 0 8px;
+    color: #909090;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: #1a1a1a;
+    background-color: #7fc8ff;
+    border-radius: 4px;
+}
+
+#workspaces button.urgent {
+    background-color: #ff6b6b;
+    color: #1a1a1a;
+}
+
+#window {
+    color: #c0c0c0;
+    padding: 0 8px;
+}
+
+#clock,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#tray {
+    padding: 0 10px;
+    color: #e0e0e0;
+}
+
+#clock {
+    color: #7fc8ff;
+    font-weight: bold;
+}
+
+#network.disconnected {
+    color: #ff6b6b;
+}
+
+#pulseaudio.muted {
+    color: #909090;
+}

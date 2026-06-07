@@ -10,6 +10,7 @@
     fuzzel              # application launcher (Mod+D)
     xwayland-satellite  # provides DISPLAY for X11 apps (e.g. Steam) under niri
     networkmanagerapplet # nm-applet (tray) + nm-connection-editor (GUI) for waybar
+    pwvucontrol         # PipeWire volume/mixer GUI (opened from waybar audio module)
   ];
 
   # greetd + tuigreet: a minimal text login on the monitor that launches niri.
