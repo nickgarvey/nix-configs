@@ -11,6 +11,7 @@ in
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/desktop/steam.nix
     ../../modules/desktop/niri.nix
+    ../../modules/desktop/opencloud-desktop.nix
     ../../modules/containers/llama-cpp.nix
     ../../modules/nix/nix-remote-builder-client.nix
     ./hardware-configuration.nix
