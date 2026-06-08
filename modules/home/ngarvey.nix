@@ -4,6 +4,10 @@
 # workstation. All home-manager config lives here; desktop-environment-specific
 # blocks are gated on the relevant NixOS option (e.g. programs.niri.enable) so a
 # host that does not run niri gets no niri config.
+#
+# Convention: home-manager manages config files ONLY (via xdg.configFile, sourced
+# verbatim from configs/); the programs themselves are installed system-wide via
+# environment.systemPackages, not by home-manager.
 { config, lib, inputs, ... }:
 
 {
@@ -19,6 +23,8 @@
   home-manager.users.ngarvey = { pkgs, ... }: lib.mkMerge [
     {
       home.stateVersion = "25.11";
+
+      xdg.configFile."nvim/init.lua".source = ../../configs/nvim/init.lua;
     }
 
     # niri-specific home config, only on hosts that run niri (e.g. wabbajack).
