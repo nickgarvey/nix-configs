@@ -63,7 +63,7 @@ in
       clusterInit = lib.mkIf isFirstNode true;
       serverAddr = lib.mkIf (!isFirstNode) "https://k3s-api.home.arpa:6443";
       extraFlags = lib.optionals isServer [
-        "--write-kubeconfig-mode=644"
+        "--write-kubeconfig-mode=600"
         "--disable=servicelb"
         "--disable=traefik"
         "--flannel-backend=none"
