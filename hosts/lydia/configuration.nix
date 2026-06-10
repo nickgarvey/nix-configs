@@ -67,14 +67,6 @@
   # Tailscale
   services.tailscale.enable = true;
 
-  # NFS server: Longhorn backup target.
-  services.nfs.server = {
-    enable = true;
-    exports = ''
-      /slow/backups/longhorn 2001:470:482f::/48(rw,sync,no_subtree_check,no_root_squash)
-    '';
-  };
-
   # SATA mirror (2x 6TB WDC) — slow/bulk storage.
   fileSystems."/slow/backups" = {
     device = "/dev/disk/by-label/slow";
@@ -144,11 +136,6 @@
     };
   };
 
-  # Longhorn NFS backup directory
-  systemd.tmpfiles.rules = [
-    "d /slow/backups/longhorn 0755 root root - -"
-  ];
-
   microvm-smb = {
     hostBridge = "vmbr0";
     address = "10.28.12.110/16";
@@ -183,7 +170,7 @@
     dataPath = "/fast/frigate/data";
     cachePath = "/fast/frigate/cache";
   };
-  networking.firewall.allowedTCPPorts = [ 2049 8443 ];
+  networking.firewall.allowedTCPPorts = [ 8443 ];
 
   environment.systemPackages = with pkgs; [
     ethtool
