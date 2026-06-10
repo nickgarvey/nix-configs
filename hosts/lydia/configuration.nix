@@ -101,20 +101,40 @@
     fileSystems = [ "/fast/media" "/fast/frigate" ];
   };
 
+  # Pool btrfs roots (subvol=/) mounted for btrbk: snapshots must live on the
+  # same filesystem as their source subvolume, and the mounted subvols
+  # (/slow/backups etc.) can't hold sibling snapshot dirs.
+  fileSystems."/mnt/slow-root" = {
+    device = "/dev/disk/by-label/slow";
+    fsType = "btrfs";
+    options = [ "subvol=/" "nofail" ];
+  };
+  fileSystems."/mnt/fast-root" = {
+    device = "/dev/disk/by-label/fast";
+    fsType = "btrfs";
+    options = [ "subvol=/" "nofail" ];
+  };
+
   # btrbk snapshots
   services.btrbk.instances.data = {
     onCalendar = "hourly";
     settings = {
       snapshot_preserve_min = "2d";
       snapshot_preserve = "14d";
-      volume."/slow" = {
-        subvolume.backups = { snapshot_dir = ".snapshots"; };
+      volume."/mnt/slow-root" = {
+        subvolume."@backups" = { snapshot_dir = ".snapshots"; };
       };
-      volume."/fast" = {
-        subvolume.media = { snapshot_dir = ".snapshots"; };
+      volume."/mnt/fast-root" = {
+        subvolume."@media" = { snapshot_dir = ".snapshots"; };
       };
     };
   };
+
+  # btrbk does not create snapshot_dir itself.
+  systemd.tmpfiles.rules = [
+    "d /mnt/slow-root/.snapshots 0700 root root - -"
+    "d /mnt/fast-root/.snapshots 0700 root root - -"
+  ];
 
   users.users.ngarvey.extraGroups = [ "incus-admin" ];
   virtualisation.incus = {
