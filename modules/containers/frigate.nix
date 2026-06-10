@@ -149,6 +149,12 @@ in
         services.go2rtc = {
           enable = true;
           settings = {
+            # Loopback only: both are unauthenticated and would otherwise
+            # serve live camera streams to the whole LAN, bypassing Frigate's
+            # auth. All external access goes through nginx (auth_request) or
+            # WebRTC on 8555 (DTLS-SRTP, gated by authenticated signaling).
+            api.listen = "127.0.0.1:1984";
+            rtsp.listen = "127.0.0.1:8554";
             streams.camera = [
               "rtsp://\${FRIGATE_RTSP_USER}:\${FRIGATE_RTSP_PASSWORD}@camera.home.arpa:554/h264Preview_01_main"
             ];
@@ -163,6 +169,7 @@ in
           # placeholders that Frigate substitutes at runtime from the env file.
           checkConfig = false;
           settings = {
+            auth.enabled = true;
             mqtt.enabled = false;
             detectors.coral = {
               type = "edgetpu";
@@ -215,6 +222,15 @@ in
         services.tailscale = {
           enable = true;
           authKeyFile = "/run/tailscale-authkey";
+        };
+
+        # Defense in depth over the go2rtc loopback binds: only the
+        # authenticated nginx front (80) and WebRTC media (8555, DTLS-SRTP)
+        # are reachable — LAN and tailnet alike.
+        networking.firewall = {
+          enable = true;
+          allowedTCPPorts = [ 80 8555 ];
+          allowedUDPPorts = [ 8555 ];
         };
       };
     };
