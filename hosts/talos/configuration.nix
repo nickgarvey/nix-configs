@@ -4,7 +4,6 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/core/nixos-common.nix
-    ../../modules/services/smb-automount.nix
     ../../modules/networking/networkd.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix

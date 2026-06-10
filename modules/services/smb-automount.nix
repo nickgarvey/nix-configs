@@ -11,6 +11,7 @@ let
     "file_mode=0664"
     "dir_mode=0775"
     "vers=3.0"
+    "seal"
     "_netdev"
     "nodfs"
   ];

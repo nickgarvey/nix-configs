@@ -46,6 +46,7 @@ creation_rules:
       - *workstation
       - *wabbajack
       - *dovahkiin
+      - *lydia
   - path_regex: secrets/nix-builder.yaml
     key_groups:
     - age:
