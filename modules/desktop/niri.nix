@@ -22,7 +22,23 @@
       xwayland-satellite  # provides DISPLAY for X11 apps (e.g. Steam) under niri
       networkmanagerapplet # nm-applet (tray) + nm-connection-editor (GUI) for waybar
       pwvucontrol         # PipeWire volume/mixer GUI (opened from waybar audio module)
+      brightnessctl       # backlight control (XF86MonBrightness keys in niri.kdl)
+      gnome-themes-extra  # provides the Adwaita-dark GTK theme (dark mode)
     ];
+
+    # Dark mode. Chromium-based apps (helium) and libadwaita/GTK4 read the
+    # color-scheme preference via the XDG portal, which is backed by this dconf
+    # key; gtk-theme + GTK_THEME cover older GTK3 apps.
+    programs.dconf = {
+      enable = true;
+      profiles.user.databases = [{
+        settings."org/gnome/desktop/interface" = {
+          color-scheme = "prefer-dark";
+          gtk-theme = "Adwaita-dark";
+        };
+      }];
+    };
+    environment.sessionVariables.GTK_THEME = "Adwaita:dark";
 
     # greetd + tuigreet: a minimal text login on the monitor that launches niri.
     # Replaces the default lightdm fallback (only one DM can own seat0).
