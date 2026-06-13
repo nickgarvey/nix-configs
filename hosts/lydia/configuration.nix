@@ -31,7 +31,6 @@
 
   networking.hostName = "lydia";
 
-  sops.defaultSopsFile = ../../secrets/lydia.yaml;
   sops.defaultSopsFormat = "yaml";
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
