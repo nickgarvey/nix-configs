@@ -72,7 +72,7 @@
       "--min-p 0.0"
     ];
     models = [
-      { name = "qwen3.6-35b-a3b"; repo = "unsloth/Qwen3.6-35B-A3B-GGUF"; filter = "UD-Q4_K_XL"; }
+      { name = "qwen3.6-27b-mtp"; repo = "unsloth/Qwen3.6-27B-MTP-GGUF"; filter = "Q6_K.gguf"; }
     ];
   };
 
