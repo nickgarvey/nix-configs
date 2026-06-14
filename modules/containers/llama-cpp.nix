@@ -100,11 +100,6 @@ in
       autoStart = true;
       privateNetwork = false;
 
-      # First-boot model downloads can take much longer than the 1min default;
-      # the container stays in `activating` until inner multi-user.target reaches
-      # ready, which is gated on llama-cpp-download.service.
-      timeoutStartSec = "1h";
-
       bindMounts = {
         "/models" = { hostPath = "/models"; isReadOnly = false; };
       } // selectedGpu.bindMounts;
@@ -124,11 +119,31 @@ in
           # races resolved and fails with "Name or service not known".
           after    = [ "network-online.target" "nss-lookup.target" ];
           wants    = [ "network-online.target" "nss-lookup.target" ];
+
+          # Cap retries at 5 starts total. The window MUST exceed the cumulative
+          # backoff (~78 min across the 4 retries below) or early starts age out
+          # of the sliding window and the cap never trips -> 4h gives margin.
+          startLimitIntervalSec = 14400;  # 4h
+          startLimitBurst       = 5;      # 5 attempts, then give up (-> failed)
+
           serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
+            # simple (not oneshot): the inner multi-user.target is reached as soon
+            # as the process forks, so the container reports "started" immediately
+            # and nixos-rebuild returns without waiting for the (multi-GB) model
+            # download. The download proceeds in the background; llama-cpp-server
+            # retries every 10s until the GGUF lands. Also: Restart= is a no-op on
+            # oneshot, so simple is what makes the auto-retry below possible.
+            Type = "simple";
             ExecStart = "${pkgs.python3}/bin/python3 ${./llama-cpp-download-models.py}";
-            TimeoutStartSec = "1h";
+
+            # Exponential backoff on failure: geometric from RestartSec to
+            # RestartMaxDelaySec over RestartSteps steps. The delays before
+            # attempts 2-5 are ~44s, ~3min, ~14min, 1h (cap reached at retry 4).
+            # Each restart re-runs the script, which skips already-complete files.
+            Restart            = "on-failure";
+            RestartSec         = 10;
+            RestartSteps       = 4;
+            RestartMaxDelaySec = "1h";
           };
           environment.MODELS_CONFIG = builtins.toJSON cfg.models;
         };
