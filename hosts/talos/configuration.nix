@@ -161,7 +161,6 @@
     uid = 1000;
     extraGroups = [ "docker" ];
     packages = with pkgs; [
-      inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
       nvidia-container-toolkit
       rsync
     ];
