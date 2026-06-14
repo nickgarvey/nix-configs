@@ -37,9 +37,15 @@
       address = "10.28.8.80/16";
       gateway = "10.28.0.1";
     };
-    # Tarrasque's IPv6 lives in 2001:470:482f:201::/64 (delegated), not the
-    # LAN /64 — suppress SLAAC so it doesn't autoconfig a LAN-/64 address.
+    # talos's own LAN identity is the static 2001:470:482f::5 (lan-hosts.nix).
+    # suppressSlaac stops networkd adding a second, dynamic LAN-/64 address
+    # on top of it.
     ipv6.suppressSlaac = true;
+    # tarrasque (garage container) lives in the delegated 2001:470:482f:201::/64.
+    # Carry that /64's gateway on vmbr0 so the container's hostBridgeAddress
+    # next-hop resolves and the router's on-link route for the /64
+    # (modules/router/lan-ipv6.nix) NDP-resolves to us.
+    ipv6.extraAddresses = [ "2001:470:482f:201::1/64" ];
   };
 
   fileSystems."/fast/garage" = {

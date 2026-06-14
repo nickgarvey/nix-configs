@@ -134,7 +134,17 @@ in
             # retries every 10s until the GGUF lands. Also: Restart= is a no-op on
             # oneshot, so simple is what makes the auto-retry below possible.
             Type = "simple";
-            ExecStart = "${pkgs.python3}/bin/python3 ${./llama-cpp-download-models.py}";
+            # On a model *change* a previous GGUF is still on disk, so
+            # llama-cpp-server (after=this, satisfied at fork under Type=simple)
+            # latches onto the OLD model at startup and never switches. After a
+            # successful download + cleanup_stale, restart the server so it picks
+            # up the new model. On failure the script exits non-zero (set -e),
+            # the restart is skipped, and Restart=on-failure retries.
+            ExecStart = pkgs.writeShellScript "llama-cpp-download" ''
+              set -euo pipefail
+              ${pkgs.python3}/bin/python3 ${./llama-cpp-download-models.py}
+              ${pkgs.systemd}/bin/systemctl try-restart llama-cpp-server.service
+            '';
 
             # Exponential backoff on failure: geometric from RestartSec to
             # RestartMaxDelaySec over RestartSteps steps. The delays before

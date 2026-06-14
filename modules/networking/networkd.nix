@@ -76,7 +76,22 @@ in
               Suppress SLAAC address autoconfiguration on this bridge while
               still using RA-derived on-link prefix and route information.
               Set true for hosts whose static IPv6 is outside the LAN /64
-              (e.g. in a delegated per-host prefix).
+              (e.g. in a delegated per-host prefix), or to keep a single
+              deterministic LAN-/64 address (from lan-hosts.nix) without a
+              second, dynamic SLAAC address on top of it.
+            '';
+          };
+          ipv6.extraAddresses = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = ''
+              Additional static IPv6 addresses (CIDR) to assign to the bridge
+              beyond the host's main-LAN address from lan-hosts.nix. Used by a
+              host that owns a delegated per-host /64 for its nspawn
+              containers: put the delegation's gateway address here (e.g.
+              "2001:470:482f:201::1/64") so the container's hostBridgeAddress
+              next-hop lives on the bridge and the router's on-link route for
+              the /64 (modules/router/lan-ipv6.nix) NDP-resolves to this host.
             '';
           };
         };
@@ -153,7 +168,8 @@ in
       systemd.network.networks."10-${br.name}" = {
         matchConfig.Name = br.name;
         address = [ br.ipv4.address ]
-          ++ lib.optionals hasIPv6 [ "${hostEntry.ipv6}/64" ];
+          ++ lib.optionals hasIPv6 [ "${hostEntry.ipv6}/64" ]
+          ++ br.ipv6.extraAddresses;
         gateway = [ br.ipv4.gateway ];
         dns = br.ipv4.dns ++ [ "2001:470:482f::1" ];
         networkConfig = {

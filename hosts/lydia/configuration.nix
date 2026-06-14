@@ -60,9 +60,15 @@
       address = "10.28.12.108/16";
       gateway = "10.28.0.1";
     };
-    # Aboleth's IPv6 lives in 2001:470:482f:200::/64 (delegated), not the
-    # LAN /64 — suppress SLAAC so it doesn't autoconfig a LAN-/64 address.
+    # lydia's own LAN identity is the static 2001:470:482f::6 (lan-hosts.nix).
+    # suppressSlaac stops networkd adding a second, dynamic LAN-/64 address
+    # on top of it.
     ipv6.suppressSlaac = true;
+    # aboleth (garage container) lives in the delegated 2001:470:482f:200::/64.
+    # Carry that /64's gateway on vmbr0 so the container's hostBridgeAddress
+    # next-hop resolves and the router's on-link route for the /64
+    # (modules/router/lan-ipv6.nix) NDP-resolves to us.
+    ipv6.extraAddresses = [ "2001:470:482f:200::1/64" ];
   };
   # Tailscale
   services.tailscale.enable = true;
