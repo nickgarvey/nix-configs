@@ -12,7 +12,6 @@ in
     ../../modules/desktop/steam.nix
     ../../modules/desktop/niri.nix
     ../../modules/desktop/opencloud-desktop.nix
-    ../../modules/containers/llama-cpp.nix
     ../../modules/nix/nix-remote-builder-client.nix
     ./hardware-configuration.nix
   ];
@@ -32,16 +31,6 @@ in
 
   # Add Xbox dongle firmware (append to existing firmware, don't replace)
   hardware.firmware = [ xone-dongle-firmware ];
-
-  homelab.llama-cpp = {
-    enable = true;
-    backend = "vulkan";
-    models = [
-      { name = "qwen3.5-27b"; repo = "unsloth/Qwen3.5-27B-GGUF"; filter = "UD-Q4_K_XL"; }
-      { name = "qwen3.5-9b";  repo = "unsloth/Qwen3.5-9B-GGUF";  filter = "UD-Q4_K_XL"; }
-      { name = "qwen3.5-4b";  repo = "unsloth/Qwen3.5-4B-GGUF";  filter = "UD-Q4_K_XL"; }
-    ];
-  };
 
   # ASUS XG27UQDMS (4K 240Hz OLED), direct-connected on DP-2. niri otherwise
   # auto-picks the 60Hz "preferred" mode, so pin the full rate. VRR is on-demand:
