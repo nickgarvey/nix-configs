@@ -9,7 +9,6 @@
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/nix/nix-binary-cache.nix
     ../../modules/nix/flake-build-check.nix
-    ../../modules/containers/llama-cpp.nix
     ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops
   ];
@@ -63,23 +62,6 @@
     capacity = "1T";
     replicationFactor = 2;
     peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@garage-aboleth.home.arpa:3901" ];
-  };
-
-  homelab.llama-cpp = {
-    enable = true;
-    backend = "cuda";
-    # Thinking on by default; MoE active-3B keeps it fast enough.
-    # Sampling matches Qwen3 thinking-mode recommendation (HF/Unsloth).
-    extraArgs = [
-      "--reasoning on"
-      "--temp 0.6"
-      "--top-p 0.95"
-      "--top-k 20"
-      "--min-p 0.0"
-    ];
-    models = [
-      { name = "qwen3.6-27b-mtp"; repo = "unsloth/Qwen3.6-27B-MTP-GGUF"; filter = "Q6_K.gguf"; }
-    ];
   };
 
   networking = {

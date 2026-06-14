@@ -29,11 +29,6 @@
 
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
-    llama-cpp = {
-      url = "github:nickgarvey/homelab-nixpkgs?dir=llama-cpp";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     claude-code-nix = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -56,7 +51,7 @@
       flake = false;
     };
   };
-  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, llama-cpp, claude-code-nix, nixos-raspberrypi, cartographer3d-plugin, ... }:
+  outputs = inputs@{ self, nixpkgs, disko, sops-nix, helium-browser, nixos-hardware, microvm, claude-code-nix, nixos-raspberrypi, cartographer3d-plugin, ... }:
   let
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes
@@ -132,7 +127,7 @@
         ];
       };
 
-      # Framework Desktop (llama-cpp inference server)
+      # Framework Desktop
       wabbajack = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [

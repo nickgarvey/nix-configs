@@ -219,28 +219,6 @@
         "type": "github"
       }
     },
-    "llama-cpp": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "dir": "llama-cpp",
-        "lastModified": 1779165644,
-        "narHash": "sha256-OSU/hTJchGbE8dEeoIdWDpSEFfrOX3zKio3C7y2ixP0=",
-        "owner": "nickgarvey",
-        "repo": "homelab-nixpkgs",
-        "rev": "9475889338526335ba72557926347b650b7728f5",
-        "type": "github"
-      },
-      "original": {
-        "dir": "llama-cpp",
-        "owner": "nickgarvey",
-        "repo": "homelab-nixpkgs",
-        "type": "github"
-      }
-    },
     "microvm": {
       "inputs": {
         "nixpkgs": [
@@ -403,7 +381,6 @@
         "disko": "disko",
         "helium-browser": "helium-browser",
         "home-manager": "home-manager",
-        "llama-cpp": "llama-cpp",
         "microvm": "microvm",
         "nixos-hardware": "nixos-hardware",
         "nixos-raspberrypi": "nixos-raspberrypi",
