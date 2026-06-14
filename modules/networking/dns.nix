@@ -35,5 +35,6 @@ in rec {
   cnames = {
     plex      = "plex.plex.k8s.home.arpa.";
     zot       = "zot.zot.k8s.home.arpa.";
+    llm       = "talos.home.arpa.";
   };
 }

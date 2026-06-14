@@ -9,6 +9,7 @@
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/nix/nix-binary-cache.nix
     ../../modules/nix/flake-build-check.nix
+    ../../modules/llms/vllm-docker.nix
     ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops
   ];
@@ -64,6 +65,33 @@
     peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@garage-aboleth.home.arpa:3901" ];
   };
 
+  # vLLM inference server (official docker image) serving Qwen3.6-27B NVFP4 on
+  # the single RTX 5090 (32 GB), loading the model from the garage llm-models S3
+  # bucket via the run:ai streamer. NVFP4 weights (~20 GB, incl. quantized
+  # linear-attn layers) run on the 5090's sm_120 FP4 tensor cores;
+  # compressed-tensors nvfp4 is auto-detected from the checkpoint. The v0.23.0
+  # image is cu130 + flashinfer + modelopt_fp4.
+  #
+  # Speculative decode (MTP) is off: the run:ai S3 streamer can't load the
+  # separate draft-model weights.
+  homelab.vllmDocker = {
+    enable = true;
+    model = "Qwen3.6-27B-NVFP4";
+    loadFormat = "runai_streamer";
+    extraArgs = [
+      # Single request at a time: captures only batch-size-1 CUDA graphs, so
+      # startup fits in 32 GB. Leaves ~198K tokens of KV at 32K ctx.
+      "--max-num-seqs" "1"
+      # 32K context; the model supports up to 262144.
+      "--max-model-len" "32768"
+      "--gpu-memory-utilization" "0.90"
+      "--kv-cache-dtype" "fp8_e4m3"
+      "--reasoning-parser" "qwen3"
+      "--enable-auto-tool-choice"
+      "--tool-call-parser" "qwen3_xml"
+    ];
+  };
+
   networking = {
     hostName = "talos";
     hostId = "a4c946db";
@@ -106,6 +134,16 @@
     enable = true;
     autoPrune.enable = true;
     enableOnBoot = true;
+    # IPv6 on the default bridge so containers can reach the IPv6-only garage
+    # S3 endpoint (the vLLM model store). ULA subnet + ip6tables gives NAT66:
+    # container traffic is masqueraded to talos's LAN address, which already
+    # routes to the garage container (IPv6 forwarding is on). Avoids needing
+    # --network=host just to get IPv6.
+    daemon.settings = {
+      ipv6 = true;
+      fixed-cidr-v6 = "fd00:d0cc::/64";
+      ip6tables = true;
+    };
   };
 
   # resolved handles split-DNS: Tailscale pushes its nameservers for ts.net
