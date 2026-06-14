@@ -20,8 +20,12 @@ in
     ../core/nixos-common.nix
     ../services/smb-automount.nix
     ../home/ngarvey.nix
+    ../llms/hf-to-garage.nix
     inputs.sops-nix.nixosModules.sops
   ];
+
+  # Manual HuggingFace → garage llm-models bucket upload tool.
+  homelab.hfToGarage.enable = true;
 
   # Workstation peripheral udev rules (rules for absent devices are inert).
   # Keychron: allow VIA / Keychron Launcher (WebHID) without root.

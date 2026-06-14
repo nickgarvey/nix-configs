@@ -24,6 +24,20 @@ creation_rules:
       - *ngarvey
       - *lydia
       - *workstation
+  # llm-models: dedicated garage S3 key for the vLLM model store.
+  # Consumed in two places, so it must decrypt on three machines:
+  #   - talos runs the vLLM service and presents the `workstation` age key
+  #     (same identity that decrypts garage.yaml).
+  #   - dovahkiin + wabbajack run the hf-to-garage upload tool and present
+  #     their own host keys.
+  # ngarvey is included so the secret can be edited.
+  - path_regex: secrets/llm-models.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *workstation
+      - *dovahkiin
+      - *wabbajack
   - path_regex: secrets/dragonsreach.yaml
     key_groups:
     - age:
