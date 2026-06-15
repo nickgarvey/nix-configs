@@ -184,10 +184,17 @@ in
         '';
         Restart = "on-failure";
         RestartSec = 30;
+        TimeoutStartSec = "3600";
       };
     };
 
-    # First start pulls the (multi-GB) image; give it room.
-    systemd.services.docker-vllm.serviceConfig.TimeoutStartSec = lib.mkForce "1800";
+    # First start pulls the (multi-GB) image; give it room. In local mode the
+    # container also waits for the model sync.
+    systemd.services.docker-vllm = {
+      serviceConfig.TimeoutStartSec = lib.mkForce "1800";
+    } // lib.optionalAttrs (cfg.loadFormat == "local") {
+      after = [ "vllm-model-sync.service" ];
+      requires = [ "vllm-model-sync.service" ];
+    };
   };
 }

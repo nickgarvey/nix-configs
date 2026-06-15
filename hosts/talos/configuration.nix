@@ -66,29 +66,37 @@
   };
 
   # vLLM inference server (official docker image) serving Qwen3.6-27B NVFP4 on
-  # the single RTX 5090 (32 GB), loading the model from the garage llm-models S3
-  # bucket via the run:ai streamer. NVFP4 weights (~20 GB, incl. quantized
+  # the single RTX 5090 (32 GB). The model is synced from the garage llm-models
+  # S3 bucket to local disk (loadFormat = "local"), which the MTP speculative
+  # decode draft loader requires. NVFP4 weights (~20 GB, incl. quantized
   # linear-attn layers) run on the 5090's sm_120 FP4 tensor cores;
-  # compressed-tensors nvfp4 is auto-detected from the checkpoint. The v0.23.0
-  # image is cu130 + flashinfer + modelopt_fp4.
-  #
-  # Speculative decode (MTP) is off: the run:ai S3 streamer can't load the
-  # separate draft-model weights.
+  # compressed-tensors nvfp4 is auto-detected. The v0.23.0 image is cu130 +
+  # flashinfer + modelopt_fp4.
   homelab.vllmDocker = {
     enable = true;
     model = "Qwen3.6-27B-NVFP4";
-    loadFormat = "runai_streamer";
+    loadFormat = "local";
     extraArgs = [
-      # Single request at a time: captures only batch-size-1 CUDA graphs, so
-      # startup fits in 32 GB. Leaves ~198K tokens of KV at 32K ctx.
+      # Single request at a time: captures only batch-size-1 CUDA graphs,
+      # keeping startup memory low.
       "--max-num-seqs" "1"
-      # 32K context; the model supports up to 262144.
-      "--max-model-len" "32768"
-      "--gpu-memory-utilization" "0.90"
+      # 240K context at gpu-memory-utilization 0.97. The BF16 MTP head
+      # (~0.85 GiB) eats KV headroom, so the full 262K doesn't fit with
+      # speculative decode on; 245760 is the practical max.
+      "--max-model-len" "245760"
+      "--gpu-memory-utilization" "0.97"
       "--kv-cache-dtype" "fp8_e4m3"
       "--reasoning-parser" "qwen3"
       "--enable-auto-tool-choice"
       "--tool-call-parser" "qwen3_xml"
+      # MTP speculative decoding via the checkpoint's BF16 MTP head
+      # (~80% draft acceptance, ~1.9x decode).
+      "--speculative-config" ''{"method":"mtp","num_speculative_tokens":3}''
+      # Log the effective sampling params of each request (INFO level logs
+      # params only, not prompt or output). max-log-len 0 redacts the prompt
+      # even if DEBUG logging is ever enabled.
+      "--enable-log-requests"
+      "--max-log-len" "0"
     ];
   };
 
