@@ -178,6 +178,14 @@ in
         content = ''
           chain prerouting {
             type nat hook prerouting priority dstnat;
+
+            # WAN IPv4 :53 -> acme-dns-proxy container (IPv4->IPv6 DNS bridge so
+            # Let's Encrypt can reach the IPv6-only acme-dns over IPv4). Scoped
+            # to port 53 on the WAN interface; the forward chain's
+            # "ct status dnat accept" rule permits the forwarded packets, and
+            # conntrack un-DNATs the replies back to the public WAN IP.
+            iifname "${cfg.wanInterface}" udp dport 53 dnat to 10.28.0.5:53
+            iifname "${cfg.wanInterface}" tcp dport 53 dnat to 10.28.0.5:53
           }
 
           chain postrouting {
