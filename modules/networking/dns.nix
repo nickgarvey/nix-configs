@@ -37,4 +37,13 @@ in rec {
     zot       = "zot.zot.k8s.home.arpa.";
     llm       = "talos.home.arpa.";
   };
+
+  # Split-horizon overrides: public (garvey.sh) names answered internally with
+  # in-cluster LB IPs, so TLS-verified internal access name-matches the cert
+  # instead of hairpinning to the public IP. Keys are full FQDNs. Add future
+  # public-named services here to keep this declarative. Everything else under
+  # garvey.sh still resolves via the normal upstream (public) path.
+  garveyShOverrides = {
+    "oci.garvey.sh" = "2001:470:482f:2::5000";
+  };
 }

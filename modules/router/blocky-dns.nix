@@ -67,7 +67,9 @@ in
         };
 
         customDNS = {
-          mapping = dnsMapping;
+          # garveyShOverrides keys are already fully-qualified (oci.garvey.sh),
+          # so merge them in directly without the home.arpa FQDN suffix.
+          mapping = dnsMapping // dns.garveyShOverrides;
           zone = zoneText;
         };
 
