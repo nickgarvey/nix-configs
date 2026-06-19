@@ -18,6 +18,7 @@ in
 {
   imports = [
     ../core/nixos-common.nix
+    ./orca-slicer.nix
     ../services/smb-automount.nix
     ../home/ngarvey.nix
     ../llms/hf-to-garage.nix
