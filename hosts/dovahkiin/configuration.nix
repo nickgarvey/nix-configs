@@ -63,6 +63,8 @@
     }
   '';
 
+  homelab.niri.hasBattery = true;
+
   services.fwupd.enable = true;
 
   hardware.bluetooth = {

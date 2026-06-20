@@ -42,11 +42,31 @@
           niri validate -c "$out"
         '';
 
-      # Waybar status bar config, managed verbatim from the repo. The package
-      # itself is installed via environment.systemPackages in
-      # modules/desktop/niri.nix and launched by spawn-at-startup in
-      # configs/niri.kdl; home-manager only owns the config files here.
-      xdg.configFile."waybar/config.jsonc".source = ../../configs/waybar/config.jsonc;
+      # Waybar status bar config. The package itself is installed via
+      # environment.systemPackages in modules/desktop/niri.nix and launched by
+      # spawn-at-startup in configs/niri.kdl; home-manager only owns the config
+      # files here. Hosts without a battery get the file verbatim; hosts that set
+      # homelab.niri.hasBattery get a battery module injected before the tray.
+      # NOTE: configs/waybar/config.jsonc is strict JSON (no comments / trailing
+      # commas) so builtins.fromJSON parses it; keep it that way or revisit here.
+      xdg.configFile."waybar/config.jsonc".source =
+        if config.homelab.niri.hasBattery then
+          let
+            base = builtins.fromJSON (builtins.readFile ../../configs/waybar/config.jsonc);
+            withBattery = base // {
+              modules-right =
+                (lib.lists.remove "tray" base.modules-right) ++ [ "battery" "tray" ];
+              battery = {
+                states = { warning = 20; critical = 10; };
+                format = "BAT {capacity}%";
+                format-charging = "CHG {capacity}%";
+                format-plugged = "AC {capacity}%";
+                tooltip-format = "{timeTo}  ({power}W)";
+                interval = 30;
+              };
+            };
+          in pkgs.writeText "waybar-config.jsonc" (builtins.toJSON withBattery)
+        else ../../configs/waybar/config.jsonc;
       xdg.configFile."waybar/style.css".source = ../../configs/waybar/style.css;
 
       # Notification daemon. NOTE: this module only installs+configures mako; it

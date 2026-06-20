@@ -11,6 +11,15 @@
     '';
   };
 
+  options.homelab.niri.hasBattery = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = ''
+      Whether this host has a battery. When true, the waybar status bar gains
+      a battery module. Leave false on desktops so the bar shows no battery slot.
+    '';
+  };
+
   config = {
     # Niri, a scrollable-tiling Wayland compositor.
     programs.niri.enable = true;
