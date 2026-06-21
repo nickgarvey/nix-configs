@@ -67,6 +67,12 @@
 
   services.fwupd.enable = true;
 
+  # The framework-amd-ai-300-series nixos-hardware profile enables fprintd by
+  # default (lib.mkDefault), which adds pam_fprintd to the greetd login stack —
+  # tuigreet then waits on a fingerprint swipe and blocks password entry. Disable
+  # it: sudo is passwordless and there's no lock screen, so the reader is unused.
+  services.fprintd.enable = false;
+
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
