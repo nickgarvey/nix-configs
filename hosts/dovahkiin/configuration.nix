@@ -10,7 +10,6 @@
     ../../modules/nix/nix-remote-builder-client.nix
     ../../modules/desktop/upower-overlay.nix
     ../../modules/desktop/opencloud-desktop.nix
-    ./printer.nix
     inputs.pi-nix.nixosModules.default
   ];
 

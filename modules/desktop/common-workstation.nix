@@ -18,6 +18,7 @@ in
 {
   imports = [
     ../core/nixos-common.nix
+    ./printer.nix
     ./orca-slicer.nix
     ../services/smb-automount.nix
     ../home/ngarvey.nix
