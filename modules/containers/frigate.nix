@@ -118,6 +118,47 @@ in
         # Coral modules are loaded on the host; suppress inside container
         boot.extraModulePackages = lib.mkForce [];
 
+        # ai-edge-litert (a Frigate dependency) ships an Intel OpenVINO vendor
+        # plugin built against OpenVINO 2026.2.0 (libopenvino.so.2620), but
+        # nixpkgs' openvino-native is 2026.2.1 (libopenvino.so.2621), so
+        # auto-patchelf hard-fails on the SONAME mismatch. We detect with the
+        # Coral EdgeTPU, never OpenVINO, so the plugin is dead weight — tell
+        # auto-patchelf to ignore the missing libs instead of failing.
+        nixpkgs.overlays = [
+          (final: prev: {
+            pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+              (pyfinal: pyprev: {
+                ai-edge-litert = pyprev.ai-edge-litert.overrideAttrs (old: {
+                  autoPatchelfIgnoreMissingDeps =
+                    (old.autoPatchelfIgnoreMissingDeps or [])
+                    ++ [
+                      "libopenvino.so.2620"
+                      "libopenvino_tensorflow_lite_frontend.so.2620"
+                    ];
+                });
+              })
+            ];
+          })
+        ];
+
+        # Tripwire: the workaround above is pinned to this exact version pair
+        # (litert links libopenvino.so.2620, openvino-native ships .so.2621).
+        # When nixpkgs bumps either package the mismatch may be gone — fail the
+        # build so we re-check and delete the overlay if it's fixed upstream.
+        assertions = [
+          {
+            assertion =
+              pkgs.python3Packages.ai-edge-litert.version == "2.1.5"
+              && pkgs.openvino.version == "2026.2.1";
+            message = ''
+              frigate.nix: ai-edge-litert (${pkgs.python3Packages.ai-edge-litert.version})
+              and/or openvino (${pkgs.openvino.version}) have been bumped.
+              Re-check whether the libopenvino.so.2620 SONAME mismatch is resolved and
+              remove the autoPatchelfIgnoreMissingDeps overlay (and this assertion) if so.
+            '';
+          }
+        ];
+
         systemd.tmpfiles.rules = [
           "d /dev/shm/logs 0755 root root - -"
           "d /dev/shm/logs/frigate 0755 root root - -"
