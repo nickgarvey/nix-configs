@@ -44,12 +44,12 @@ in
       KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
     };
 
-    # Configure Zot registry (HTTP) for k3s
+    # Configure Zot registry for k3s
     environment.etc."rancher/k3s/registries.yaml".text = ''
       mirrors:
         "zot.zot.k8s.home.arpa":
           endpoint:
-            - "http://zot.zot.k8s.home.arpa:5000"
+            - "https://oci.garvey.sh"
     '';
 
     systemd.services.k3s.restartTriggers = [
