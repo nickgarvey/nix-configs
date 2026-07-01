@@ -179,8 +179,23 @@ in
         ExecStart = pkgs.writeShellScript "vllm-model-sync" ''
           set -euo pipefail
           mkdir -p ${lib.escapeShellArg localPath}
-          exec ${pkgs.awscli2}/bin/aws --endpoint-url="${cfg.s3Endpoint}" --region=garage \
-            s3 sync "${s3Uri}/" ${lib.escapeShellArg localPath} --delete
+          # Retry in place: garage lives on another host and may not be
+          # reachable the instant network-online.target fires at boot. Staying
+          # in `activating` (rather than failing) is what keeps systemd from
+          # cancelling the dependent docker-vllm start job. ~40 x 15s ~= 10 min,
+          # well under TimeoutStartSec below.
+          n=0
+          max=40
+          until ${pkgs.awscli2}/bin/aws --endpoint-url="${cfg.s3Endpoint}" --region=garage \
+                s3 sync "${s3Uri}/" ${lib.escapeShellArg localPath} --delete; do
+            n=$((n + 1))
+            if [ "$n" -ge "$max" ]; then
+              echo "vllm-model-sync: giving up after $n attempts" >&2
+              exit 1
+            fi
+            echo "vllm-model-sync: sync failed (attempt $n/$max), retrying in 15s..." >&2
+            sleep 15
+          done
         '';
         Restart = "on-failure";
         RestartSec = 30;
