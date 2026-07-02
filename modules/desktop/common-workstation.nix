@@ -32,10 +32,16 @@ in
   # Workstation peripheral udev rules (rules for absent devices are inert).
   # Keychron: allow VIA / Keychron Launcher (WebHID) without root.
   #   3434 - Keychron vendor ID; GROUP="users" + TAG+="uaccess" for seat access.
+  # Vial: match on the Vial magic serial (vendor-agnostic) so the Vial GUI can
+  #   reach any Vial-firmware keyboard's hidraw node without root. qmk-udev-rules
+  #   only covers bootloader/DFU flashing, not this runtime hidraw access.
+  # Keebio: FoldKB (cb10) runs VIA firmware; grant hidraw access for the VIA app.
   # Pico: unprivileged access to RP2040 in BOOTSEL mode (2e8a) and pico-dirtyJtag (1209:c0ca).
   # ESP-Prog-2: Espressif USB JTAG adapter (303a:1002).
   services.udev.extraRules = ''
     KERNEL=="hidraw*", ATTRS{idVendor}=="3434", MODE="0660", GROUP="users", TAG+="uaccess"
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", GROUP="users", TAG+="uaccess"
+    KERNEL=="hidraw*", ATTRS{idVendor}=="cb10", MODE="0660", GROUP="users", TAG+="uaccess"
     SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", MODE="0666"
     SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="c0ca", MODE="0666"
     SUBSYSTEM=="usb", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1002", MODE="0666"
