@@ -2,10 +2,11 @@ Avoid NULL-deref crashes when loading a 3mf without filament_colour, and
 when wxMediaCtrl's GStreamer backend fails to construct (e.g. playbin not
 found in the registry).
 
-Both bugs are present in OrcaSlicer 2.3.2. The wxMediaCtrl2 issue has been
-partially fixed in upstream master (m_imp null-check added) but the inner
-playbin pointer is still dereferenced unconditionally there. The Plater.cpp
-filament_colour lookup is unchanged in master.
+Both bugs originate in OrcaSlicer 2.3.2. As of 2.4.0 upstream added the
+outer m_imp null-check (`if (!m_use_gtk_sink && m_imp)`), but the inner
+playbin pointer is still dereferenced unconditionally, so we keep the
+`if (playbin)` guard here. The Plater.cpp filament_colour lookup is still
+unguarded upstream.
 
 See UPSTREAMABLE_FIXES.md in nix-configs for full context.
 
@@ -25,22 +26,17 @@ See UPSTREAMABLE_FIXES.md in nix-configs for full context.
                              this->preview->update_gcode_result(partplate_list.get_current_slice_result());
 --- a/src/slic3r/GUI/wxMediaCtrl2.cpp
 +++ b/src/slic3r/GUI/wxMediaCtrl2.cpp
-@@ -42,10 +42,14 @@
-     wxMediaCtrl::Create(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxMEDIACTRLPLAYERCONTROLS_NONE);
- #ifdef __LINUX__
-     /* Register only after we have created the wxMediaCtrl, since only then are we guaranteed to have fired up Gstreamer's plugin registry. */
--    auto playbin = reinterpret_cast<wxGStreamerMediaBackend *>(m_imp)->m_playbin;
--    g_object_set (G_OBJECT (playbin),
--                  "audio-sink", NULL,
--                   NULL);
-+    if (m_imp) {
-+        auto playbin = reinterpret_cast<wxGStreamerMediaBackend *>(m_imp)->m_playbin;
+@@ -139,8 +139,10 @@
+     if (!m_use_gtk_sink && m_imp) {
+         auto playbin = reinterpret_cast<wxGStreamerMediaBackend *>(m_imp)->m_playbin;
+-        g_object_set(G_OBJECT(playbin),
+-                     "audio-sink", nullptr,
+-                     nullptr);
 +        if (playbin) {
-+            g_object_set (G_OBJECT (playbin),
-+                          "audio-sink", NULL,
-+                           NULL);
++            g_object_set(G_OBJECT(playbin),
++                         "audio-sink", nullptr,
++                         nullptr);
 +        }
-+    }
-     gstbambusrc_register();
-     Bind(wxEVT_MEDIA_LOADED, [this](auto & e) {
-         m_loaded = true;
+     } else if (!m_use_gtk_sink) {
+         BOOST_LOG_TRIVIAL(warning) << "wxMediaCtrl2: wxMediaCtrl backend is unavailable";
+     }
