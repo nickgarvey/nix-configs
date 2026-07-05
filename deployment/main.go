@@ -16,6 +16,7 @@ type CLIArgs struct {
 	Mode   Mode
 	Reboot RebootFlag
 	Force  bool
+	Self   bool
 }
 
 func parseArgs(argv []string) (CLIArgs, error) {
@@ -25,6 +26,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 	modeStr := fs.String("mode", "safe", "Deploy mode: safe|switch|boot")
 	rebootStr := fs.String("reboot", "auto", "Reboot behavior: auto|never|always|ask")
 	force := fs.Bool("force", false, "Skip safety pre-checks (e.g. active print on printer hosts)")
+	self := fs.Bool("self", false, "Deploy to the host running this command (equivalent to -hosts $(hostname))")
 	if err := fs.Parse(argv); err != nil {
 		return CLIArgs{}, err
 	}
@@ -49,7 +51,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 			}
 		}
 	}
-	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force}, nil
+	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force, Self: *self}, nil
 }
 
 func main() {
@@ -57,6 +59,15 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(2)
+	}
+
+	if args.Self {
+		hn, err := os.Hostname()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: --self: cannot determine hostname: %v\n", err)
+			os.Exit(1)
+		}
+		args.Hosts = append(args.Hosts, strings.SplitN(hn, ".", 2)[0])
 	}
 
 	hosts, err := SelectHosts(AllHosts, args.Hosts)

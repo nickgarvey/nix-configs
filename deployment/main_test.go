@@ -54,6 +54,17 @@ func TestParseArgsAllValues(t *testing.T) {
 	}
 }
 
+func TestParseArgsSelf(t *testing.T) {
+	def, err := parseArgs(nil)
+	if err != nil || def.Self {
+		t.Fatalf("default Self should be false, got %+v err=%v", def, err)
+	}
+	got, err := parseArgs([]string{"--self"})
+	if err != nil || !got.Self {
+		t.Fatalf("--self should set Self=true, got %+v err=%v", got, err)
+	}
+}
+
 func TestParseArgsRejectsPositional(t *testing.T) {
 	if _, err := parseArgs([]string{"extra"}); err == nil {
 		t.Fatal("expected error for positional args")
