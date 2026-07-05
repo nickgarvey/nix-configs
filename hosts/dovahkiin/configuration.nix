@@ -54,11 +54,10 @@
     ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x14c3", ATTR{device}=="0x0717", ATTR{link/l1_aspm}="0"
   '';
 
-  # Framework 13 internal panel (13.5" 2256x1504). niri's auto-scale heuristic
-  # picks 2.0 for this DPI, which is oversized; pin 1.5 instead.
+  # Framework 13 internal panel (13.5" 2256x1504). Pin scale 2.0.
   homelab.niri.outputs = ''
     output "eDP-1" {
-        scale 1.5
+        scale 2.0
     }
   '';
 
