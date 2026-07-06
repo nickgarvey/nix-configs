@@ -86,6 +86,7 @@ in
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" "input" "docker" ];
     packages = with pkgs; [
+      android-tools # adb/fastboot for Android debugging
       anki-with-sync
       atop
       claude-code
