@@ -135,6 +135,10 @@ in
                       "libopenvino.so.2620"
                       "libopenvino_tensorflow_lite_frontend.so.2620"
                     ];
+                  # Upstream marked the package broken over the same
+                  # libopenvino.so.2620 SONAME mismatch the ignore above already
+                  # handles; un-break it so eval proceeds.
+                  meta = old.meta // { broken = false; };
                 });
               })
             ];
