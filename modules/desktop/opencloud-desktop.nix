@@ -18,6 +18,12 @@
     description = "OpenCloud Desktop sync client";
     wantedBy = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
+    # Start after niri has imported WAYLAND_DISPLAY into the user env.
+    after = [ "graphical-session.target" ];
+    # Force the native Wayland Qt plugin. DISPLAY is set (for XWayland), so Qt
+    # otherwise picks xcb and core-dumps on boot before xwayland-satellite is up
+    # ("could not connect to display"), restarting into the setup window.
+    environment.QT_QPA_PLATFORM = "wayland";
     serviceConfig = {
       ExecStart = "${pkgs.opencloud-desktop}/bin/opencloud";
       Restart = "on-failure";
