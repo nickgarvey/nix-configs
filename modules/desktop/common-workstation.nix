@@ -151,5 +151,10 @@ in
       extraDefCfg = "process-unmapped-keys yes";
     };
   };
+
+  systemd.services.kanata-keyboard.serviceConfig = {
+    Restart = "on-failure";
+    RestartSec = 3;
+  };
 }
 
