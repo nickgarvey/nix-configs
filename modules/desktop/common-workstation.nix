@@ -38,10 +38,16 @@ in
   # Keebio: FoldKB (cb10) runs VIA firmware; grant hidraw access for the VIA app.
   # Pico: unprivileged access to RP2040 in BOOTSEL mode (2e8a) and pico-dirtyJtag (1209:c0ca).
   # ESP-Prog-2: Espressif USB JTAG adapter (303a:1002).
+  # FoldKB joystick misdetection: the FoldKB's "System Control" interface exposes
+  #   ABS axes, so input_id tags it ID_INPUT_JOYSTICK=1. SDL2 then enumerates the
+  #   keyboard as a gamepad, and its resting axis reads as a constant direction
+  #   (e.g. breaks rightward movement in Baba Is You). Clear the tag; it is not a
+  #   joystick. 99-local.rules runs after input_id, so this override wins.
   services.udev.extraRules = ''
     KERNEL=="hidraw*", ATTRS{idVendor}=="3434", MODE="0660", GROUP="users", TAG+="uaccess"
     KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", GROUP="users", TAG+="uaccess"
     KERNEL=="hidraw*", ATTRS{idVendor}=="cb10", MODE="0660", GROUP="users", TAG+="uaccess"
+    SUBSYSTEM=="input", ATTRS{idVendor}=="cb10", ATTRS{idProduct}=="2358", ENV{ID_INPUT_JOYSTICK}=""
     SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", MODE="0666"
     SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="c0ca", MODE="0666"
     SUBSYSTEM=="usb", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1002", MODE="0666"
