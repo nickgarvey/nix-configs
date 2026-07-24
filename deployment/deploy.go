@@ -203,6 +203,31 @@ func deployUnsafe(ctx *DeployContext, host Host, nrMode string) bool {
 	return true
 }
 
+// BuildOnly builds a host's configuration on the build host without touching
+// the target: no closure copy, no activation, no persist. Used by --build to
+// verify that every selected host still evaluates and compiles.
+func BuildOnly(runner Runner, host Host) bool {
+	fmt.Printf("\n%s\n", strings.Repeat("=", 60))
+	fmt.Printf("Building %s\n", host.Name)
+	fmt.Printf("%s\n", strings.Repeat("=", 60))
+
+	cctx, cancel := WithTimeout(30 * time.Minute) // builds can be slow
+	defer cancel()
+	argv := []string{
+		"nixos-rebuild", "build",
+		"--flake", ".#" + host.FlakeName,
+		"--build-host", BuildHost,
+		"--use-substitutes",
+		"--no-reexec",
+	}
+	if res := runner.Run(cctx, argv, RunOpts{Stream: true}); res.Failed() {
+		fmt.Printf("  ✗ build for %s failed\n", host.Name)
+		return false
+	}
+	fmt.Printf("  ✓ %s built\n", host.Name)
+	return true
+}
+
 // buildAndCopy runs `nixos-rebuild build --build-host talos --target-host
 // <host> --use-substitutes`. This evaluates+builds on talos and has the
 // target pull the closure from talos's harmonia substituter, populating

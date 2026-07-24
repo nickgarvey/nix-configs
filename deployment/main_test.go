@@ -71,6 +71,17 @@ func TestParseArgsRejectsPositional(t *testing.T) {
 	}
 }
 
+func TestParseArgsBuild(t *testing.T) {
+	def, err := parseArgs(nil)
+	if err != nil || def.Build {
+		t.Fatalf("default Build should be false, got %+v err=%v", def, err)
+	}
+	got, err := parseArgs([]string{"--build"})
+	if err != nil || !got.Build {
+		t.Fatalf("--build should set Build=true, got %+v err=%v", got, err)
+	}
+}
+
 func TestParseArgsForce(t *testing.T) {
 	def, err := parseArgs(nil)
 	if err != nil || def.Force {

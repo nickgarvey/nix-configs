@@ -17,6 +17,7 @@ type CLIArgs struct {
 	Reboot RebootFlag
 	Force  bool
 	Self   bool
+	Build  bool
 }
 
 func parseArgs(argv []string) (CLIArgs, error) {
@@ -27,6 +28,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 	rebootStr := fs.String("reboot", "auto", "Reboot behavior: auto|never|always|ask")
 	force := fs.Bool("force", false, "Skip safety pre-checks (e.g. active print on printer hosts)")
 	self := fs.Bool("self", false, "Deploy to the host running this command (equivalent to -hosts $(hostname))")
+	build := fs.Bool("build", false, "Only build configurations for the selected hosts; do not deploy or activate anything")
 	if err := fs.Parse(argv); err != nil {
 		return CLIArgs{}, err
 	}
@@ -51,7 +53,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 			}
 		}
 	}
-	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force, Self: *self}, nil
+	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force, Self: *self, Build: *build}, nil
 }
 
 func main() {
@@ -96,6 +98,25 @@ func main() {
 	for i, h := range hosts {
 		names[i] = h.Name
 	}
+
+	if args.Build {
+		fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
+		fmt.Println("Mode: build-only (no deploy)")
+		var failed []string
+		for _, h := range hosts {
+			if !BuildOnly(runner, h) {
+				failed = append(failed, h.Name)
+			}
+		}
+		fmt.Printf("\n%s\nSummary\n%s\n", strings.Repeat("=", 60), strings.Repeat("=", 60))
+		if len(failed) > 0 {
+			fmt.Printf("\nFailed builds: %v\n", failed)
+			os.Exit(1)
+		}
+		fmt.Println("\nAll hosts built successfully!")
+		return
+	}
+
 	fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
 	fmt.Printf("Mode: %s, Reboot: %s\n", args.Mode, args.Reboot)
 
