@@ -21,7 +21,7 @@
 
   programs.pi.coding-agent = {
     enable = true;
-    environment.DEEPSEEK_API_KEY = config.sops.secrets.deepseek-api-key.path;
+    environment.DEEPSEEK_API_KEY.file = config.sops.secrets.deepseek-api-key.path;
     extraArgs = [ "--provider" "deepseek" "--model" "deepseek-v4-pro" ];
   };
 
