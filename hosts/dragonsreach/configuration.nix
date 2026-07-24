@@ -15,6 +15,11 @@
 
   networking.hostName = "dragonsreach";
 
+  # mongodb (unifi dependency) fails to build on current nixpkgs pin —
+  # cheetah3 metadata check breaks under python 3.14. Re-enable once a
+  # flake update picks up the upstream fix.
+  homelab.unifi.enable = false;
+
   services.icmpv6-archive = {
     enable = true;
     interface = "br-lan";
