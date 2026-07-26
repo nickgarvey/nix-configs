@@ -12,6 +12,7 @@ in
     ../../modules/desktop/steam.nix
     ../../modules/desktop/niri.nix
     ../../modules/desktop/opencloud-desktop.nix
+    ../../modules/desktop/mic-mute.nix
     ../../modules/nix/nix-remote-builder-client.nix
     ./hardware-configuration.nix
   ];
@@ -25,6 +26,14 @@ in
   };
 
   services.icmpv6-archive.enable = true;
+
+  # The Arctis Nova Pro Wireless's hardware mic-mute reaches OS-level mute,
+  # which silently breaks Discord mic input until manually unmuted. autoUnmute
+  # is the workaround; monitor logs/notifies what is actually asserting it so
+  # the workaround can be replaced with a real fix. Both expire 2026-11-01.
+  # See modules/desktop/mic-mute.nix.
+  homelab.audio.micMute.autoUnmute.enable = true;
+  homelab.audio.micMute.monitor.enable = true;
 
   # Enable Xbox wireless dongle support
   hardware.xone.enable = true;
