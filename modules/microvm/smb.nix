@@ -80,6 +80,39 @@ in
   };
 
   config = {
+    homelab.metrics.sources.microvm_smb_uptime = {
+      type = "exec";
+      mode = "scheduled";
+      scheduled.exec_interval_secs = 60;
+      # `date` (not VRL's parse_timestamp, which chokes on systemd's %Z
+      # abbreviation) resolves systemctl's timestamp to a plain epoch.
+      command = [
+        "${pkgs.bash}/bin/bash"
+        "-c"
+        ''${pkgs.coreutils}/bin/date -d "$(${pkgs.systemd}/bin/systemctl show microvm@smb.service -p ActiveEnterTimestamp --value)" +%s''
+      ];
+    };
+    homelab.metrics.transforms.microvm_smb_uptime_fields = {
+      type = "remap";
+      inputs = [ "microvm_smb_uptime" ];
+      source = ''
+        .value = to_unix_timestamp(now()) - to_int!(strip_whitespace!(to_string!(.message)))
+      '';
+    };
+    homelab.metrics.transforms.microvm_smb_uptime_metric = {
+      type = "log_to_metric";
+      inputs = [ "microvm_smb_uptime_fields" ];
+      metrics = [{
+        type = "gauge";
+        field = "value";
+        name = "microvm_uptime_seconds";
+        tags = {
+          vm = "smb";
+          hostname = "lydia";
+        };
+      }];
+    };
+
     # Render the VM's account credentials on the host (lydia) and expose only
     # this one file to the guest over virtiofs (see the smb-accounts share).
     sops.secrets.smb-rw-password = {

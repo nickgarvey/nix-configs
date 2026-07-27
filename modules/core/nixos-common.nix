@@ -3,6 +3,7 @@
   imports = [
     ./nspawn-cleanup.nix
     ../networking/ipv6-accept-ra-routes.nix
+    ../services/vector-agent.nix
   ];
 
   environment.systemPackages = with pkgs; [
