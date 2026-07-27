@@ -241,8 +241,11 @@ layout {
 // which may be more convenient to use.
 // See the binds section below for more spawn examples.
 
-// waybar: status bar across the top of the screen.
-spawn-at-startup "waybar"
+// waybar: status bar across the top of the screen. Started via systemd (not exec'd
+// directly) so the shipped waybar.service's `Restart=on-failure` brings it back if it
+// crashes (e.g. known waybar pulseaudio-reconnect segfault when pipewire-pulse restarts
+// mid-session — see Alexays/Waybar#2960).
+spawn-at-startup "systemctl" "--user" "start" "waybar.service"
 spawn-at-startup "helium"
 // mako: notification daemon. home-manager's services.mako installs and
 // configures it but does not create a systemd unit, so start it here.

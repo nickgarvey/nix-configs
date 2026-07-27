@@ -69,6 +69,18 @@
         else ../../configs/waybar/config.jsonc;
       xdg.configFile."waybar/style.css".source = ../../configs/waybar/style.css;
 
+      # Waybar's pulseaudio module has known leak-on-reconnect bugs (e.g.
+      # Alexays/Waybar#2619, #3981) that let it balloon to multi-GB before it
+      # eventually segfaults, rather than failing fast. Cap its memory so a
+      # runaway leak gets OOM-killed (and restarted by the unit's own
+      # Restart=on-failure) well before it grows that large. 300M is generous
+      # headroom over its normal ~15-20M footprint.
+      xdg.configFile."systemd/user/waybar.service.d/override.conf".text = ''
+        [Service]
+        MemoryHigh=200M
+        MemoryMax=300M
+      '';
+
       # Notification daemon. NOTE: this module only installs+configures mako; it
       # does not create a systemd unit, so mako is launched via spawn-at-startup
       # in configs/niri.kdl.
