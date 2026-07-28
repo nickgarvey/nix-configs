@@ -31,6 +31,17 @@ let
 in
 {
   config = {
+    users.groups.blocky-secrets = { };
+    sops.secrets.domains = {
+      sopsFile = ../../secrets/dragonsreach.yaml;
+      group = "blocky-secrets";
+      mode = "0440";
+    };
+
+    # services.blocky runs under DynamicUser, so the only way to reach the
+    # secret is a supplementary group.
+    systemd.services.blocky.serviceConfig.SupplementaryGroups = [ "blocky-secrets" ];
+
     services.blocky = {
       enable = true;
       settings = {
@@ -54,9 +65,10 @@ in
             ads = [
               "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
             ];
+            local = [ config.sops.secrets.domains.path ];
           };
           clientGroupsBlock = {
-            default = [ "ads" ];
+            default = [ "ads" "local" ];
           };
         };
 
