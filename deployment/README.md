@@ -44,7 +44,7 @@ nix run .#deploy -- --hosts ro
 |---|---|---|---|
 | `--hosts` | comma list | (all default hosts) | Named hosts deploy even if `Default=false` (e.g. `dovahkiin`). |
 | `--mode` | `safe` \| `switch` \| `boot` | `safe` | See modes below. |
-| `--reboot` | `auto` \| `never` \| `always` \| `ask` | `auto` | See reboot table below. |
+| `--reboot` | `never` \| `auto` \| `always` \| `ask` | `never` | See reboot table below. `--mode boot` accepts only `never` and `always`. |
 | `--force` | flag | false | Skip safety pre-checks (e.g. active print on printer hosts). |
 
 ### Modes
@@ -53,19 +53,25 @@ nix run .#deploy -- --hosts ro
 - **`switch`** — `nixos-rebuild switch`, no watchdog. Debug only.
 - **`boot`** — `nixos-rebuild boot`. Persists the new generation without
   activating it. Use for changes that require a reboot to take effect
-  (e.g. dbus implementation switch). The flow assumes a reboot is needed
-  and acts according to `--reboot`.
+  (e.g. dbus implementation switch). Nothing is activated, so there is nothing
+  to compare against and **no reboot detection runs** — a reboot is owed by
+  definition. `--reboot never` (default) stages and warns; `--reboot always`
+  stages and reboots. `auto` and `ask` depend on detection and are rejected as a
+  usage error.
 
 ### Reboot decision
 
-|              | NEVER host    | PROMPT host        | AUTO host         |
-|--------------|---------------|--------------------|-------------------|
-| `auto`       | skip (warn)   | prompt iff changed | reboot iff changed|
-| `never`      | skip          | skip               | skip              |
-| `always`     | skip (warn)   | reboot             | reboot            |
-| `ask`        | skip          | prompt             | prompt            |
+`--reboot` is authoritative and applies uniformly to every host, including
+`dragonsreach`. There is no per-host override.
 
-`NEVER` (dragonsreach) is hard policy and never reboots regardless of `--reboot`.
+| value | behavior |
+|---|---|
+| `never` (default) | never reboot; warn in the summary if a reboot is owed |
+| `auto` | reboot iff changed, no prompt |
+| `always` | reboot every selected host, changed or not |
+| `ask` | prompt `[y/N]` iff changed; skip silently if not |
+
+"Changed" is detected in `safe` and `switch` mode only; see `boot` above.
 
 "Changed" = the running kernel version differs from
 `/run/current-system/kernel-modules/...`, or `/run/booted-system/kernel-params`
@@ -75,15 +81,15 @@ differs (as a set) from `/run/current-system/kernel-params`.
 
 Source of truth: `hosts.go` `AllHosts`. Summary:
 
-| Host | Order | Reboot | k8s health | Default | Notes |
-|---|---|---|---|---|---|
-| fus / ro / dah | 10–12 | auto | ✓ | ✓ | SSH + IPv6 gateway ping |
-| wabbajack | 20 | prompt | – | ✓ | SSH + gateway ping |
-| talos | 21 | prompt | – | ✓ | also the build host; SSH + gateway ping |
-| lydia | 30 | prompt | – | ✓ | SSH + gateway ping |
-| dovahkiin | 40 | prompt | – | opt-in | only deploys when named explicitly |
-| skyforge | 50 | prompt | – | ✓ | aarch64; built via talos binfmt; printer idle pre-check |
-| dragonsreach | 99 | **never** | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
+| Host | Order | k8s health | Default | Notes |
+|---|---|---|---|---|
+| fus / ro / dah | 10–12 | ✓ | ✓ | SSH + IPv6 gateway ping |
+| wabbajack | 20 | – | ✓ | SSH + gateway ping |
+| talos | 21 | – | ✓ | also the build host; SSH + gateway ping |
+| lydia | 30 | – | ✓ | SSH + gateway ping |
+| dovahkiin | 40 | – | opt-in | only deploys when named explicitly |
+| skyforge | 50 | – | ✓ | aarch64; built via talos binfmt; printer idle pre-check |
+| dragonsreach | 99 | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
 
 ### Printer pre-check (skyforge)
 

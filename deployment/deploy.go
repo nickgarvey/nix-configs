@@ -61,7 +61,7 @@ func (c *DeployContext) now() time.Time {
 // Deploy is the top-level per-host entry point. Dispatches on Mode.
 func Deploy(ctx *DeployContext, host Host, mode Mode) bool {
 	fmt.Printf("\n%s\n", strings.Repeat("=", 60))
-	fmt.Printf("Processing %s (mode=%s, reboot-policy=%s)\n", host.Name, mode, host.Reboot)
+	fmt.Printf("Processing %s (mode=%s)\n", host.Name, mode)
 	fmt.Printf("%s\n", strings.Repeat("=", 60))
 
 	if !CheckSSHReachable(ctx.Runner, host) {
@@ -97,7 +97,7 @@ func deploySafe(ctx *DeployContext, host Host) bool {
 		// owe a reboot (e.g. a prior deploy changed the kernel and the box was
 		// never rebooted), so run the post-deploy reboot/health checks.
 		fmt.Printf("\n  ✓ %s already running and booting this config — skipping activation\n", host.Name)
-		if !handleReboot(ctx, host, false) {
+		if !handleReboot(ctx, host) {
 			return false
 		}
 		if host.K8sHealthCheck {
@@ -151,7 +151,7 @@ func deploySafe(ctx *DeployContext, host Host) bool {
 	disarmWatchdog(ctx, host, unit)
 
 	fmt.Println("\n  [9/9] Post-deploy checks...")
-	if !handleReboot(ctx, host, false) {
+	if !handleReboot(ctx, host) {
 		return false
 	}
 	if host.K8sHealthCheck {
@@ -186,10 +186,14 @@ func deployUnsafe(ctx *DeployContext, host Host, nrMode string) bool {
 	}
 
 	fmt.Println("\n  [2/3] Post-deploy checks...")
-	// In --mode boot the new system isn't activated, so /run/current-system
-	// won't show the bump — assume reboot is needed.
-	assumeNeeded := nrMode == "boot"
-	if !handleReboot(ctx, host, assumeNeeded) {
+	// In --mode boot nothing is activated, so there is nothing to compare
+	// against — a reboot is owed by definition. parseArgs restricts --reboot to
+	// never|always here, so no detection is run.
+	if nrMode == "boot" {
+		if !applyReboot(ctx, host, true) {
+			return false
+		}
+	} else if !handleReboot(ctx, host) {
 		return false
 	}
 
@@ -383,26 +387,22 @@ func persistBoot(ctx *DeployContext, host Host, systemPath string) bool {
 	return true
 }
 
-// handleReboot resolves the reboot decision and acts on it. Returns false
+// handleReboot detects whether a reboot is owed and acts on it. Returns false
 // only if a reboot was attempted and the host did not come back online.
-func handleReboot(ctx *DeployContext, host Host, assumeNeeded bool) bool {
-	var changed bool
-	if assumeNeeded {
-		changed = true
-	} else {
-		changed = DetectKernelChange(ctx.Runner, host)
-	}
+func handleReboot(ctx *DeployContext, host Host) bool {
+	return applyReboot(ctx, host, DetectKernelChange(ctx.Runner, host))
+}
 
-	action := RebootDecide(ctx.RebootFlag, host.Reboot, changed)
+// applyReboot resolves the reboot decision for an already-known "changed" and
+// acts on it. Split out for --mode boot, which knows a reboot is owed without
+// detecting anything.
+func applyReboot(ctx *DeployContext, host Host, changed bool) bool {
+	action := RebootDecide(ctx.RebootFlag, changed)
 
 	switch action {
 	case RebootSkip:
-		if changed && host.Reboot == RebootNever {
-			msg := fmt.Sprintf("%s needs reboot (policy NEVER, reboot manually)", host.Name)
-			fmt.Printf("  ⚠ %s\n", msg)
-			ctx.appendWarning(msg)
-		} else if changed && ctx.RebootFlag == RebootFlagNever {
-			msg := fmt.Sprintf("%s needs reboot (skipped due to --reboot never)", host.Name)
+		if changed {
+			msg := fmt.Sprintf("%s needs reboot (skipped due to --reboot %s)", host.Name, ctx.RebootFlag)
 			fmt.Printf("  ⚠ %s\n", msg)
 			ctx.appendWarning(msg)
 		} else {

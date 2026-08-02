@@ -13,8 +13,8 @@ func TestParseArgsDefaults(t *testing.T) {
 	if got.Mode != ModeSafe {
 		t.Errorf("default mode = %q, want safe", got.Mode)
 	}
-	if got.Reboot != RebootFlagAuto {
-		t.Errorf("default reboot = %q, want auto", got.Reboot)
+	if got.Reboot != RebootFlagNever {
+		t.Errorf("default reboot = %q, want never", got.Reboot)
 	}
 	if len(got.Hosts) != 0 {
 		t.Errorf("default hosts = %v, want empty", got.Hosts)
@@ -51,6 +51,31 @@ func TestParseArgsAllValues(t *testing.T) {
 	}
 	if got.Mode != ModeBoot || got.Reboot != RebootFlagAlways || got.Hosts[0] != "talos" {
 		t.Errorf("got %+v", got)
+	}
+}
+
+// --mode boot stages without activating, so there is nothing to detect: the
+// detection-dependent --reboot values are a usage error there.
+func TestParseArgsBootRebootRestricted(t *testing.T) {
+	for _, argv := range [][]string{
+		{"--mode", "boot", "--reboot", "auto"},
+		{"--mode", "boot", "--reboot", "ask"},
+	} {
+		if _, err := parseArgs(argv); err == nil {
+			t.Errorf("parseArgs(%v) should error", argv)
+		}
+	}
+	for _, argv := range [][]string{
+		{"--mode", "boot"},
+		{"--mode", "boot", "--reboot", "never"},
+		{"--mode", "boot", "--reboot", "always"},
+		{"--mode", "safe", "--reboot", "auto"},
+		{"--mode", "safe", "--reboot", "ask"},
+		{"--mode", "switch", "--reboot", "ask"},
+	} {
+		if _, err := parseArgs(argv); err != nil {
+			t.Errorf("parseArgs(%v) errored: %v", argv, err)
+		}
 	}
 }
 

@@ -6,26 +6,6 @@ import (
 	"strings"
 )
 
-type RebootPolicy int
-
-const (
-	RebootNever RebootPolicy = iota
-	RebootPrompt
-	RebootAuto
-)
-
-func (p RebootPolicy) String() string {
-	switch p {
-	case RebootNever:
-		return "never"
-	case RebootPrompt:
-		return "prompt"
-	case RebootAuto:
-		return "auto"
-	}
-	return "unknown"
-}
-
 // ConnCheck names the per-host connectivity probes to run after activation.
 type ConnCheck string
 
@@ -45,7 +25,6 @@ type Host struct {
 	Domain         string
 	SSHAddress     string // overrides FQDN if set (used by dragonsreach)
 	Order          int
-	Reboot         RebootPolicy
 	K8sHealthCheck bool
 	Groups         []string
 	Default        bool // false = opt-in only (dovahkiin)
@@ -81,58 +60,53 @@ func (h Host) InGroup(g string) bool {
 var AllHosts = []Host{
 	{
 		Name: "fus", FlakeName: "fus",
-		Order: 10, Reboot: RebootAuto, K8sHealthCheck: true,
+		Order: 10, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
 		Name: "ro", FlakeName: "ro",
-		Order: 11, Reboot: RebootAuto, K8sHealthCheck: true,
+		Order: 11, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
 		Name: "dah", FlakeName: "dah",
-		Order: 12, Reboot: RebootAuto, K8sHealthCheck: true,
+		Order: 12, K8sHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},
 	{
 		Name: "wabbajack", FlakeName: "wabbajack",
-		Order: 20, Reboot: RebootPrompt,
-		Groups: []string{"workstation"}, Default: true,
+		Order: 20, Groups: []string{"workstation"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	},
 	{
 		Name: "talos", FlakeName: "talos",
-		Order: 21, Reboot: RebootPrompt,
-		Groups: []string{"workstation"}, Default: true,
+		Order: 21, Groups: []string{"workstation"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	},
 	{
 		Name: "lydia", FlakeName: "lydia",
-		Order: 30, Reboot: RebootPrompt,
-		Groups: []string{"infra"}, Default: true,
+		Order: 30, Groups: []string{"infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
 	},
 	{
 		Name: "dovahkiin", FlakeName: "dovahkiin",
-		Order: 40, Reboot: RebootPrompt,
-		Groups: []string{"workstation"}, Default: false,
+		Order: 40, Groups: []string{"workstation"}, Default: false,
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
 		Name: "skyforge", FlakeName: "skyforge",
-		Order: 50, Reboot: RebootPrompt,
-		Groups: []string{"printer"}, Default: true,
+		Order: 50, Groups: []string{"printer"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
 		Name: "dragonsreach", FlakeName: "dragonsreach",
 		SSHAddress: "10.28.0.1",
-		Order:      99, Reboot: RebootNever,
-		Groups:  []string{"infra", "router"},
-		Default: true,
+		Order:      99,
+		Groups:     []string{"infra", "router"},
+		Default:    true,
 		ConnChecks: []ConnCheck{
 			CheckSSH, CheckPingInternet, CheckDNS, CheckIPv6Tunnel, CheckIPv6Internet,
 		},

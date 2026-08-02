@@ -106,7 +106,7 @@ func TestSafeDeploySkipsIfAlreadyDeployed(t *testing.T) {
 }
 
 func TestSafeDeploySkipStillRebootsWhenOwed(t *testing.T) {
-	host := AllHosts[1] // ro, RebootAuto
+	host := AllHosts[1] // ro
 	host.K8sHealthCheck = false
 
 	// Active + boot already match the build (skip path), but the running
@@ -297,7 +297,7 @@ func TestModeDispatchSwitch(t *testing.T) {
 func TestModeDispatchBoot(t *testing.T) {
 	host := AllHosts[1]
 	host.K8sHealthCheck = false
-	host.Reboot = RebootNever // suppress reboot from assumeNeeded
+	// testCtx uses --reboot never, so nothing reboots.
 	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
 	ctx := testCtx(fake)
 
@@ -307,6 +307,41 @@ func TestModeDispatchBoot(t *testing.T) {
 	joined := joinedCalls(fake)
 	if !contains(joined, "nixos-rebuild boot") {
 		t.Errorf("expected 'nixos-rebuild boot', got %v", joined)
+	}
+	assertNoDetection(t, joined)
+	if contains(joined, "systemctl reboot") {
+		t.Errorf("--reboot never should not reboot, got %v", joined)
+	}
+}
+
+// Boot mode knows a reboot is owed without detecting anything, so --reboot
+// always reboots with no kernel queries.
+func TestModeDispatchBootRebootAlways(t *testing.T) {
+	host := AllHosts[1]
+	host.K8sHealthCheck = false
+	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
+	ctx := testCtx(fake)
+	ctx.RebootFlag = RebootFlagAlways
+
+	if !Deploy(ctx, host, ModeBoot) {
+		t.Fatal("expected success")
+	}
+	joined := joinedCalls(fake)
+	if !contains(joined, "systemctl reboot") {
+		t.Errorf("--reboot always should reboot, got %v", joined)
+	}
+	assertNoDetection(t, joined)
+}
+
+// assertNoDetection fails if the kernel/params reboot check was run. Boot mode
+// stages without activating, so /run/current-system can't answer the question
+// and the check is skipped entirely.
+func assertNoDetection(t *testing.T, calls []string) {
+	t.Helper()
+	for _, probe := range []string{"uname -r", "kernel-modules", "kernel-params"} {
+		if contains(calls, probe) {
+			t.Errorf("boot mode should not run detection, but called %q: %v", probe, calls)
+		}
 	}
 }
 

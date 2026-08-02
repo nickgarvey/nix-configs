@@ -5,42 +5,26 @@ import "testing"
 func TestRebootDecide(t *testing.T) {
 	type row struct {
 		flag    RebootFlag
-		policy  RebootPolicy
 		changed bool
 		want    RebootAction
 	}
-	// Full 4-flag x 3-policy x 2-changed matrix. NEVER hosts always skip.
+	// Full 4-flag x 2-changed matrix. The flag alone decides — no per-host
+	// policy, so dragonsreach behaves like every other host.
 	cases := []row{
-		// auto
-		{RebootFlagAuto, RebootNever, true, RebootSkip},
-		{RebootFlagAuto, RebootNever, false, RebootSkip},
-		{RebootFlagAuto, RebootPrompt, true, RebootPromptUser},
-		{RebootFlagAuto, RebootPrompt, false, RebootSkip},
-		{RebootFlagAuto, RebootAuto, true, RebootDo},
-		{RebootFlagAuto, RebootAuto, false, RebootSkip},
-		// never
-		{RebootFlagNever, RebootNever, true, RebootSkip},
-		{RebootFlagNever, RebootPrompt, true, RebootSkip},
-		{RebootFlagNever, RebootAuto, true, RebootSkip},
-		// always
-		{RebootFlagAlways, RebootNever, true, RebootSkip},
-		{RebootFlagAlways, RebootNever, false, RebootSkip},
-		{RebootFlagAlways, RebootPrompt, true, RebootDo},
-		{RebootFlagAlways, RebootPrompt, false, RebootDo},
-		{RebootFlagAlways, RebootAuto, true, RebootDo},
-		{RebootFlagAlways, RebootAuto, false, RebootDo},
-		// ask
-		{RebootFlagAsk, RebootNever, true, RebootSkip},
-		{RebootFlagAsk, RebootPrompt, true, RebootPromptUser},
-		{RebootFlagAsk, RebootPrompt, false, RebootPromptUser},
-		{RebootFlagAsk, RebootAuto, true, RebootPromptUser},
-		{RebootFlagAsk, RebootAuto, false, RebootPromptUser},
+		{RebootFlagNever, true, RebootSkip},
+		{RebootFlagNever, false, RebootSkip},
+		{RebootFlagAuto, true, RebootDo},
+		{RebootFlagAuto, false, RebootSkip},
+		{RebootFlagAlways, true, RebootDo},
+		{RebootFlagAlways, false, RebootDo},
+		{RebootFlagAsk, true, RebootPromptUser},
+		{RebootFlagAsk, false, RebootSkip},
 	}
 	for _, c := range cases {
-		got := RebootDecide(c.flag, c.policy, c.changed)
+		got := RebootDecide(c.flag, c.changed)
 		if got != c.want {
-			t.Errorf("RebootDecide(%s, %s, changed=%v) = %v, want %v",
-				c.flag, c.policy, c.changed, got, c.want)
+			t.Errorf("RebootDecide(%s, changed=%v) = %v, want %v",
+				c.flag, c.changed, got, c.want)
 		}
 	}
 }

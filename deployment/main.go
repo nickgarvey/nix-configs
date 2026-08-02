@@ -25,7 +25,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 	fs.SetOutput(os.Stderr)
 	hostsCSV := fs.String("hosts", "", "Comma-separated host names (default: all default hosts)")
 	modeStr := fs.String("mode", "safe", "Deploy mode: safe|switch|boot")
-	rebootStr := fs.String("reboot", "auto", "Reboot behavior: auto|never|always|ask")
+	rebootStr := fs.String("reboot", "never", "Reboot behavior: never|auto|always|ask (-mode boot allows only never|always)")
 	force := fs.Bool("force", false, "Skip safety pre-checks (e.g. active print on printer hosts)")
 	self := fs.Bool("self", false, "Deploy to the host running this command (equivalent to -hosts $(hostname))")
 	build := fs.Bool("build", false, "Only build configurations for the selected hosts; do not deploy or activate anything")
@@ -43,6 +43,13 @@ func parseArgs(argv []string) (CLIArgs, error) {
 	reboot, err := ParseRebootFlag(*rebootStr)
 	if err != nil {
 		return CLIArgs{}, err
+	}
+	// boot mode stages a generation without activating it, so there is nothing
+	// to compare against — the detection-dependent values are meaningless here.
+	if mode == ModeBoot && (reboot == RebootFlagAuto || reboot == RebootFlagAsk) {
+		return CLIArgs{}, fmt.Errorf(
+			"--mode boot does not support --reboot %s (use never or always): "+
+				"the staged generation is not activated, so there is nothing to detect", reboot)
 	}
 
 	var hosts []string

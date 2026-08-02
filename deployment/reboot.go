@@ -21,7 +21,7 @@ func ParseRebootFlag(s string) (RebootFlag, error) {
 	case RebootFlagAuto, RebootFlagNever, RebootFlagAlways, RebootFlagAsk:
 		return RebootFlag(s), nil
 	}
-	return "", fmt.Errorf("invalid --reboot value %q (want auto|never|always|ask)", s)
+	return "", fmt.Errorf("invalid --reboot value %q (want never|auto|always|ask)", s)
 }
 
 // RebootAction is the resolved decision from RebootDecide.
@@ -33,36 +33,28 @@ const (
 	RebootPromptUser                 // ask the user, then maybe reboot
 )
 
-// RebootDecide resolves the --reboot flag against the host's per-host policy
-// and the detected kernel/params change. The full matrix:
+// RebootDecide resolves the --reboot flag against the detected kernel/params
+// change. The flag is authoritative and applies uniformly to every host —
+// there is no per-host override:
 //
-//	flag       | NEVER       | PROMPT          | AUTO
-//	-----------+-------------+-----------------+------------------
-//	auto       | skip (warn) | prompt iff chg  | reboot iff chg
-//	never      | skip        | skip            | skip
-//	always     | skip (warn) | reboot          | reboot
-//	ask        | skip        | prompt          | prompt
-//
-// NEVER hosts are a hard policy and never reboot regardless of the flag.
-// For NEVER hosts under auto/always, the caller should surface a warning if
-// kernelChanged is true.
-func RebootDecide(flag RebootFlag, policy RebootPolicy, kernelChanged bool) RebootAction {
-	if policy == RebootNever {
-		return RebootSkip
-	}
+//	never  | skip always (caller warns if a reboot is pending)
+//	auto   | reboot iff changed, no prompt
+//	always | reboot unconditionally
+//	ask    | prompt iff changed, skip silently otherwise
+func RebootDecide(flag RebootFlag, kernelChanged bool) RebootAction {
 	switch flag {
 	case RebootFlagNever:
 		return RebootSkip
 	case RebootFlagAlways:
 		return RebootDo
 	case RebootFlagAsk:
+		if !kernelChanged {
+			return RebootSkip
+		}
 		return RebootPromptUser
 	case RebootFlagAuto:
 		if !kernelChanged {
 			return RebootSkip
-		}
-		if policy == RebootPrompt {
-			return RebootPromptUser
 		}
 		return RebootDo
 	}
