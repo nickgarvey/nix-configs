@@ -24,7 +24,10 @@ in
     ../home/ngarvey.nix
     ../llms/hf-to-garage.nix
     inputs.sops-nix.nixosModules.sops
+    inputs.pi-nix.nixosModules.default
   ];
+
+  programs.pi.coding-agent.enable = true;
 
   # Manual HuggingFace → garage llm-models bucket upload tool.
   homelab.hfToGarage.enable = true;

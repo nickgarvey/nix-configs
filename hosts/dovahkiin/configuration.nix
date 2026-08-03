@@ -10,7 +10,6 @@
     ../../modules/nix/nix-remote-builder-client.nix
     ../../modules/desktop/upower-overlay.nix
     ../../modules/desktop/opencloud-desktop.nix
-    inputs.pi-nix.nixosModules.default
   ];
 
   # pi reads its env file as the ngarvey user, so the secret must be owned by it.
