@@ -2,6 +2,7 @@
 {
   imports = [
     ../../modules/k3s/k3s-common.nix
+    ../../modules/k3s/kata.nix
     ../../modules/core/nixos-common.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
