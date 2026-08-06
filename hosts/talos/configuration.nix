@@ -62,7 +62,7 @@
     hostname = "tarrasque";
     capacity = "1T";
     replicationFactor = 2;
-    peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@garage-aboleth.home.arpa:3901" ];
+    peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@[2001:470:482f:200::2]:3901" ];
   };
 
   # vLLM inference server (official docker image) serving Qwen3.6-27B NVFP4 on

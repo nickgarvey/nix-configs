@@ -9,11 +9,8 @@
 # run:ai model streamer (loadFormat = "runai_streamer", default), or by syncing
 # the bucket to a local dir and bind-mounting it (loadFormat = "local").
 #
-# The garage S3 endpoint is IPv6-only. We enable IPv6 on the docker bridge
-# (virtualisation.docker.daemon.settings in the talos config) and reach garage
-# by its static IPv6 literal — Docker's embedded DNS + systemd-resolved don't
-# play nicely with split-horizon .home.arpa names, and the literal avoids that
-# entirely (garage is only the model store, so it's the one endpoint we need).
+# The garage S3 endpoint is IPv6-only, so IPv6 is enabled on the docker bridge
+# (virtualisation.docker.daemon.settings in the talos config).
 
 let
   cfg = config.homelab.vllmDocker;
@@ -72,11 +69,8 @@ in
 
     s3Endpoint = lib.mkOption {
       type = lib.types.str;
-      # garage-tarrasque's static LAN IPv6 (talos-local garage node). Literal,
-      # not the .home.arpa name, because docker's DNS can't resolve it — see
-      # the module header.
-      default = "http://[2001:470:482f:201::2]:3900";
-      description = "garage S3 endpoint (talos-local garage node by default).";
+      default = "http://garage.home.garvey.sh:3900";
+      description = "garage S3 endpoint. Resolves to both garage nodes.";
     };
 
     port = lib.mkOption {

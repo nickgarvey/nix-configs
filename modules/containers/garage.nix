@@ -24,10 +24,7 @@ in
 
     hostname = lib.mkOption {
       type = lib.types.str;
-      description = ''
-        Short identifier for this node. Used as the garage layout zone and
-        as the DNS suffix for rpc_public_addr (garage-<hostname>.home.arpa).
-      '';
+      description = "Short identifier for this node, used as its garage layout zone.";
     };
 
     capacity = lib.mkOption {
@@ -40,8 +37,13 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = ''
-        Peer entries of the form <node_id>@<dns-name>:3901. Used as
+        Peer entries of the form <node_id>@[<ipv6>]:3901. Used as
         bootstrap_peers and re-asserted via `garage node connect` on startup.
+
+        Literal addresses, not names: garage-init is a oneshot that resolves
+        peers once per boot and never retries, and the container's only
+        resolver is blocky on the router — so a name here would make cluster
+        formation depend on the DNS service at exactly the wrong moment.
       '';
     };
 
@@ -126,7 +128,8 @@ in
             consistency_mode = "consistent";
 
             rpc_bind_addr = "[::]:3901";
-            rpc_public_addr = "garage-${cfg.hostname}.home.arpa:3901";
+            # The container's own address, so peers need no name resolution.
+            rpc_public_addr = "[${lib.head (lib.splitString "/" cfg.localAddress6)}]:3901";
             bootstrap_peers = cfg.peers;
 
             s3_api = {

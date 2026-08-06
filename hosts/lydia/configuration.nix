@@ -225,7 +225,7 @@
     hostname = "aboleth";
     capacity = "1T";
     replicationFactor = 2;
-    peers = [ "90dd7a079aec5a9bead87277093390fbf4e66e018a946149af829cd85f875f0f@garage-tarrasque.home.arpa:3901" ];
+    peers = [ "90dd7a079aec5a9bead87277093390fbf4e66e018a946149af829cd85f875f0f@[2001:470:482f:201::2]:3901" ];
   };
 
   nspawn.frigate = {
