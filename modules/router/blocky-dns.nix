@@ -99,22 +99,6 @@ in
           };
         };
 
-        conditional = {
-          # The *.garvey.sh zones are deliberately NOT here -- they are kresd
-          # forward stubs (modules/router/knot-resolver.nix). A mapping here
-          # would short-circuit straight to the authoritative server, and blocky
-          # would hand back Knot's CNAME-plus-referral without chasing it,
-          # breaking clients that don't re-query (musl/Alpine).
-          #
-          # home.arpa stays: k8s_gateway emits only A/AAAA and never a CNAME, so
-          # it can't produce a partial answer, and home.arpa is an RFC 8375
-          # special-use name a recursive resolver may decline to handle. Retired
-          # at the cutover.
-          mapping = {
-            "k8s.home.arpa" = "[2001:470:482f:2::53]";
-          };
-        };
-
         customDNS = {
           # garveyShOverrides keys are already fully-qualified (oci.garvey.sh),
           # so merge them in directly. k3s-api.home.arpa is kept alive

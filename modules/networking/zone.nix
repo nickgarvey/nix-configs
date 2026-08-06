@@ -53,7 +53,8 @@ in ''
   ; The NS target is in-zone (no glue needed -- resolvers already hold ns1's A
   ; from above), so v4-only resolvers reach the subzone at the same public IPv4;
   ; the cluster's own :53 is never exposed. LAN clients reach this subzone via
-  ; blocky's conditional mapping instead, since blocky can't chase referrals.
+  ; kresd's forward stub instead (modules/router/knot-resolver.nix), which
+  ; follows the referral directly.
   k8s	IN	NS	ns1.${domain}.
 
   ; --- physical hosts (lan-hosts.nix) ---
