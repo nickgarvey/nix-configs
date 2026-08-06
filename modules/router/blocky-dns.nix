@@ -75,6 +75,9 @@ in
         conditional = {
           mapping = {
             "k8s.home.arpa" = "[2001:470:482f:2::53]";
+            # Same k8s_gateway backend, which now serves both zones. First step
+            # toward moving off home.arpa; k8s.home.arpa stays until cutover.
+            "k8s.home.garvey.sh" = "[2001:470:482f:2::53]";
           };
         };
 
