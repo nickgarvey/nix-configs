@@ -179,11 +179,16 @@ in
           chain prerouting {
             type nat hook prerouting priority dstnat;
 
-            # WAN IPv4 :53 -> acme-dns-proxy container (IPv4->IPv6 DNS bridge so
-            # Let's Encrypt can reach the IPv6-only acme-dns over IPv4). Scoped
-            # to port 53 on the WAN interface; the forward chain's
-            # "ct status dnat accept" rule permits the forwarded packets, and
-            # conntrack un-DNATs the replies back to the public WAN IP.
+            # WAN IPv4 :53 -> public-dns-proxy container, the single public entry
+            # point for every zone we serve authoritatively. dnsdist there splits
+            # by qname to Knot / k8s_gateway / acme-dns, and bridges IPv4 to the
+            # IPv6-only cluster backends. Scoped to port 53 on the WAN interface;
+            # the forward chain's "ct status dnat accept" rule permits the
+            # forwarded packets, and conntrack un-DNATs replies to the public IP.
+            #
+            # NOTE this is WAN-scoped, so a LAN client querying 64.186.8.205 is
+            # NOT redirected here -- it hits the router's input chain and lands on
+            # blocky. Test the proxy at 10.28.0.5 directly.
             iifname "${cfg.wanInterface}" udp dport 53 dnat to 10.28.0.5:53
             iifname "${cfg.wanInterface}" tcp dport 53 dnat to 10.28.0.5:53
           }

@@ -51,7 +51,7 @@ in ''
   		300 )		; negative TTL
 
   ; Apex nameserver. ns1 is the public IPv4 front door (router DNAT -> dnsdist),
-  ; not this container's LAN address -- see modules/containers/acme-dns-proxy.nix.
+  ; not this container's LAN address -- see modules/containers/public-dns-proxy.nix.
   @	IN	NS	ns1.${domain}.
   ns1	IN	A	64.186.8.205
 

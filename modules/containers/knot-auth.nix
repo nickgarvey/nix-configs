@@ -4,8 +4,9 @@
 #
 # Blocky owns :53 on the router host (all interfaces), so this can't live on the
 # host directly -- it runs in a dedicated nspawn container with its own LAN IPv4,
-# mirroring acme-dns-proxy. Blocky conditional-forwards home.garvey.sh here; the
-# router will later DNAT public :53 through dnsdist to reach it as well.
+# mirroring public-dns-proxy. LAN queries arrive via knot-resolver's forward stub
+# (modules/router/knot-resolver.nix), which blocky uses as its upstream; public
+# queries arrive via the router's WAN :53 DNAT into public-dns-proxy's dnsdist.
 #
 # Knot is authoritative-only: it answers for this zone and returns a referral for
 # the k8s.home.garvey.sh subzone. It never recurses and never forwards.
