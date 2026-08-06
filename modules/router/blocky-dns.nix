@@ -50,15 +50,14 @@ in
           http = 4000;
         };
 
-        upstreams.groups.default = [
-          "https://dns.quad9.net/dns-query"
-          "https://cloudflare-dns.com/dns-query"
-        ];
-
-        bootstrapDns = [
-          { upstream = "https://dns.quad9.net/dns-query"; ips = [ "9.9.9.9" "149.112.112.112" ]; }
-          { upstream = "https://cloudflare-dns.com/dns-query"; ips = [ "1.1.1.1" "1.0.0.1" ]; }
-        ];
+        # Local knot-resolver (modules/router/knot-resolver.nix), which recurses
+        # from the root instead of forwarding to a public DoH provider. Blocky
+        # is a forwarder and can't chase CNAMEs from an upstream; kresd can, so
+        # resolution lives there and blocky stays a policy layer.
+        #
+        # Same host as blocky, so this adds no new failure domain. No
+        # bootstrapDns needed: the upstream is a literal address, not a name.
+        upstreams.groups.default = [ "tcp+udp:127.0.0.1:5353" ];
 
         blocking = {
           denylists = {
@@ -73,22 +72,18 @@ in
         };
 
         conditional = {
-          # Longest suffix wins (blocky strips labels from the most specific
-          # name), so the k8s subzone entry takes precedence over the parent.
+          # The *.garvey.sh zones are deliberately NOT here -- they are kresd
+          # forward stubs (modules/router/knot-resolver.nix). A mapping here
+          # would short-circuit straight to the authoritative server, and blocky
+          # would hand back Knot's CNAME-plus-referral without chasing it,
+          # breaking clients that don't re-query (musl/Alpine).
           #
-          # Both the parent and the k8s entry are required: blocky forwards a
-          # query and returns whatever comes back, so it cannot chase the
-          # referral Knot hands out for k8s.home.garvey.sh. Mapping only the
-          # parent would break every k8s name on the LAN.
+          # home.arpa stays: k8s_gateway emits only A/AAAA and never a CNAME, so
+          # it can't produce a partial answer, and home.arpa is an RFC 8375
+          # special-use name a recursive resolver may decline to handle. Retired
+          # at the cutover.
           mapping = {
             "k8s.home.arpa" = "[2001:470:482f:2::53]";
-            # Same k8s_gateway backend, which now serves both zones. First step
-            # toward moving off home.arpa; k8s.home.arpa stays until cutover.
-            "k8s.home.garvey.sh" = "[2001:470:482f:2::53]";
-            # Our own authoritative Knot (modules/containers/knot-auth.nix).
-            # Answering locally keeps LAN name resolution working through an ISP
-            # outage and through any mistake in the public delegation.
-            "home.garvey.sh" = "10.28.0.6";
           };
         };
 

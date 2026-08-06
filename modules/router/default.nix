@@ -8,6 +8,7 @@ in
     ./nftables.nix
     ./kea-dhcp.nix
     ./blocky-dns.nix
+    ./knot-resolver.nix
     ./he-tunnel.nix
     ./lan-ipv6.nix
     ./nat64.nix
