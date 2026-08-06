@@ -38,9 +38,21 @@ in
       mode = "0440";
     };
 
-    # services.blocky runs under DynamicUser, so the only way to reach the
-    # secret is a supplementary group.
-    systemd.services.blocky.serviceConfig.SupplementaryGroups = [ "blocky-secrets" ];
+    systemd.services.blocky = {
+      # services.blocky runs under DynamicUser, so the only way to reach the
+      # secret is a supplementary group.
+      serviceConfig.SupplementaryGroups = [ "blocky-secrets" ];
+
+      # Blocky downloads its denylists over HTTPS and resolves those URLs
+      # through the system resolver -- which is blocky itself, forwarding to
+      # kresd. Without this ordering blocky starts first, the download fails
+      # with "Temporary failure in name resolution", and the ads group stays
+      # EMPTY until the next refresh: no blocking for hours, silently. Wants
+      # (not Requires) so a kresd failure degrades resolution rather than
+      # taking blocky down with it.
+      after = [ "knot-resolver.service" ];
+      wants = [ "knot-resolver.service" ];
+    };
 
     services.blocky = {
       enable = true;
@@ -55,9 +67,16 @@ in
         # is a forwarder and can't chase CNAMEs from an upstream; kresd can, so
         # resolution lives there and blocky stays a policy layer.
         #
-        # Same host as blocky, so this adds no new failure domain. No
-        # bootstrapDns needed: the upstream is a literal address, not a name.
+        # Same host as blocky, so this adds no new failure domain.
         upstreams.groups.default = [ "tcp+udp:127.0.0.1:5353" ];
+
+        # Needed for the denylist DOWNLOADS, not for the upstream above (that
+        # one is a literal address). Without it blocky resolves list URLs via
+        # the OS resolver -- which is blocky itself on 127.0.0.1:53, not yet
+        # bound while lists load -- so every download fails with "Temporary
+        # failure in name resolution" and the ads group starts empty. Point it
+        # straight at kresd to break the self-dependency.
+        bootstrapDns = [ "tcp+udp:127.0.0.1:5353" ];
 
         blocking = {
           denylists = {
@@ -68,6 +87,21 @@ in
           };
           clientGroupsBlock = {
             default = [ "ads" "local" ];
+          };
+
+          # Second layer of defence for the startup race the systemd ordering
+          # above fixes: if the resolver is still coming up (or GitHub is
+          # briefly unreachable), retry with a real cooldown instead of giving
+          # up in ~1s and running with an empty denylist until refreshPeriod.
+          loading = {
+            downloads = {
+              attempts = 5;
+              cooldown = "10s";
+              timeout = "60s";
+            };
+            # Serve DNS immediately rather than blocking startup on the
+            # download -- the retries above cover the transient case.
+            strategy = "fast";
           };
         };
 
