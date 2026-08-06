@@ -23,6 +23,19 @@ let
   stubs = [
     { subtree = "k8s.home.garvey.sh"; servers = [ "2001:470:482f:2::53" ]; }  # k8s_gateway
     { subtree = "home.garvey.sh";     servers = [ "10.28.0.6" ]; }            # Knot
+    # acme-dns, which holds the _acme-challenge TXT records for DNS-01 (see
+    # modules/containers/public-dns-proxy.nix). Cloudflare delegates
+    # acme.garvey.sh to itself with glue A 64.186.8.205 -- our own WAN address.
+    # That delegation is correct for the public internet (Let's Encrypt hits the
+    # WAN, where nftables DNATs :53 to dnsdist), but it is a dead end from the
+    # inside: the DNAT rule matches `iifname enp4s0`, so a locally-originated or
+    # LAN query to 64.186.8.205:53 is never translated and instead lands on
+    # blocky, which forwards it straight back here -- kresd resolving through
+    # itself, reported as "No Reachable Authority" (EDE 22). Pointing the subtree
+    # at the acme-dns LoadBalancer directly sidesteps the hairpin. Without this,
+    # cert-manager's DNS-01 self-check (cluster -> blocky -> kresd) hangs at
+    # "Waiting for DNS-01 challenge propagation" and no cert is ever issued.
+    { subtree = "acme.garvey.sh";     servers = [ "2001:470:482f:2::5300" ]; } # acme-dns
   ];
 
   mkStub = s: {

@@ -10,6 +10,7 @@ in
     ./blocky-dns.nix
     ./knot-resolver.nix
     ./he-tunnel.nix
+    ./wan-dns-drift.nix
     ./lan-ipv6.nix
     ./nat64.nix
     ./tailscale.nix
