@@ -41,7 +41,7 @@ domain=WORKGROUP
   ];
 
   systemd.mounts = [{
-    what = "//lydia.home.arpa/media";
+    what = "//lydia.home.garvey.sh/media";
     where = "/shares/media";
     type = "cifs";
     options = lib.concatStringsSep "," (mountOptions ++ [ "ip=10.28.12.110" ]);

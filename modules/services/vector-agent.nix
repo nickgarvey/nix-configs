@@ -36,7 +36,7 @@
           inputs = builtins.attrNames (
             lib.filterAttrs (_: t: t.type == "log_to_metric") config.homelab.metrics.transforms
           );
-          endpoint = "http://prometheus.prometheus.k8s.home.arpa:9090/api/v1/write";
+          endpoint = "http://prometheus.prometheus.k8s.home.garvey.sh:9090/api/v1/write";
         };
       };
     };

@@ -43,7 +43,7 @@ in
     };
 
     programs.ssh.knownHosts.${cfg.hostName} = {
-      hostNames = [ cfg.hostName "${cfg.hostName}.home.arpa" ];
+      hostNames = [ cfg.hostName "${cfg.hostName}.home.garvey.sh" ];
       publicKey = cfg.hostPublicKey;
     };
 

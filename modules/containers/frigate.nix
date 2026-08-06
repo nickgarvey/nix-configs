@@ -201,9 +201,9 @@ in
             api.listen = "127.0.0.1:1984";
             rtsp.listen = "127.0.0.1:8554";
             streams.camera = [
-              "rtsp://\${FRIGATE_RTSP_USER}:\${FRIGATE_RTSP_PASSWORD}@camera.home.arpa:554/h264Preview_01_main"
+              "rtsp://\${FRIGATE_RTSP_USER}:\${FRIGATE_RTSP_PASSWORD}@camera.home.garvey.sh:554/h264Preview_01_main"
             ];
-            webrtc.candidates = [ "frigate.home.arpa:8555" ];
+            webrtc.candidates = [ "frigate.home.garvey.sh:8555" ];
           };
         };
 
@@ -228,11 +228,11 @@ in
             cameras.camera = {
               ffmpeg.inputs = [
                 {
-                  path = "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@camera.home.arpa:554/h264Preview_01_main";
+                  path = "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@camera.home.garvey.sh:554/h264Preview_01_main";
                   roles = [ "record" ];
                 }
                 {
-                  path = "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@camera.home.arpa:554/h264Preview_01_sub";
+                  path = "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@camera.home.garvey.sh:554/h264Preview_01_sub";
                   roles = [ "detect" ];
                 }
               ];
@@ -245,9 +245,9 @@ in
 
             go2rtc = {
               streams.camera = [
-                "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@camera.home.arpa:554/h264Preview_01_main"
+                "rtsp://{FRIGATE_RTSP_USER}:{FRIGATE_RTSP_PASSWORD}@camera.home.garvey.sh:554/h264Preview_01_main"
               ];
-              webrtc.candidates = [ "frigate.home.arpa:8555" ];
+              webrtc.candidates = [ "frigate.home.garvey.sh:8555" ];
             };
 
             objects.track = [ "cat" ];

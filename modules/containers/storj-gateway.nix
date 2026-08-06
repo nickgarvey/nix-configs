@@ -4,7 +4,7 @@
 # systemd-nspawn container on the router's "router-side container" /64
 # (2001:470:482f:300::/64). Dual-stack: libuplink needs native IPv4 to
 # reach Storj storagenodes (predominantly v4); k3s pods reach the
-# gateway over IPv6 via storj-gateway.home.arpa.
+# gateway over IPv6 via storj-gateway.home.garvey.sh.
 #
 # The access grant holds the encryption passphrase, so encryption
 # happens here on the router before pieces are uploaded to the Storj

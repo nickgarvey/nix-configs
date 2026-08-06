@@ -47,7 +47,7 @@ in
     # Configure Zot registry for k3s
     environment.etc."rancher/k3s/registries.yaml".text = ''
       mirrors:
-        "zot.zot.k8s.home.arpa":
+        "zot.zot.k8s.home.garvey.sh":
           endpoint:
             - "https://oci.garvey.sh"
     '';

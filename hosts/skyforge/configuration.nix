@@ -185,8 +185,8 @@
         location = "printer";
         service = "mjpegstreamer-adaptive";
         target_fps = 15;
-        stream_url = "http://skyforge.home.arpa:8080/stream";
-        snapshot_url = "http://skyforge.home.arpa:8080/snapshot";
+        stream_url = "http://skyforge.home.garvey.sh:8080/stream";
+        snapshot_url = "http://skyforge.home.garvey.sh:8080/snapshot";
       };
     };
   };
@@ -221,7 +221,7 @@
 
   services.mainsail = {
     enable = true;
-    hostName = "skyforge.home.arpa";
+    hostName = "skyforge.home.garvey.sh";
   };
 
   # The mainsail module builds its nginx upstream as `${moonraker.address}:${port}`,
