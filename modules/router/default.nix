@@ -58,7 +58,7 @@ in
 
     domain = lib.mkOption {
       type = lib.types.str;
-      default = "home.arpa";
+      default = "home.garvey.sh";
       description = "Local domain name.";
     };
   };

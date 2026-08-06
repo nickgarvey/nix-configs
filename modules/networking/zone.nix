@@ -13,12 +13,6 @@ let
   dns = import ./dns.nix { inherit lib; };
   inherit (import ./lan-hosts.nix) lanHosts;
 
-  # dns.nix's CNAME targets are written against home.arpa. Retarget them at the
-  # zone being rendered so one table serves both sides of the cutover:
-  #   zot.zot.k8s.home.arpa.  ->  zot.zot.k8s.home.garvey.sh.
-  #   talos.home.arpa.        ->  talos.home.garvey.sh.
-  retarget = lib.replaceStrings [ "home.arpa." ] [ "${domain}." ];
-
   mkA = name: ip: "${name}\tIN\tA\t${ip}";
   mkAAAA = name: ip: "${name}\tIN\tAAAA\t${ip}";
 
@@ -34,7 +28,7 @@ let
   ) dns.records);
 
   cnameLines = lib.mapAttrsToList
-    (name: target: "${name}\tIN\tCNAME\t${retarget target}")
+    (name: target: "${name}\tIN\tCNAME\t${target}")
     dns.cnames;
 
 in ''

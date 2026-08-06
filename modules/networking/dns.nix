@@ -1,4 +1,4 @@
-# DNS records for the local zone (home.arpa).
+# DNS records for the local zone (home.garvey.sh).
 # Consumed by: blocky DNS (router).
 #
 # Split from lan-hosts.nix so that "physical host" data (MAC → IP for DHCP)
@@ -33,9 +33,9 @@ in rec {
 
   # CNAMEs (targets are FQDNs with trailing dot).
   cnames = {
-    plex      = "plex.plex.k8s.home.arpa.";
-    zot       = "zot.zot.k8s.home.arpa.";
-    llm       = "talos.home.arpa.";
+    plex      = "plex.plex.k8s.home.garvey.sh.";
+    zot       = "zot.zot.k8s.home.garvey.sh.";
+    llm       = "talos.home.garvey.sh.";
   };
 
   # Split-horizon overrides: public (garvey.sh) names answered internally with

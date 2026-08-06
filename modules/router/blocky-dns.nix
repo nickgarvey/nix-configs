@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.routerConfig;
   inherit (import ../networking/lan-hosts.nix) lanHosts;
   dns = import ../networking/dns.nix { inherit lib; };
 
@@ -18,16 +17,11 @@ let
     (map (h: { name = h.hostname; value = hostIpStr h; }) lanHosts) ++
     (lib.mapAttrsToList (n: r: { name = n; value = recordIpStr r; }) dns.records);
 
-  dnsMapping = builtins.listToAttrs (
-    entries ++
-    (map (e: e // { name = "${e.name}.${cfg.domain}"; }) entries)
-  );
-
-  cnameLines = lib.mapAttrsToList
-    (name: target: "${name} 300 IN CNAME ${target}") dns.cnames;
-
-  zoneText = lib.concatStringsSep "\n"
-    ([ "$ORIGIN ${cfg.domain}." ] ++ cnameLines);
+  # Bare labels only. FQDNs under the domain itself are answered by the
+  # authoritative Knot zone (modules/containers/knot-auth.nix) via kresd's
+  # forward stub, not by blocky's customDNS -- see the comment above
+  # `conditional` below for why an FQDN entry here would shadow it.
+  dnsMapping = builtins.listToAttrs entries;
 in
 {
   config = {
@@ -123,9 +117,15 @@ in
 
         customDNS = {
           # garveyShOverrides keys are already fully-qualified (oci.garvey.sh),
-          # so merge them in directly without the home.arpa FQDN suffix.
-          mapping = dnsMapping // dns.garveyShOverrides;
-          zone = zoneText;
+          # so merge them in directly. k3s-api.home.arpa is kept alive
+          # explicitly: the k3s API serving cert and every kubeconfig have that
+          # name baked in as a TLS SAN (modules/k3s/k3s-common.nix), and
+          # regenerating it cluster-wide is out of scope for this cutover --
+          # unlike every other bare-label entry, it deliberately stays pinned
+          # to the retired domain rather than following cfg.domain.
+          mapping = dnsMapping // dns.garveyShOverrides // {
+            "k3s-api.home.arpa" = recordIpStr dns.records.k3s-api;
+          };
         };
 
         dns64 = {
