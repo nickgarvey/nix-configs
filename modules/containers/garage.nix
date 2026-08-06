@@ -37,13 +37,13 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = ''
-        Peer entries of the form <node_id>@[<ipv6>]:3901. Used as
-        bootstrap_peers and re-asserted via `garage node connect` on startup.
+        Peer entries of the form <node_id>@[<ipv6>]:3901, used as
+        bootstrap_peers. Garage dials these itself and retries until they
+        answer.
 
-        Literal addresses, not names: garage-init is a oneshot that resolves
-        peers once per boot and never retries, and the container's only
-        resolver is blocky on the router — so a name here would make cluster
-        formation depend on the DNS service at exactly the wrong moment.
+        Literal addresses, not names: the container's only resolver is blocky
+        on the router, so a name here would make cluster formation depend on
+        the DNS service being up first.
       '';
     };
 
@@ -143,7 +143,11 @@ in
           };
         };
 
-        systemd.services.garage-init = {
+        # Only the cluster-origin node (no peers) bootstraps itself. A node that
+        # has peers needs nothing here: garage dials bootstrap_peers itself and
+        # retries until they answer, and role/bucket/key setup on a joining node
+        # is an operator's `garage layout assign`.
+        systemd.services.garage-init = lib.mkIf (cfg.peers == [ ]) {
           description = "Initialize Garage layout, bucket, and API key";
           after = [ "garage.service" ];
           requires = [ "garage.service" ];
@@ -160,36 +164,21 @@ in
             # Fails if garage isn't ready yet; systemd will retry.
             NODE_ID=$(garage node id | cut -c1-16)
 
-            # Re-assert peer connections (idempotent).
-            ${lib.concatMapStringsSep "\n" (p: ''
-              garage node connect ${p} || true
-            '') cfg.peers}
+            if ! garage layout show | awk '/^==== CURRENT CLUSTER LAYOUT ====/{f=1;next} /^$/{f=0} f && /^[0-9a-f]/{print $1}' | grep -q "^$NODE_ID"; then
+              CURRENT_VERSION=$(garage layout show | awk '/Current cluster layout version:/ {print $NF}')
+              garage layout assign -z ${cfg.hostname} -c ${cfg.capacity} "$NODE_ID"
+              garage layout apply --version $(( CURRENT_VERSION + 1 ))
+            fi
 
-            ${if cfg.peers == [] then ''
-              # Standalone-bootstrap host: auto-assign self a role and seed
-              # buckets/keys if missing. Only safe when this node is the
-              # cluster origin (peers list empty).
-              if ! garage layout show | awk '/^==== CURRENT CLUSTER LAYOUT ====/{f=1;next} /^$/{f=0} f && /^[0-9a-f]/{print $1}' | grep -q "^$NODE_ID"; then
-                CURRENT_VERSION=$(garage layout show | awk '/Current cluster layout version:/ {print $NF}')
-                garage layout assign -z ${cfg.hostname} -c ${cfg.capacity} "$NODE_ID"
-                garage layout apply --version $(( CURRENT_VERSION + 1 ))
-              fi
+            if ! garage bucket list | grep -q "default"; then
+              garage bucket create default
+            fi
 
-              if ! garage bucket list | grep -q "default"; then
-                garage bucket create default
-              fi
+            if ! garage key list | grep -q "garage-key"; then
+              garage key import -n garage-key --yes "$GARAGE_S3_ACCESS_KEY" "$GARAGE_S3_SECRET_KEY"
+            fi
 
-              if ! garage key list | grep -q "garage-key"; then
-                garage key import -n garage-key --yes "$GARAGE_S3_ACCESS_KEY" "$GARAGE_S3_SECRET_KEY"
-              fi
-
-              garage bucket allow --read --write --owner default --key garage-key
-            '' else ''
-              # Joining an existing cluster — role/bucket/key setup is the
-              # responsibility of an operator running `garage layout assign`
-              # manually. Init only ensures peer connections.
-              echo "garage-init: peers configured, skipping layout/bucket/key bootstrap"
-            ''}
+            garage bucket allow --read --write --owner default --key garage-key
           '';
         };
 
