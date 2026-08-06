@@ -73,11 +73,22 @@ in
         };
 
         conditional = {
+          # Longest suffix wins (blocky strips labels from the most specific
+          # name), so the k8s subzone entry takes precedence over the parent.
+          #
+          # Both the parent and the k8s entry are required: blocky forwards a
+          # query and returns whatever comes back, so it cannot chase the
+          # referral Knot hands out for k8s.home.garvey.sh. Mapping only the
+          # parent would break every k8s name on the LAN.
           mapping = {
             "k8s.home.arpa" = "[2001:470:482f:2::53]";
             # Same k8s_gateway backend, which now serves both zones. First step
             # toward moving off home.arpa; k8s.home.arpa stays until cutover.
             "k8s.home.garvey.sh" = "[2001:470:482f:2::53]";
+            # Our own authoritative Knot (modules/containers/knot-auth.nix).
+            # Answering locally keeps LAN name resolution working through an ISP
+            # outage and through any mistake in the public delegation.
+            "home.garvey.sh" = "10.28.0.6";
           };
         };
 

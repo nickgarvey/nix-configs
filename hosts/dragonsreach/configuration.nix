@@ -11,6 +11,7 @@
     ../../modules/containers/storj-gateway.nix
     ../../modules/containers/unifi.nix
     ../../modules/containers/acme-dns-proxy.nix
+    ../../modules/containers/knot-auth.nix
   ];
 
   networking.hostName = "dragonsreach";
