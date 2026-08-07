@@ -45,5 +45,6 @@ in rec {
   # garvey.sh still resolves via the normal upstream (public) path.
   garveyShOverrides = {
     "oci.garvey.sh" = "2001:470:482f:2::5000";
+    "jellyfin.garvey.sh" = "2001:470:482f:2::5001";
   };
 }
