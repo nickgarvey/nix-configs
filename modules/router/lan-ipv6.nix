@@ -62,6 +62,7 @@ in
       routes = podRoutes ++ [
         { Destination = "2001:470:482f:200::/64"; }  # lydia delegated /64
         { Destination = "2001:470:482f:201::/64"; }  # talos delegated /64
+        { Destination = "2001:470:482f:210::/64"; }  # talos vllm delegated /64
         # 300::/64 is on-link via the router's own address above; no
         # explicit route needed here (kernel installs it from the addr).
         # Cilium LB pool — on-link via br-lan so the router can

@@ -41,11 +41,12 @@
     # suppressSlaac stops networkd adding a second, dynamic LAN-/64 address
     # on top of it.
     ipv6.suppressSlaac = true;
-    # tarrasque (garage container) lives in the delegated 2001:470:482f:201::/64.
-    # Carry that /64's gateway on vmbr0 so the container's hostBridgeAddress
-    # next-hop resolves and the router's on-link route for the /64
-    # (modules/router/lan-ipv6.nix) NDP-resolves to us.
-    ipv6.extraAddresses = [ "2001:470:482f:201::1/64" ];
+    # tarrasque (garage container) lives in the delegated 2001:470:482f:201::/64,
+    # and the vLLM netns lives in the delegated 2001:470:482f:210::/64. Carry
+    # both /64s' gateways on vmbr0 so their next-hops resolve and the
+    # router's on-link routes for these /64s (modules/router/lan-ipv6.nix)
+    # NDP-resolve to us.
+    ipv6.extraAddresses = [ "2001:470:482f:201::1/64" "2001:470:482f:210::1/64" ];
   };
 
   fileSystems."/fast/garage" = {

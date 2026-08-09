@@ -9,23 +9,26 @@
 # run:ai model streamer (loadFormat = "runai_streamer", default), or by syncing
 # the bucket to a local dir and bind-mounting it (loadFormat = "local").
 #
-# The container runs in its own podman network namespace (not on the host
-# network) with an IPv6 address on a dedicated NAT66 bridge, since the garage
-# S3 endpoint is IPv6-only. The API port is published to the host over IPv6
-# only.
+# The container runs in its own network namespace with a real, directly
+# routable IPv6 address on a delegated /64 (2001:470:482f:210::/64) — a veth
+# pair into vmbr0, the same mechanism the garage nspawn container uses for
+# LAN presence. No NAT, no host port publish: the container is reachable
+# directly at its own address.
 
 let
   cfg = config.homelab.vllm;
 
   vllmUnit = "${config.virtualisation.oci-containers.containers.vllm.serviceName}.service";
 
-  # Dedicated podman network so vLLM gets its own address rather than sharing
-  # the host's. netavark always pairs an IPv4 subnet with a bridge network
-  # even when only --ipv6/--subnet(v6) is given; that IPv4 side is unused —
-  # nothing is published on it and the container's own IPv4 route is never
-  # exercised.
-  networkName = "vllm";
-  networkSubnet = "fd00:d0cc::/64";
+  # vLLM's delegated /64 (see hosts/talos/configuration.nix's
+  # homelab.network.bridge.ipv6.extraAddresses and
+  # modules/router/lan-ipv6.nix for the matching host address + route).
+  netnsName = "vllm";
+  vethHost = "veth-vllm-h";
+  vethCtr = "veth-vllm-c";
+  hostAddress = "2001:470:482f:210::1";
+  containerAddress = "2001:470:482f:210::2";
+  sitePrefix6 = "2001:470:482f::/48";
 
   s3Uri = "s3://${cfg.bucket}/${cfg.model}";
   localPath = "${cfg.localModelsDir}/${cfg.model}";
@@ -88,7 +91,7 @@ in
     port = lib.mkOption {
       type = lib.types.port;
       default = 8000;
-      description = "OpenAI-compatible API port, published to the host over IPv6 only.";
+      description = "OpenAI-compatible API port vLLM listens on inside its own netns.";
     };
 
     loadFormat = lib.mkOption {
@@ -120,7 +123,9 @@ in
       message = "homelab.vllm requires virtualisation.podman.enable = true.";
     }];
 
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
+    # No networking.firewall rule needed: vmbr0 is a trusted interface
+    # (modules/networking/networkd.nix) and vLLM's netns is reached directly
+    # at its own address, not via a port published on talos's own addresses.
 
     # Root-owned creds template (system service), separate from the
     # ngarvey-owned one the workstation hf-to-garage tool uses. Passed into the
@@ -144,18 +149,47 @@ in
     ] ++ lib.optional (cfg.loadFormat == "local")
       "d ${cfg.localModelsDir} 0755 root root - -";
 
-    # nixpkgs has no declarative option for podman networks, so create the
-    # dedicated NAT66 network with a plain oneshot ahead of the container.
-    # --ignore makes it idempotent across rebuilds.
-    systemd.services.vllm-podman-network = {
-      description = "Create the podman network for vLLM";
+    # nixpkgs has no declarative option for podman networks, so build a
+    # netns + veth pair into vmbr0 by hand, ahead of the container. This is
+    # the same mechanism nspawn uses for the garage container's LAN presence
+    # (modules/containers/common.nix), just hand-rolled since podman has no
+    # equivalent of nspawn's bridge attachment. Every step tolerates
+    # re-running (idempotent across rebuilds/restarts).
+    systemd.services.vllm-netns = {
+      description = "Create the netns/veth network for vLLM (bridged onto vmbr0)";
       wantedBy = [ "multi-user.target" ];
       before = [ vllmUnit ];
+      after = [ "sys-subsystem-net-devices-vmbr0.device" ];
+      wants = [ "sys-subsystem-net-devices-vmbr0.device" ];
+      path = [ pkgs.iproute2 ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStart =
-          "${config.virtualisation.podman.package}/bin/podman network create --ignore --ipv6 --subnet ${networkSubnet} ${networkName}";
+        ExecStart = pkgs.writeShellScript "vllm-netns-start" ''
+          set -euo pipefail
+          ip netns list | cut -d' ' -f1 | grep -qx ${netnsName} || ip netns add ${netnsName}
+          ip link show ${vethHost} &>/dev/null || {
+            ip link add ${vethHost} type veth peer name ${vethCtr}
+            ip link set ${vethCtr} netns ${netnsName}
+          }
+          ip link set ${vethHost} master vmbr0
+          ip link set ${vethHost} up
+          if ip netns exec ${netnsName} ip link show ${vethCtr} &>/dev/null; then
+            ip netns exec ${netnsName} ip link set ${vethCtr} name eth0
+          fi
+          ip netns exec ${netnsName} ip link set lo up
+          ip netns exec ${netnsName} ip link set eth0 up
+          ip netns exec ${netnsName} sysctl -qw net.ipv6.conf.eth0.accept_ra=0
+          # nodad: this address is statically and uniquely assigned by us, so
+          # duplicate-address detection only adds boot-time latency the
+          # container's own startup can't wait out.
+          ip netns exec ${netnsName} ip -6 addr replace ${containerAddress}/64 dev eth0 nodad
+          # No default route — the ${sitePrefix6} prefix is HE-tunnel-routed
+          # and tunnel-broker prefixes get reputation-flagged by major
+          # services (see modules/containers/common.nix). This /48 route via
+          # the host's vmbr0 address is enough for intra-site + garage.
+          ip netns exec ${netnsName} ip -6 route replace ${sitePrefix6} via ${hostAddress} dev eth0
+        '';
       };
     };
 
@@ -165,8 +199,10 @@ in
         image = cfg.image;
         autoStart = true;
         cmd = cmd;
-        networks = [ networkName ];
-        ports = [ "[::]:${toString cfg.port}:8000" ];
+        # Join the netns built by vllm-netns.service above rather than a
+        # podman-managed network — gives the container a real routable
+        # address with no NAT/port-publish involved.
+        networks = [ "ns:/var/run/netns/${netnsName}" ];
         # GPU via the nvidia-container-toolkit CDI device (`--gpus all` fails
         # with "AMD CDI spec not found" on NixOS — the CDI device name is what
         # works). --ipc=host: vLLM needs a large /dev/shm.
@@ -227,11 +263,11 @@ in
     # container also waits for the model sync.
     systemd.services."${config.virtualisation.oci-containers.containers.vllm.serviceName}" = {
       serviceConfig.TimeoutStartSec = lib.mkForce "1800";
-      after = [ "vllm-podman-network.service" ];
-      requires = [ "vllm-podman-network.service" ];
+      after = [ "vllm-netns.service" ];
+      requires = [ "vllm-netns.service" ];
     } // lib.optionalAttrs (cfg.loadFormat == "local") {
-      after = [ "vllm-podman-network.service" "vllm-model-sync.service" ];
-      requires = [ "vllm-podman-network.service" "vllm-model-sync.service" ];
+      after = [ "vllm-netns.service" "vllm-model-sync.service" ];
+      requires = [ "vllm-netns.service" "vllm-model-sync.service" ];
     };
   };
 }
