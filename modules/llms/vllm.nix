@@ -9,13 +9,23 @@
 # run:ai model streamer (loadFormat = "runai_streamer", default), or by syncing
 # the bucket to a local dir and bind-mounting it (loadFormat = "local").
 #
-# The garage S3 endpoint is IPv6-only, so the container runs with
-# --network=host to reach it directly over talos's own IPv6 address.
+# The container runs in its own podman network namespace (not on the host
+# network) with an IPv6 address on a dedicated NAT66 bridge, since the garage
+# S3 endpoint is IPv6-only. The API port is published to the host over IPv6
+# only.
 
 let
   cfg = config.homelab.vllm;
 
   vllmUnit = "${config.virtualisation.oci-containers.containers.vllm.serviceName}.service";
+
+  # Dedicated podman network so vLLM gets its own address rather than sharing
+  # the host's. netavark always pairs an IPv4 subnet with a bridge network
+  # even when only --ipv6/--subnet(v6) is given; that IPv4 side is unused —
+  # nothing is published on it and the container's own IPv4 route is never
+  # exercised.
+  networkName = "vllm";
+  networkSubnet = "fd00:d0cc::/64";
 
   s3Uri = "s3://${cfg.bucket}/${cfg.model}";
   localPath = "${cfg.localModelsDir}/${cfg.model}";
@@ -78,7 +88,7 @@ in
     port = lib.mkOption {
       type = lib.types.port;
       default = 8000;
-      description = "OpenAI-compatible API port, bound on the host via --network=host.";
+      description = "OpenAI-compatible API port, published to the host over IPv6 only.";
     };
 
     loadFormat = lib.mkOption {
@@ -134,18 +144,33 @@ in
     ] ++ lib.optional (cfg.loadFormat == "local")
       "d ${cfg.localModelsDir} 0755 root root - -";
 
+    # nixpkgs has no declarative option for podman networks, so create the
+    # dedicated NAT66 network with a plain oneshot ahead of the container.
+    # --ignore makes it idempotent across rebuilds.
+    systemd.services.vllm-podman-network = {
+      description = "Create the podman network for vLLM";
+      wantedBy = [ "multi-user.target" ];
+      before = [ vllmUnit ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart =
+          "${config.virtualisation.podman.package}/bin/podman network create --ignore --ipv6 --subnet ${networkSubnet} ${networkName}";
+      };
+    };
+
     virtualisation.oci-containers = {
       backend = "podman";
       containers.vllm = {
         image = cfg.image;
         autoStart = true;
         cmd = cmd;
+        networks = [ networkName ];
+        ports = [ "[::]:${toString cfg.port}:8000" ];
         # GPU via the nvidia-container-toolkit CDI device (`--gpus all` fails
         # with "AMD CDI spec not found" on NixOS — the CDI device name is what
-        # works). --ipc=host: vLLM needs a large /dev/shm. --network=host: the
-        # garage S3 endpoint is IPv6-only and netavark's default network is
-        # IPv4-only, so the container binds talos's own addresses directly.
-        extraOptions = [ "--device=nvidia.com/gpu=all" "--ipc=host" "--network=host" ];
+        # works). --ipc=host: vLLM needs a large /dev/shm.
+        extraOptions = [ "--device=nvidia.com/gpu=all" "--ipc=host" ];
         # NB: do NOT set HF_HUB_OFFLINE — it forces vLLM's offline path
         # resolver, which can't parse s3:// URIs and crashes. For an s3 model
         # vLLM pulls config/tokenizer from garage via the runai streamer.
@@ -177,8 +202,8 @@ in
           # Retry in place: garage lives on another host and may not be
           # reachable the instant network-online.target fires at boot. Staying
           # in `activating` (rather than failing) is what keeps systemd from
-          # cancelling the dependent docker-vllm start job. ~40 x 15s ~= 10 min,
-          # well under TimeoutStartSec below.
+          # cancelling the dependent vllm start job. ~40 x 15s ~= 10 min, well
+          # under TimeoutStartSec below.
           n=0
           max=40
           until ${pkgs.awscli2}/bin/aws --endpoint-url="${cfg.s3Endpoint}" --region=garage \
@@ -202,9 +227,11 @@ in
     # container also waits for the model sync.
     systemd.services."${config.virtualisation.oci-containers.containers.vllm.serviceName}" = {
       serviceConfig.TimeoutStartSec = lib.mkForce "1800";
+      after = [ "vllm-podman-network.service" ];
+      requires = [ "vllm-podman-network.service" ];
     } // lib.optionalAttrs (cfg.loadFormat == "local") {
-      after = [ "vllm-model-sync.service" ];
-      requires = [ "vllm-model-sync.service" ];
+      after = [ "vllm-podman-network.service" "vllm-model-sync.service" ];
+      requires = [ "vllm-podman-network.service" "vllm-model-sync.service" ];
     };
   };
 }
