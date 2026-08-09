@@ -13,7 +13,7 @@
 # (virtualisation.docker.daemon.settings in the talos config).
 
 let
-  cfg = config.homelab.vllmDocker;
+  cfg = config.homelab.vllm;
 
   s3Uri = "s3://${cfg.bucket}/${cfg.model}";
   localPath = "${cfg.localModelsDir}/${cfg.model}";
@@ -41,7 +41,7 @@ let
     ++ cfg.extraArgs;
 in
 {
-  options.homelab.vllmDocker = {
+  options.homelab.vllm = {
     enable = lib.mkEnableOption "vLLM inference server (official docker image)";
 
     image = lib.mkOption {
@@ -105,7 +105,7 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [{
       assertion = config.virtualisation.docker.enable;
-      message = "homelab.vllmDocker requires virtualisation.docker.enable = true.";
+      message = "homelab.vllm requires virtualisation.docker.enable = true.";
     }];
 
     networking.firewall.allowedTCPPorts = [ cfg.port ];

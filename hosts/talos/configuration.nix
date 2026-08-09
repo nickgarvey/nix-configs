@@ -9,7 +9,7 @@
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/nix/nix-binary-cache.nix
     ../../modules/nix/flake-build-check.nix
-    ../../modules/llms/vllm-docker.nix
+    ../../modules/llms/vllm.nix
     ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops
   ];
@@ -72,7 +72,7 @@
   # linear-attn layers) run on the 5090's sm_120 FP4 tensor cores;
   # compressed-tensors nvfp4 is auto-detected. The v0.23.0 image is cu130 +
   # flashinfer + modelopt_fp4.
-  homelab.vllmDocker = {
+  homelab.vllm = {
     enable = true;
     model = "Qwen3.6-27B-NVFP4";
     loadFormat = "local";
