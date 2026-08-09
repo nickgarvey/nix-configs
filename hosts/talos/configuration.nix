@@ -142,16 +142,6 @@
     enable = true;
     autoPrune.enable = true;
     enableOnBoot = true;
-    # IPv6 on the default bridge so containers can reach the IPv6-only garage
-    # S3 endpoint (the vLLM model store). ULA subnet + ip6tables gives NAT66:
-    # container traffic is masqueraded to talos's LAN address, which already
-    # routes to the garage container (IPv6 forwarding is on). Avoids needing
-    # --network=host just to get IPv6.
-    daemon.settings = {
-      ipv6 = true;
-      fixed-cidr-v6 = "fd00:d0cc::/64";
-      ip6tables = true;
-    };
   };
 
   # resolved handles split-DNS: Tailscale pushes its nameservers for ts.net

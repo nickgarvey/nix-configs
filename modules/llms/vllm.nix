@@ -9,11 +9,13 @@
 # run:ai model streamer (loadFormat = "runai_streamer", default), or by syncing
 # the bucket to a local dir and bind-mounting it (loadFormat = "local").
 #
-# The garage S3 endpoint is IPv6-only, so IPv6 is enabled on the docker bridge
-# (virtualisation.docker.daemon.settings in the talos config).
+# The garage S3 endpoint is IPv6-only, so the container runs with
+# --network=host to reach it directly over talos's own IPv6 address.
 
 let
   cfg = config.homelab.vllm;
+
+  vllmUnit = "${config.virtualisation.oci-containers.containers.vllm.serviceName}.service";
 
   s3Uri = "s3://${cfg.bucket}/${cfg.model}";
   localPath = "${cfg.localModelsDir}/${cfg.model}";
@@ -49,7 +51,7 @@ in
       # vllm/vllm-openai:v0.23.0 pinned by digest. Verified: transformers 5.12
       # (TokenizersBackend present), CUDA arch sm_120 (RTX 5090), runai s3
       # streamer bundled, native Qwen3.6 support (vLLM >= 0.17).
-      default = "vllm/vllm-openai@sha256:6d8429e38e3747723ca07ee1b17972e09bb9c51c4032b266f24fb1cc3b22ed8f";
+      default = "docker.io/vllm/vllm-openai@sha256:6d8429e38e3747723ca07ee1b17972e09bb9c51c4032b266f24fb1cc3b22ed8f";
       description = "Container image (pinned by digest) to run.";
     };
 
@@ -76,7 +78,7 @@ in
     port = lib.mkOption {
       type = lib.types.port;
       default = 8000;
-      description = "OpenAI-compatible API port (bound on the host via --network=host).";
+      description = "OpenAI-compatible API port, bound on the host via --network=host.";
     };
 
     loadFormat = lib.mkOption {
@@ -104,8 +106,8 @@ in
 
   config = lib.mkIf cfg.enable {
     assertions = [{
-      assertion = config.virtualisation.docker.enable;
-      message = "homelab.vllm requires virtualisation.docker.enable = true.";
+      assertion = config.virtualisation.podman.enable;
+      message = "homelab.vllm requires virtualisation.podman.enable = true.";
     }];
 
     networking.firewall.allowedTCPPorts = [ cfg.port ];
@@ -133,18 +135,17 @@ in
       "d ${cfg.localModelsDir} 0755 root root - -";
 
     virtualisation.oci-containers = {
-      backend = "docker";
+      backend = "podman";
       containers.vllm = {
         image = cfg.image;
         autoStart = true;
         cmd = cmd;
-        ports = [ "${toString cfg.port}:8000" ];
-        # GPU via the nvidia-container-toolkit CDI device (the docker daemon
-        # runs in CDI mode on NixOS — `--gpus all` fails with "AMD CDI spec not
-        # found", the CDI device name is what works). --ipc=host: vLLM needs a
-        # large /dev/shm. IPv6 reach to garage comes from the docker daemon's
-        # IPv6 bridge (configured on the host), not from host networking.
-        extraOptions = [ "--device=nvidia.com/gpu=all" "--ipc=host" ];
+        # GPU via the nvidia-container-toolkit CDI device (`--gpus all` fails
+        # with "AMD CDI spec not found" on NixOS — the CDI device name is what
+        # works). --ipc=host: vLLM needs a large /dev/shm. --network=host: the
+        # garage S3 endpoint is IPv6-only and netavark's default network is
+        # IPv4-only, so the container binds talos's own addresses directly.
+        extraOptions = [ "--device=nvidia.com/gpu=all" "--ipc=host" "--network=host" ];
         # NB: do NOT set HF_HUB_OFFLINE — it forces vLLM's offline path
         # resolver, which can't parse s3:// URIs and crashes. For an s3 model
         # vLLM pulls config/tokenizer from garage via the runai streamer.
@@ -162,7 +163,7 @@ in
     systemd.services.vllm-model-sync = lib.mkIf (cfg.loadFormat == "local") {
       description = "Sync ${cfg.model} from garage to ${localPath}";
       wantedBy = [ "multi-user.target" ];
-      before = [ "docker-vllm.service" ];
+      before = [ vllmUnit ];
       after = [ "network-online.target" "nss-lookup.target" ];
       wants = [ "network-online.target" "nss-lookup.target" ];
       environment = s3Env;
@@ -199,7 +200,7 @@ in
 
     # First start pulls the (multi-GB) image; give it room. In local mode the
     # container also waits for the model sync.
-    systemd.services.docker-vllm = {
+    systemd.services."${config.virtualisation.oci-containers.containers.vllm.serviceName}" = {
       serviceConfig.TimeoutStartSec = lib.mkForce "1800";
     } // lib.optionalAttrs (cfg.loadFormat == "local") {
       after = [ "vllm-model-sync.service" ];
