@@ -10,6 +10,7 @@
     ../../modules/nix/nix-binary-cache.nix
     ../../modules/nix/flake-build-check.nix
     ../../modules/llms/vllm.nix
+    ../../modules/games/palworld.nix
     ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops
   ];
@@ -98,6 +99,15 @@
       "--enable-log-requests"
       "--max-log-len" "0"
     ];
+  };
+
+  # Palworld dedicated server on a fresh stock world, netns-bridged onto
+  # vmbr0 alongside garage and vLLM (see modules/games/palworld.nix). Idle
+  # shutdown is the image's own AUTO_PAUSE, not a separate control surface.
+  homelab.palworld = {
+    enable = true;
+    serverName = "Garvey Homelab";
+    players = 8;
   };
 
   networking = {

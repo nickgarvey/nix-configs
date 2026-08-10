@@ -79,3 +79,10 @@ creation_rules:
       - *wabbajack
       - *workstation
       - *dovahkiin
+  # palworld: game server admin/RCON credentials, run on talos under podman.
+  # talos presents the `workstation` age identity (same as llm-models.yaml).
+  - path_regex: secrets/palworld.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *workstation

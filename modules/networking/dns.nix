@@ -32,6 +32,12 @@ in rec {
     # vLLM's own address in its dedicated netns on talos (modules/llms/vllm.nix)
     # — not talos's own address, IPv6-only.
     llm           = { v4 = []; v6 = [ "2001:470:482f:201::3" ]; };
+    # Palworld's own address in its dedicated netns on talos
+    # (modules/games/palworld.nix) — not talos's own address. Dual-stack:
+    # v4 for SteamCMD's outbound internet access (see containerAddressV4
+    # comment in the module — NAT64 was tried and doesn't reliably work for
+    # Steam's login protocol), v6 for direct LAN reachability.
+    palworld      = { v4 = [ "10.28.8.81" ]; v6 = [ "2001:470:482f:201::4" ]; };
   };
 
   # CNAMEs (targets are FQDNs with trailing dot).
