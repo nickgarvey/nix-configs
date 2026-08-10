@@ -10,24 +10,25 @@
 # the bucket to a local dir and bind-mounting it (loadFormat = "local").
 #
 # The container runs in its own network namespace with a real, directly
-# routable IPv6 address on a delegated /64 (2001:470:482f:210::/64) — a veth
-# pair into vmbr0, the same mechanism the garage nspawn container uses for
-# LAN presence. No NAT, no host port publish: the container is reachable
-# directly at its own address.
+# routable IPv6 address in talos's delegated /64 (2001:470:482f:201::/64,
+# shared with the garage container) — a veth pair into vmbr0, the same
+# mechanism the garage nspawn container uses for LAN presence. No NAT, no
+# host port publish: the container is reachable directly at its own address.
 
 let
   cfg = config.homelab.vllm;
 
   vllmUnit = "${config.virtualisation.oci-containers.containers.vllm.serviceName}.service";
 
-  # vLLM's delegated /64 (see hosts/talos/configuration.nix's
+  # talos's delegated /64 (see hosts/talos/configuration.nix's
   # homelab.network.bridge.ipv6.extraAddresses and
-  # modules/router/lan-ipv6.nix for the matching host address + route).
+  # modules/router/lan-ipv6.nix). Shared with the garage container (::2);
+  # vLLM takes ::3.
   netnsName = "vllm";
   vethHost = "veth-vllm-h";
   vethCtr = "veth-vllm-c";
-  hostAddress = "2001:470:482f:210::1";
-  containerAddress = "2001:470:482f:210::2";
+  hostAddress = "2001:470:482f:201::1";
+  containerAddress = "2001:470:482f:201::3";
   sitePrefix6 = "2001:470:482f::/48";
 
   s3Uri = "s3://${cfg.bucket}/${cfg.model}";
