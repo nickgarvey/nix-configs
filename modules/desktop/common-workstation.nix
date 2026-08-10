@@ -165,5 +165,7 @@ in
     Restart = "on-failure";
     RestartSec = 3;
   };
+
+  systemd.user.settings.Manager.DefaultTimeoutStopSec = "10s";
 }
 
