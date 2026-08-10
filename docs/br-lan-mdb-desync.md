@@ -8,24 +8,10 @@ On the router, `bridge -d mdb show` for `br-lan` consistently has
 the bridge — in particular `ff02::1:ff00:1` (solicited-node for the
 router GUA `2001:470:482f::1`).
 
-Structurally-verifiable via the `netaudit` dataset — see
-`ipv6-control-audit/docs/schema.md` §11:
-
-```sql
-SELECT host, grp
-FROM netaudit.igmp6
-WHERE iface = 'br-lan'
-  AND ts > now() - INTERVAL 3 MINUTE
-  AND (host, grp) NOT IN (
-      SELECT host, grp FROM netaudit.mdb
-      WHERE bridge = 'br-lan' AND host_joined = 1
-        AND ts > now() - INTERVAL 3 MINUTE
-  )
-GROUP BY host, grp;
-```
-
-A non-empty result means the bridge filter will drop multicast NS
-targeting those groups before it reaches the local IP stack, so LAN
+To check: compare the groups in `/proc/net/igmp6` for `br-lan` against
+the `host_joined` rows in `bridge -d mdb show`. Any group the stack has
+joined but the bridge hasn't promoted is one whose multicast NS the
+bridge filter will drop before it reaches the local IP stack — so LAN
 clients can't resolve the router's GUA over multicast NDP.
 
 ## History
@@ -33,9 +19,9 @@ clients can't resolve the router's GUA over multicast NDP.
 `modules/router/default.nix` previously set `MulticastQuerier=true` on
 the br-lan netdev on the theory that a local querier would trigger the
 IPv6 stack to re-send MLD reports, which the bridge would then insert
-as `host_joined` MDB entries. Evidence from the netaudit dataset: MLD
-general queries **are** fired by the bridge every ~125s, and the IPv6
-stack **does** emit MLDv1/v2 reports in response, but the bridge
+as `host_joined` MDB entries. What was actually observed: MLD general
+queries **are** fired by the bridge every ~125s, and the IPv6 stack
+**does** emit MLDv1/v2 reports in response, but the bridge
 snooping code never promotes those reports into `host_joined` rows for
 the groups the local stack actually cares about. The fix didn't work.
 
@@ -82,11 +68,11 @@ this is negligible.
 
 - `modules/router/default.nix` — br-lan config, has a short TODO
   referencing this file.
-- `ipv6-control-audit/` — the netaudit pipeline used to characterize
-  the bug. See `docs/schema.md` §11 (desync), §12 (NUD transitions),
-  `docs/runbook.md` ("Is the bridge snooping layer out of sync…").
+- `modules/icmpv6-archive/` — ICMPv6 packet capture, enabled on all
+  hosts. Ships rotating tcpdump pcaps to garage S3 (bucket `icmpv6`).
+  This is where to look when re-deriving any of the above.
 - Earlier PROBLEM.txt analysis in `ndp-debug/` is **superseded**: it
   asserted `MulticastQuerier=true` was a no-op because the bridge
-  wasn't actually querying. The netaudit dataset proves the bridge
-  *does* query every 125s; the failure is further downstream in the
-  snooping → MDB-insert path.
+  wasn't actually querying. Capture shows the bridge *does* query every
+  125s; the failure is further downstream in the snooping → MDB-insert
+  path.
