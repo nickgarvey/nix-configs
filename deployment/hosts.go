@@ -113,6 +113,19 @@ var AllHosts = []Host{
 	},
 }
 
+// HostNames returns the names of hosts matching pred, sorted by Order.
+func HostNames(all []Host, pred func(Host) bool) []string {
+	sorted := append([]Host(nil), all...)
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].Order < sorted[j].Order })
+	var names []string
+	for _, h := range sorted {
+		if pred(h) {
+			names = append(names, h.Name)
+		}
+	}
+	return names
+}
+
 // SelectHosts filters AllHosts by the --hosts flag. Empty selector returns all
 // Default hosts. Named hosts are returned even if !Default. Unknown names are
 // an error. Output is sorted by Order; duplicates in the input are deduped.

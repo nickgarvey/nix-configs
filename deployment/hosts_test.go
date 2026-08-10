@@ -125,3 +125,36 @@ func TestSelectHostsResultIsSorted(t *testing.T) {
 		t.Fatalf("result not sorted by Order: %v", got)
 	}
 }
+
+func TestHostNames(t *testing.T) {
+	hosts := []Host{
+		{Name: "late", Order: 30, Default: true},
+		{Name: "optin", Order: 20, Default: false},
+		{Name: "early", Order: 10, Default: true},
+	}
+	cases := []struct {
+		name string
+		pred func(Host) bool
+		want []string
+	}{
+		{"defaults sorted by order", func(h Host) bool { return h.Default }, []string{"early", "late"}},
+		{"opt-in only", func(h Host) bool { return !h.Default }, []string{"optin"}},
+		{"none match", func(h Host) bool { return false }, nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := HostNames(hosts, c.pred)
+			if strings.Join(got, ",") != strings.Join(c.want, ",") {
+				t.Errorf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestHostNamesDoesNotReorderInput(t *testing.T) {
+	hosts := []Host{{Name: "b", Order: 20}, {Name: "a", Order: 10}}
+	HostNames(hosts, func(Host) bool { return true })
+	if hosts[0].Name != "b" {
+		t.Errorf("input slice reordered: %v", hosts)
+	}
+}

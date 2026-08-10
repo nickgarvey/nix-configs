@@ -20,10 +20,22 @@ type CLIArgs struct {
 	Build  bool
 }
 
+// hostsFlagUsage renders the -hosts help text from AllHosts so the documented
+// default set cannot drift from the one SelectHosts actually picks.
+func hostsFlagUsage(all []Host) string {
+	def := HostNames(all, func(h Host) bool { return h.Default })
+	optIn := HostNames(all, func(h Host) bool { return !h.Default })
+	s := "Comma-separated host names (default: " + strings.Join(def, ",") + ")"
+	if len(optIn) > 0 {
+		s += "; opt-in only: " + strings.Join(optIn, ",")
+	}
+	return s
+}
+
 func parseArgs(argv []string) (CLIArgs, error) {
 	fs := flag.NewFlagSet("deploy", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	hostsCSV := fs.String("hosts", "", "Comma-separated host names (default: all default hosts)")
+	hostsCSV := fs.String("hosts", "", hostsFlagUsage(AllHosts))
 	modeStr := fs.String("mode", "safe", "Deploy mode: safe|switch|boot")
 	rebootStr := fs.String("reboot", "never", "Reboot behavior: never|auto|always|ask (-mode boot allows only never|always)")
 	force := fs.Bool("force", false, "Skip safety pre-checks (e.g. active print on printer hosts)")

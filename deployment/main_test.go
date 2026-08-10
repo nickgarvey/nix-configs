@@ -117,3 +117,34 @@ func TestParseArgsForce(t *testing.T) {
 		t.Fatalf("--force should set Force=true, got %+v err=%v", got, err)
 	}
 }
+
+func TestHostsFlagUsage(t *testing.T) {
+	hosts := []Host{
+		{Name: "second", Order: 20, Default: true},
+		{Name: "optin", Order: 30, Default: false},
+		{Name: "first", Order: 10, Default: true},
+	}
+	got := hostsFlagUsage(hosts)
+	want := "Comma-separated host names (default: first,second); opt-in only: optin"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestHostsFlagUsageNoOptIn(t *testing.T) {
+	hosts := []Host{{Name: "only", Order: 10, Default: true}}
+	got := hostsFlagUsage(hosts)
+	want := "Comma-separated host names (default: only)"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestHostsFlagUsageListsRealDefaults(t *testing.T) {
+	got := hostsFlagUsage(AllHosts)
+	for _, h := range AllHosts {
+		if h.Default && !strings.Contains(got, h.Name) {
+			t.Errorf("default host %q missing from usage: %s", h.Name, got)
+		}
+	}
+}
