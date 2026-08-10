@@ -48,5 +48,6 @@ in rec {
   garveyShOverrides = {
     "oci.garvey.sh" = "2001:470:482f:2::5000";
     "jellyfin.garvey.sh" = "2001:470:482f:2::5001";
+    "temporal.garvey.sh" = "2001:470:482f:2::5002";
   };
 }
