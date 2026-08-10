@@ -1,6 +1,15 @@
 { config, lib, pkgs, inputs, ... }:
 let
   xone-dongle-firmware = pkgs.callPackage ../../pkgs/xone-dongle-firmware { };
+
+  # Temporary diagnostics for slow `vector.service` shutdown on wabbajack.
+  # VECTOR_LOG=warn,vector=debug surfaces per-sink/source shutdown flush
+  # activity in journalctl -u vector (only vector's own crate at debug,
+  # deps stay at warn to avoid flooding the journal), to find what's
+  # blocking graceful stop (leading suspect: prometheus_remote_write sink
+  # flush). Remove once root-caused, or push deadline out. Expires 2026-09-08.
+  vectorDebugDeadline = 1788825600; # 2026-09-08T00:00:00Z
+  vectorDebugFlakeTime = lib.max inputs.self.lastModified inputs.nixpkgs.lastModified;
 in
 {
   imports = [
@@ -54,6 +63,13 @@ in
         position x=0 y=0
     }
   '';
+
+  systemd.services.vector.environment.VECTOR_LOG = "warn,vector=debug";
+
+  assertions = [{
+    assertion = vectorDebugFlakeTime < vectorDebugDeadline;
+    message = "wabbajack vector debug logging (VECTOR_LOG=warn,vector=debug) has expired (2026-09-08) - either root-cause the slow shutdown and remove it, or push the deadline out in hosts/wabbajack/configuration.nix";
+  }];
 
   networking.hostName = "wabbajack";
 
