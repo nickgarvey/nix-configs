@@ -65,7 +65,7 @@
     peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@[2001:470:482f:200::2]:3901" ];
   };
 
-  # vLLM inference server (official docker image) serving Qwen3.6-27B NVFP4 on
+  # vLLM inference server (official OCI image, run via podman) serving Qwen3.6-27B NVFP4 on
   # the single RTX 5090 (32 GB). The model is synced from the garage llm-models
   # S3 bucket to local disk (loadFormat = "local"), which the MTP speculative
   # decode draft loader requires. NVFP4 weights (~20 GB, incl. quantized
@@ -138,12 +138,6 @@
     ];
   };
 
-  virtualisation.docker = {
-    enable = true;
-    autoPrune.enable = true;
-    enableOnBoot = true;
-  };
-
   # resolved handles split-DNS: Tailscale pushes its nameservers for ts.net
   # domains, while DHCP-provided DNS is used for everything else.
   services.resolved = {
@@ -183,7 +177,6 @@
 
   users.users.ngarvey = {
     uid = 1000;
-    extraGroups = [ "docker" ];
     packages = with pkgs; [
       nvidia-container-toolkit
       rsync
@@ -205,7 +198,7 @@
 
   # Satisfies nvidia-container-toolkit's driver-presence assertion. xserver
   # itself is not enabled — this just declares which driver the toolkit can
-  # find for Docker GPU passthrough.
+  # find for GPU passthrough.
   services.xserver.videoDrivers = [ "nvidia" ];
 
   system.stateVersion = "25.05";
