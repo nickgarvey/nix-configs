@@ -10,7 +10,6 @@ This is a mono-repo for all my nix settings. Here are the sections:
 * `devshells/`: Project-specific Nix dev shells
 * `patches/`: Patches applied to upstream packages
 * `secrets/`: SOPS-encrypted secrets
-* `public_certs/`: Public CA certificates
 * `configs/`: Standalone application config files
 * `docs/`: Notes and troubleshooting docs
 

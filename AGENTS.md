@@ -49,8 +49,8 @@ imports = [
 
 ## Paths escaping `modules/`
 
-When a module references `pkgs/`, `patches/`, `secrets/`, `configs/`, or
-`public_certs/` it must use paths relative to its own location. From inside a
+When a module references `pkgs/`, `patches/`, `secrets/`, or `configs/` it
+must use paths relative to its own location. From inside a
 subdir (e.g. `modules/desktop/`) those roots are two levels up (`../../`), not
 one. Example: `../../patches/my-fix.patch`.
 
