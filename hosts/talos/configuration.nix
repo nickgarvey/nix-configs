@@ -8,7 +8,7 @@
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/nix/nix-binary-cache.nix
-    ../../modules/nix/flake-build-check.nix
+    ../../modules/nix/temporal-nix-builder.nix
     ../../modules/llms/vllm.nix
     ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops
@@ -128,7 +128,7 @@
 
   zramSwap.enable = true;
 
-  services.flakeBuildCheck.enable = true;
+  services.temporalNixBuilder.enable = true;
 
   services.nixBinaryCache = {
     enable = true;

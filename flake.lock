@@ -384,7 +384,8 @@
         "nixos-raspberrypi": "nixos-raspberrypi",
         "nixpkgs": "nixpkgs_3",
         "pi-nix": "pi-nix",
-        "sops-nix": "sops-nix"
+        "sops-nix": "sops-nix",
+        "temporal-workflows": "temporal-workflows"
       }
     },
     "sops-nix": {
@@ -450,6 +451,26 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "temporal-workflows": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786412500,
+        "narHash": "sha256-3Cml2xliDCY05+Ob8HYn7BdPAoUtKdQP1Lnc0qth/2s=",
+        "owner": "nickgarvey",
+        "repo": "temporal-workflows",
+        "rev": "fa4ecdec230cd3ab887b9232dd89034bab25cd12",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nickgarvey",
+        "repo": "temporal-workflows",
         "type": "github"
       }
     },

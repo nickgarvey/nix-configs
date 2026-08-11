@@ -29,6 +29,12 @@
 
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
+    # Temporal workers.
+    temporal-workflows = {
+      url = "github:nickgarvey/temporal-workflows";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     claude-code-nix = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";
