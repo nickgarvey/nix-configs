@@ -36,12 +36,6 @@ in
     ipv4Forward = lib.mkEnableOption "IPv4 forwarding";
     ipv6Forward = lib.mkEnableOption "IPv6 forwarding";
 
-    podCIDR = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Pod CIDR (/64) assigned to this node for k3s pod networking.";
-    };
-
     bridge = lib.mkOption {
       type = lib.types.nullOr (lib.types.submodule {
         options = {

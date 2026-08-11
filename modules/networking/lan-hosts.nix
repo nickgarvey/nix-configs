@@ -8,7 +8,11 @@
 # Some hosts also own a dedicated per-host /64 carved from the HE /48 (for
 # their nspawn containers / k3s pods). Those hosts keep their own identity
 # here in the main LAN /64 and carry the delegated /64's gateway on their
-# bridge separately (homelab.network.bridge.ipv6.extraAddresses / podCIDR).
+# bridge separately (homelab.network.bridge.ipv6.extraAddresses).
+#
+# The `podCIDR` field below must match `kubectl get nodes -o
+# custom-columns=:.spec.podCIDR`. networkd.nix and modules/router/lan-ipv6.nix
+# read it to build static pod routes.
 # Subnet plan inside 2001:470:482f::/48:
 #   :0::/64       main LAN (most hosts SLAAC + static here)
 #   :2::/64       k8s LB pool (Cilium L2 announce)

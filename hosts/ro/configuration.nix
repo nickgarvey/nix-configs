@@ -10,7 +10,6 @@
   ];
 
   networking.hostName = "ro";
-  homelab.network.podCIDR = "2001:470:482f:101::/64";
 
   services.icmpv6-archive.enable = true;
 

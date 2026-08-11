@@ -10,7 +10,6 @@
   ];
 
   networking.hostName = "dah";
-  homelab.network.podCIDR = "2001:470:482f:102::/64";
 
   services.icmpv6-archive.enable = true;
 
