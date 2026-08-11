@@ -121,6 +121,11 @@ in
           filterUnmappedTypes = false;
         };
 
+        caching = {
+          # Blocky's default is 30m.
+          cacheTimeNegative = "1m";
+        };
+
         dns64 = {
           enable = true;
           prefixes = [ "64:ff9b::/96" ];
