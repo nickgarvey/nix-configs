@@ -35,8 +35,6 @@ in rec {
 
   # CNAMEs (targets are FQDNs with trailing dot).
   cnames = {
-    plex      = "plex.plex.k8s.home.garvey.sh.";
-    zot       = "zot.zot.k8s.home.garvey.sh.";
   };
 
   # Split-horizon overrides: public (garvey.sh) names answered internally with
