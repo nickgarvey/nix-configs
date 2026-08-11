@@ -186,13 +186,6 @@ key lives in XCA outside these repos.
 
 ### Leftovers that are harmless but stale
 
-- `homelab-esp32-devices/devices/garage-opener/main/certs/ca_bundle.pem` still carries the
-  Garvey CA. It also carries ISRG Root X1/X2, which is what actually validates HA's current
-  cert, so the device works — the Garvey entries are just dead weight until the next
-  firmware change.
-- `homelab-esp32-devices/devices/freezer-temp-sensor/main/certs/ca_bundle.pem` is
-  Garvey-only, but nothing embeds it (no `EMBED_TXTFILES` in its `CMakeLists.txt`) and the
-  device is Matter-based, so it never talks to HA over HTTPS.
 - `modules/k3s/k3s-common.nix` still passes `--tls-san=k3s-api.home.arpa`, a name from the
   retired `home.arpa` zone. Harmless (it is an extra SAN on an internal cert nothing
   validates by that name), but misleading.
