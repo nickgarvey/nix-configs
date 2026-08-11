@@ -43,7 +43,7 @@ Services running on that cluster are found in the [k8s-gitops](https://github.co
 ### Workstations
 Workstations run [niri](https://github.com/YaLTeR/niri), a scrollable-tiling Wayland compositor, configured via [`modules/desktop/niri.nix`](modules/desktop/niri.nix) and [`configs/niri.kdl`](configs/niri.kdl). Each host pins its own monitor mode/scale through the `homelab.niri.outputs` option.
 
-`wabbajack` is the 128GB model of the Framework Desktop. LLM performance was underwhelming, so it largely acts as a surprisingly quiet TV computer.
+`wabbajack` is the 128GB model of the Framework Desktop. LLM performance was underwhelming, so it serves as a general workstation instead.
 
 `dovahkiin` is a AMD Ryzen AI 7 350 mainboard laptop with 64GB RAM I got off eBay. Eager to upgrade to a Panther Lake mainboard but going to wait for RAM to come down.
 
