@@ -39,7 +39,6 @@
       clientIPv6 = "2001:470:66:35::2/64";
       serverIPv6 = "2001:470:66:35::1";
       routedPrefix = "2001:470:482f::";
-      routedPrefixLength = 64;
     };
   };
 

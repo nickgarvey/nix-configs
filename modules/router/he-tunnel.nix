@@ -31,12 +31,6 @@ in
       default = "";
       description = "Routed /64 or /48 prefix for LAN clients (e.g., 2001:470:yyyy::/64).";
     };
-
-    routedPrefixLength = lib.mkOption {
-      type = lib.types.int;
-      default = 64;
-      description = "Prefix length of the routed prefix.";
-    };
   };
 
   config = lib.mkIf heCfg.enable {
