@@ -10,12 +10,11 @@ owns cert-manager, acme-dns, and the services themselves.
 
 ---
 
-## The four ways a cert gets issued
+## The three ways a cert gets issued
 
 | Path | Names | Issued by | Config |
 |---|---|---|---|
 | cert-manager + acme-dns | `*.garvey.sh` | Let's Encrypt, DNS-01 | `k8s-gitops/manifests/cert-manager/cluster-issuer-acmedns-{prod,staging}.yaml` |
-| cert-manager + Cloudflare | `*.garvey.sh` | Let's Encrypt, DNS-01 | `k8s-gitops/manifests/cert-manager/cluster-issuer.yaml` |
 | On-box certbot | `homeassistant.home.garvey.sh` | Let's Encrypt, DNS-01 via RFC2136 | HAOS itself; TSIG ACL in `modules/containers/knot-auth.nix` |
 | Tailscale | `*.bigeye-turtle.ts.net` | Tailscale | `ingressClassName: tailscale` on the Ingress |
 
@@ -24,8 +23,9 @@ this — k3s manages it, nothing here touches it, and it never appears on the LA
 
 ### 1. cert-manager via acme-dns — the default for public names
 
-This is how `oci.garvey.sh` and `jellyfin.garvey.sh` get their certs, and it is the path
-to use for anything new.
+This is how `oci.garvey.sh`, `jellyfin.garvey.sh`, and `temporal.garvey.sh` get their certs.
+Since the Cloudflare issuer was retired (2026-08-10) it is the **only** in-cluster path —
+every `Certificate` uses `letsencrypt-acmedns-prod`.
 
 acme-dns (`acme.garvey.sh`) holds **one account per hostname**. Each account can only
 write the TXT record under its own random subdomain, so a leaked account cannot touch any
@@ -33,8 +33,9 @@ other name. A `_acme-challenge.<host>` CNAME in Cloudflare points at that random
 subdomain, which is what makes Let's Encrypt's DNS-01 lookup land somewhere the account is
 allowed to write.
 
-The point of the indirection: **no Cloudflare credentials ever reach a service**, and no
-zone edits happen at renewal time. The one-time CNAME is the only Cloudflare change.
+The point of the indirection: **no Cloudflare credential exists in the cluster at all**, and
+no zone edits happen at renewal time. The one-time CNAME is the only Cloudflare change, made
+by hand with an operator-supplied token.
 
 Two consequences worth internalising:
 
@@ -50,14 +51,7 @@ Full step-by-step onboarding, including the gotchas that can orphan an account, 
 `k8s-gitops/manifests/acme-dns/ONBOARDING.md`. Don't improvise it — acme-dns has no
 lookup-by-name, so a lost registration response is unrecoverable.
 
-### 2. cert-manager via Cloudflare
-
-`letsencrypt-prod` solves DNS-01 with a Cloudflare API token directly
-(`cloudflare-api-token` secret). It still exists and works, but it puts a zone-wide
-credential in the cluster, which is exactly what the acme-dns path avoids. Prefer
-acme-dns for new certificates.
-
-### 3. Home Assistant issues its own
+### 2. Home Assistant issues its own
 
 HA runs HAOS, not NixOS, so cert-manager cannot deliver a cert to it. Instead HA's Let's
 Encrypt add-on does DNS-01 itself using **RFC2136 dynamic update against our own Knot**
@@ -80,7 +74,7 @@ Knot's zone is loaded from the Nix store and never written back
 dynamic TXT updates — `zonefile-load = "difference"` plus `journal-content = "changes"` is
 what keeps an in-flight challenge from being wiped by an unrelated config reload.
 
-### 4. Tailscale Ingress
+### 3. Tailscale Ingress
 
 The default for HTTP UIs that don't need a public name: `opencloud`, `anki`, `couchdb`,
 `authentik`, `grafana`, and jellyfin's UI. Tailscale terminates TLS with its own cert for
