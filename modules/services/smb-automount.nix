@@ -41,10 +41,10 @@ domain=WORKGROUP
   ];
 
   systemd.mounts = [{
-    what = "//lydia.home.garvey.sh/media";
+    what = "//smb.home.garvey.sh/media";
     where = "/shares/media";
     type = "cifs";
-    options = lib.concatStringsSep "," (mountOptions ++ [ "ip=10.28.12.110" ]);
+    options = lib.concatStringsSep "," mountOptions;
     mountConfig = {
       TimeoutStopSec = "5";
     };
