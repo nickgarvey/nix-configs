@@ -18,7 +18,9 @@
 
   # mongodb (unifi dependency) fails to build on current nixpkgs pin —
   # cheetah3 metadata check breaks under python 3.14. Re-enable once a
-  # flake update picks up the upstream fix.
+  # flake update picks up the upstream fix. The DNS record and DHCP option 43
+  # that pointed clients at the controller were removed while it is down;
+  # modules/containers/unifi.nix documents everything needed to restore them.
   homelab.unifi.enable = false;
 
   services.icmpv6-archive = {

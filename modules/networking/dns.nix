@@ -24,7 +24,6 @@ in rec {
     # Peer-to-peer RPC does not use this — see modules/containers/garage.nix.
     garage        = { v4 = []; v6 = [ "2001:470:482f:200::2" "2001:470:482f:201::2" ]; };
     storj-gateway = { v4 = [ "10.28.0.3" ]; v6 = [ "2001:470:482f:300::2" ]; };
-    unifi         = { v4 = [ "10.28.0.4" ]; v6 = []; };
     k3s-api       = { v4 = []; v6 = map hostV6 [ "fus" "ro" "dah" ]; };
     # trmnl-display keeps A+AAAA: the ESP32 client is IPv4-only and hits an
     # IPv4→IPv6 proxy at 10.28.0.2. The AAAA is for dual-stack clients.

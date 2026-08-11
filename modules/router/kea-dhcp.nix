@@ -36,9 +36,6 @@ in
               { name = "routers";            data = cfg.lanAddress; }
               { name = "domain-name-servers"; data = cfg.lanAddress; }
               { name = "domain-name";         data = cfg.domain; }
-              # UniFi inform URL (DHCP option 43, suboption 01): 10.28.0.4
-              # See modules/containers/unifi.nix.
-              { name = "vendor-encapsulated-options"; data = "01:04:0a:1c:00:04"; csv-format = false; }
             ];
             reservations = map (host: {
               hw-address = host.mac;
