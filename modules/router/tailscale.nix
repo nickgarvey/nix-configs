@@ -10,6 +10,7 @@
       ];
       extraSetFlags = [
         "--advertise-exit-node"
+        "--advertise-routes=2001:470:482f::/48"
         "--accept-dns=false"
       ];
     };
