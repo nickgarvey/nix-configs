@@ -10,6 +10,7 @@
     ../../modules/containers/frigate.nix
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
+    ../../modules/virtualisation/incus.nix
     ../../modules/nix/nix-remote-builder-client.nix
     ../../modules/services/fancontrol.nix
   ];
@@ -141,64 +142,11 @@
     "d /mnt/fast-root/.snapshots 0700 root root - -"
   ];
 
-  users.users.ngarvey.extraGroups = [ "incus-admin" ];
-  virtualisation.incus = {
+  homelab.incus = {
     enable = true;
-    ui.enable = true;
-    preseed = {
-      config = {
-        "core.https_address" = ":8443";
-      };
-      storage_pools = [
-        {
-          name = "default";
-          driver = "btrfs";
-          config = {
-            source = "/fast/incus";
-          };
-        }
-      ];
-    };
+    storageSource = "/fast/incus";
+    adminUsers = [ "ngarvey" ];
   };
-
-  # Incus VMs are created/destroyed dynamically, so their uptime can't be
-  # hardcoded per-VM like the microvm-smb metric above — enumerate whatever's
-  # actually running at collection time instead.
-  homelab.metrics.sources.incus_vm_uptime = {
-    type = "exec";
-    mode = "scheduled";
-    scheduled.exec_interval_secs = 60;
-    decoding.codec = "json";
-    command = [
-      "${pkgs.bash}/bin/bash"
-      "-c"
-      # Wrapped in an array (not one object per line) so a zero-VM result is
-      # still valid JSON (`[]`) instead of empty stdout, which the decoder
-      # below can't parse. Vector's json codec expands a top-level array into
-      # one event per element.
-      # started_at has fractional-second precision (like incus's created_at),
-      # which jq's fromdateiso8601 can't parse — strip it before converting.
-      # HOME must point somewhere writable: the incus CLI needs to create
-      # ~/.config/incus for its client cert on first run, but vector's
-      # systemd DynamicUser has no home directory by default.
-      ''HOME=/var/lib/vector ${pkgs.incus}/bin/incus list --format json | ${pkgs.jq}/bin/jq -c '[.[] | select(.type=="virtual-machine" and .status=="Running") | {name: .name, uptime: ((now|floor) - (.state.started_at | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601))}]' ''
-    ];
-  };
-  homelab.metrics.transforms.incus_vm_uptime_metric = {
-    type = "log_to_metric";
-    inputs = [ "incus_vm_uptime" ];
-    metrics = [{
-      type = "gauge";
-      field = "uptime";
-      name = "incus_vm_uptime_seconds";
-      tags = {
-        vm = "{{ name }}";
-        hostname = "lydia";
-      };
-    }];
-  };
-  # Vector needs Incus API access to enumerate VMs for incus_vm_uptime above.
-  systemd.services.vector.serviceConfig.SupplementaryGroups = [ "incus-admin" ];
 
   microvm-smb = {
     hostBridge = "vmbr0";
