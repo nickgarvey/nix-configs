@@ -10,24 +10,19 @@
 # the bucket to a local dir and bind-mounting it (loadFormat = "local").
 #
 # The container runs in its own network namespace with a real, directly
-# routable IPv6 address in talos's delegated /64 (2001:470:482f:201::/64,
-# shared with the garage container) — a veth pair into vmbr0, the same
-# mechanism the garage nspawn container uses for LAN presence. No NAT, no
-# host port publish: the container is reachable directly at its own address.
+# routable IPv6 address (homelab.vllm.address) in the host's delegated /64 —
+# a veth pair into the configured bridge, the same mechanism the garage nspawn
+# container uses for LAN presence. No NAT, no host port publish: the container
+# is reachable directly at its own address.
 
 let
   cfg = config.homelab.vllm;
 
   vllmUnit = "${config.virtualisation.oci-containers.containers.vllm.serviceName}.service";
 
-  # talos's delegated /64 (see hosts/talos/configuration.nix's
-  # homelab.network.bridge.ipv6.extraAddresses and
-  # modules/router/lan-ipv6.nix). Shared with the garage container (::2);
-  # vLLM takes ::3.
   netnsName = "vllm";
   vethHost = "veth-vllm-h";
   vethCtr = "veth-vllm-c";
-  containerAddress = "2001:470:482f:201::3";
 
   s3Uri = "s3://${cfg.bucket}/${cfg.model}";
   localPath = "${cfg.localModelsDir}/${cfg.model}";
@@ -65,6 +60,24 @@ in
       # streamer bundled, native Qwen3.6 support (vLLM >= 0.17).
       default = "docker.io/vllm/vllm-openai@sha256:6d8429e38e3747723ca07ee1b17972e09bb9c51c4032b266f24fb1cc3b22ed8f";
       description = "Container image (pinned by digest) to run.";
+    };
+
+    bridge = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        Host bridge the container's veth is attached to, giving it LAN
+        presence (e.g. "vmbr0" as set by homelab.network.bridge.name).
+      '';
+    };
+
+    address = lib.mkOption {
+      type = lib.types.str;
+      description = ''
+        IPv6 address the container listens on, from the host's delegated /64
+        (the one carried on `bridge` via
+        homelab.network.bridge.ipv6.extraAddresses). Treated as on-link in that
+        /64 — the prefix length is appended by this module.
+      '';
     };
 
     model = lib.mkOption {
@@ -122,7 +135,7 @@ in
       message = "homelab.vllm requires virtualisation.podman.enable = true.";
     }];
 
-    # No networking.firewall rule needed: vmbr0 is a trusted interface
+    # No networking.firewall rule needed: the LAN bridge is a trusted interface
     # (modules/networking/networkd.nix) and vLLM's netns is reached directly
     # at its own address, not via a port published on talos's own addresses.
 
@@ -155,11 +168,11 @@ in
     # equivalent of nspawn's bridge attachment. Every step tolerates
     # re-running (idempotent across rebuilds/restarts).
     systemd.services.vllm-netns = {
-      description = "Create the netns/veth network for vLLM (bridged onto vmbr0)";
+      description = "Create the netns/veth network for vLLM (bridged onto ${cfg.bridge})";
       wantedBy = [ "multi-user.target" ];
       before = [ vllmUnit ];
-      after = [ "sys-subsystem-net-devices-vmbr0.device" ];
-      wants = [ "sys-subsystem-net-devices-vmbr0.device" ];
+      after = [ "sys-subsystem-net-devices-${cfg.bridge}.device" ];
+      wants = [ "sys-subsystem-net-devices-${cfg.bridge}.device" ];
       path = [ pkgs.iproute2 pkgs.procps ];
       serviceConfig = {
         Type = "oneshot";
@@ -171,7 +184,7 @@ in
             ip link add ${vethHost} type veth peer name ${vethCtr}
             ip link set ${vethCtr} netns ${netnsName}
           }
-          ip link set ${vethHost} master vmbr0
+          ip link set ${vethHost} master ${cfg.bridge}
           ip link set ${vethHost} up
           if ip netns exec ${netnsName} ip link show ${vethCtr} &>/dev/null; then
             ip netns exec ${netnsName} ip link set ${vethCtr} name eth0
@@ -179,9 +192,9 @@ in
           # autoconf=0: keep only our static address, no second SLAAC'd one.
           # accept_ra stays on (kernel default; set explicitly for clarity)
           # so eth0 learns on-link prefixes and RA-advertised routes exactly
-          # like any other host on vmbr0 (including the site /48 route from
-          # modules/router/lan-ipv6.nix) — a hand-rolled static route via
-          # talos's own vmbr0 address looks equivalent but is NOT: talos
+          # like any other host on the bridge (including the site /48 route from
+          # modules/router/lan-ipv6.nix) — a hand-rolled static route via the
+          # host's own bridge address looks equivalent but is NOT: the host
           # treats the whole main-LAN /64 as on-link and answers NDP for it
           # directly rather than forwarding, which silently breaks delivery
           # to LAN hosts actually reached via the router. accept_ra_rt_info_max_plen
@@ -194,7 +207,7 @@ in
           ip netns exec ${netnsName} sysctl -qw net.ipv6.conf.eth0.accept_ra_rt_info_max_plen=64
           ip netns exec ${netnsName} ip link set lo up
           ip netns exec ${netnsName} ip link set eth0 up
-          ip netns exec ${netnsName} ip -6 addr replace ${containerAddress}/64 dev eth0
+          ip netns exec ${netnsName} ip -6 addr replace ${cfg.address}/64 dev eth0
         '';
       };
     };

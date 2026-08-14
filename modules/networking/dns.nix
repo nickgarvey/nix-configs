@@ -28,9 +28,6 @@ in rec {
     # trmnl-display keeps A+AAAA: the ESP32 client is IPv4-only and hits an
     # IPv4→IPv6 proxy at 10.28.0.2. The AAAA is for dual-stack clients.
     trmnl-display = { v4 = [ "10.28.0.2" ]; v6 = [ "2001:470:482f:2::5" ]; };
-    # vLLM's own address in its dedicated netns on talos (modules/llms/vllm.nix)
-    # — not talos's own address, IPv6-only.
-    llm           = { v4 = []; v6 = [ "2001:470:482f:201::3" ]; };
   };
 
   # CNAMEs (targets are FQDNs with trailing dot).

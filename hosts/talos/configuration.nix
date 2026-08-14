@@ -9,7 +9,6 @@
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/nix/nix-binary-cache.nix
     ../../modules/nix/temporal-nix-builder.nix
-    ../../modules/llms/vllm.nix
     ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops
   ];
@@ -41,10 +40,10 @@
     # suppressSlaac stops networkd adding a second, dynamic LAN-/64 address
     # on top of it.
     ipv6.suppressSlaac = true;
-    # tarrasque (garage container) and the vLLM netns both live in the
-    # delegated 2001:470:482f:201::/64. Carry that /64's gateway on vmbr0 so
-    # both containers' next-hops resolve and the router's on-link route for
-    # the /64 (modules/router/lan-ipv6.nix) NDP-resolves to us.
+    # tarrasque (the garage container) lives in the delegated
+    # 2001:470:482f:201::/64. Carry that /64's gateway on vmbr0 so its next-hop
+    # resolves and the router's on-link route for the /64
+    # (modules/router/lan-ipv6.nix) NDP-resolves to us.
     ipv6.extraAddresses = [ "2001:470:482f:201::1/64" ];
   };
 
@@ -63,41 +62,6 @@
     capacity = "1T";
     replicationFactor = 2;
     peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@[2001:470:482f:200::2]:3901" ];
-  };
-
-  # vLLM inference server (official OCI image, run via podman) serving Qwen3.6-27B NVFP4 on
-  # the single RTX 5090 (32 GB). The model is synced from the garage llm-models
-  # S3 bucket to local disk (loadFormat = "local"), which the MTP speculative
-  # decode draft loader requires. NVFP4 weights (~20 GB, incl. quantized
-  # linear-attn layers) run on the 5090's sm_120 FP4 tensor cores;
-  # compressed-tensors nvfp4 is auto-detected. The v0.23.0 image is cu130 +
-  # flashinfer + modelopt_fp4.
-  homelab.vllm = {
-    enable = true;
-    model = "Qwen3.6-27B-NVFP4";
-    loadFormat = "local";
-    extraArgs = [
-      # Single request at a time: captures only batch-size-1 CUDA graphs,
-      # keeping startup memory low.
-      "--max-num-seqs" "1"
-      # 240K context at gpu-memory-utilization 0.97. The BF16 MTP head
-      # (~0.85 GiB) eats KV headroom, so the full 262K doesn't fit with
-      # speculative decode on; 245760 is the practical max.
-      "--max-model-len" "245760"
-      "--gpu-memory-utilization" "0.97"
-      "--kv-cache-dtype" "fp8_e4m3"
-      "--reasoning-parser" "qwen3"
-      "--enable-auto-tool-choice"
-      "--tool-call-parser" "qwen3_xml"
-      # MTP speculative decoding via the checkpoint's BF16 MTP head
-      # (~80% draft acceptance, ~1.9x decode).
-      "--speculative-config" ''{"method":"mtp","num_speculative_tokens":3}''
-      # Log the effective sampling params of each request (INFO level logs
-      # params only, not prompt or output). max-log-len 0 redacts the prompt
-      # even if DEBUG logging is ever enabled.
-      "--enable-log-requests"
-      "--max-log-len" "0"
-    ];
   };
 
   networking = {
