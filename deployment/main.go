@@ -18,6 +18,7 @@ type CLIArgs struct {
 	Force  bool
 	Self   bool
 	Build  bool
+	Local  bool
 }
 
 // hostsFlagUsage renders the -hosts help text from AllHosts so the documented
@@ -41,6 +42,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 	force := fs.Bool("force", false, "Skip safety pre-checks (e.g. active print on printer hosts)")
 	self := fs.Bool("self", false, "Deploy to the host running this command (equivalent to -hosts $(hostname))")
 	build := fs.Bool("build", false, "Only build configurations for the selected hosts; do not deploy or activate anything")
+	local := fs.Bool("local", false, "Build on this machine instead of offloading to the remote build host ("+BuildHost+")")
 	if err := fs.Parse(argv); err != nil {
 		return CLIArgs{}, err
 	}
@@ -72,7 +74,7 @@ func parseArgs(argv []string) (CLIArgs, error) {
 			}
 		}
 	}
-	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force, Self: *self, Build: *build}, nil
+	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force, Self: *self, Build: *build, Local: *local}, nil
 }
 
 func main() {
@@ -99,19 +101,24 @@ func main() {
 
 	runner := ExecRunner{}
 
-	// Pre-flight: verify build host (talos) is reachable. We always offload.
-	fmt.Printf("Checking build host %s is reachable...\n", BuildHost)
-	probeCtx, cancel := WithTimeout(15 * time.Second)
-	probe := runner.Run(probeCtx, []string{
-		"ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-		BuildHost, "true",
-	}, RunOpts{})
-	cancel()
-	if probe.Failed() {
-		fmt.Fprintf(os.Stderr, "✗ Build host %s unreachable. Aborting.\n", BuildHost)
-		os.Exit(1)
+	// Pre-flight: verify the build host is reachable. Skipped under --local,
+	// where nothing is offloaded.
+	if args.Local {
+		fmt.Printf("Building locally (--local): not offloading to %s\n\n", BuildHost)
+	} else {
+		fmt.Printf("Checking build host %s is reachable...\n", BuildHost)
+		probeCtx, cancel := WithTimeout(15 * time.Second)
+		probe := runner.Run(probeCtx, []string{
+			"ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+			BuildHost, "true",
+		}, RunOpts{})
+		cancel()
+		if probe.Failed() {
+			fmt.Fprintf(os.Stderr, "✗ Build host %s unreachable. Aborting (use --local to build here).\n", BuildHost)
+			os.Exit(1)
+		}
+		fmt.Printf("✓ Build host %s reachable\n\n", BuildHost)
 	}
-	fmt.Printf("✓ Build host %s reachable\n\n", BuildHost)
 
 	names := make([]string, len(hosts))
 	for i, h := range hosts {
@@ -123,7 +130,7 @@ func main() {
 		fmt.Println("Mode: build-only (no deploy)")
 		var failed []string
 		for _, h := range hosts {
-			if !BuildOnly(runner, h) {
+			if !BuildOnly(runner, h, args.Local) {
 				failed = append(failed, h.Name)
 			}
 		}
@@ -143,6 +150,7 @@ func main() {
 	ctx := &DeployContext{
 		Runner:     runner,
 		RebootFlag: args.Reboot,
+		LocalBuild: args.Local,
 		Prompter:   stdinPrompter,
 		Warnings:   &warnings,
 	}

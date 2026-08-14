@@ -148,3 +148,14 @@ func TestHostsFlagUsageListsRealDefaults(t *testing.T) {
 		}
 	}
 }
+
+func TestParseArgsLocal(t *testing.T) {
+	def, err := parseArgs(nil)
+	if err != nil || def.Local {
+		t.Fatalf("default Local should be false, got %+v err=%v", def, err)
+	}
+	got, err := parseArgs([]string{"--local"})
+	if err != nil || !got.Local {
+		t.Fatalf("--local should set Local=true, got %+v err=%v", got, err)
+	}
+}

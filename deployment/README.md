@@ -46,6 +46,7 @@ nix run .#deploy -- --hosts ro
 | `--mode` | `safe` \| `switch` \| `boot` | `safe` | See modes below. |
 | `--reboot` | `never` \| `auto` \| `always` \| `ask` | `never` | See reboot table below. `--mode boot` accepts only `never` and `always`. |
 | `--force` | flag | false | Skip safety pre-checks (e.g. active print on printer hosts). |
+| `--local` | flag | false | Build on this machine instead of offloading to `talos`. Drops `--build-host` and skips the build-host reachability pre-flight; the closure is pushed to the target from here. Use when `talos` is down or is itself the target. |
 
 ### Modes
 
