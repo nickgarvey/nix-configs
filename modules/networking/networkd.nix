@@ -83,7 +83,7 @@ in
               beyond the host's main-LAN address from lan-hosts.nix. Used by a
               host that owns a delegated per-host /64 for its nspawn
               containers: put the delegation's gateway address here (e.g.
-              "2001:470:482f:201::1/64") so the container's hostBridgeAddress
+              "2001:470:482f:200::1/64") so the container's hostBridgeAddress
               next-hop lives on the bridge and the router's on-link route for
               the /64 (modules/router/lan-ipv6.nix) NDP-resolves to this host.
             '';

@@ -9,7 +9,6 @@
     ../../modules/icmpv6-archive/sops.nix
     ../../modules/nix/nix-binary-cache.nix
     ../../modules/nix/temporal-nix-builder.nix
-    ../../modules/containers/garage.nix
     inputs.sops-nix.nixosModules.sops
   ];
 
@@ -23,12 +22,8 @@
   services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
-  # Required so the garage container (on vmbr0) can route to its peer's
-  # delegated /64 — crosses interfaces, needs IPv6 forwarding.
-  homelab.network.ipv6Forward = true;
 
-  # Bridge for the garage nspawn container to get LAN access (IPv6 auto-derived
-  # from lan-hosts.nix). Mirrors lydia's setup.
+  # Bridge over the LAN interface (IPv6 auto-derived from lan-hosts.nix).
   homelab.network.bridge = {
     name = "vmbr0";
     interface = "enp14s0";
@@ -40,28 +35,14 @@
     # suppressSlaac stops networkd adding a second, dynamic LAN-/64 address
     # on top of it.
     ipv6.suppressSlaac = true;
-    # tarrasque (the garage container) lives in the delegated
-    # 2001:470:482f:201::/64. Carry that /64's gateway on vmbr0 so its next-hop
-    # resolves and the router's on-link route for the /64
-    # (modules/router/lan-ipv6.nix) NDP-resolves to us.
-    ipv6.extraAddresses = [ "2001:470:482f:201::1/64" ];
   };
 
+  # Retired garage node (tarrasque). Kept mounted while its data is still a
+  # second copy of the cluster that now runs only on lydia.
   fileSystems."/fast/garage" = {
     device = "/dev/disk/by-label/fast";
     fsType = "btrfs";
     options = [ "compress=zstd" "subvol=@garage" "nofail" ];
-  };
-
-  nspawn.garage = {
-    hostBridge = "vmbr0";
-    localAddress6 = "2001:470:482f:201::2/64";
-    hostBridgeAddress = "2001:470:482f:201::1";
-    dataPath = "/fast/garage";
-    hostname = "tarrasque";
-    capacity = "1T";
-    replicationFactor = 2;
-    peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@[2001:470:482f:200::2]:3901" ];
   };
 
   networking = {

@@ -51,11 +51,14 @@ in
       type = lib.types.int;
       default = 2;
       description = ''
-        Garage replication factor. Must match the cluster's persisted RF —
-        garage refuses to start on mismatch. To migrate an existing RF=1
-        cluster to RF=2: first deploy with this set to 1 on both hosts,
-        join the second node, run `garage layout config -r 2`, then bump
-        this to 2 and redeploy.
+        Garage replication factor. Must match the RF persisted in the
+        cluster layout — garage refuses to start on mismatch, and there is
+        no online command to change it (`garage layout config -r` sets zone
+        redundancy, a different parameter). Changing RF means rebuilding the
+        layout: stop every node, delete `meta/cluster_layout` on each,
+        redeploy with the new value, then let the layout be assigned afresh.
+        A layout also cannot have fewer capacity-carrying nodes than the RF,
+        so shrinking the cluster below the RF requires the same procedure.
       '';
     };
 
