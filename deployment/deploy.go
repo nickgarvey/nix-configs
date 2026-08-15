@@ -40,16 +40,7 @@ type DeployContext struct {
 	Prompter   func(string) bool // for ask-mode reboots; nil = decline
 	Now        func() time.Time  // for watchdog unit name; nil = time.Now
 	RebootFlag RebootFlag
-	LocalBuild bool // build here instead of offloading to BuildHost
 	Warnings   *[]string
-}
-
-// buildHostArgs is the nixos-rebuild offload flag, empty when building locally.
-func buildHostArgs(local bool) []string {
-	if local {
-		return nil
-	}
-	return []string{"--build-host", BuildHost}
 }
 
 func (c *DeployContext) sleep(d time.Duration) {
@@ -94,11 +85,7 @@ func Deploy(ctx *DeployContext, host Host, mode Mode) bool {
 // watchdog we only call switch-to-configuration directly on the known system
 // path — no nix eval, no closure transfer.
 func deploySafe(ctx *DeployContext, host Host) bool {
-	where := BuildHost
-	if ctx.LocalBuild {
-		where = "this machine"
-	}
-	fmt.Printf("\n  [1/9] Building on %s and copying closure to target...\n", where)
+	fmt.Println("\n  [1/9] Building and copying closure to target...")
 	systemPath, ok := buildAndCopy(ctx, host)
 	if !ok {
 		return false
@@ -187,13 +174,10 @@ func deployUnsafe(ctx *DeployContext, host Host, nrMode string) bool {
 		"nixos-rebuild", nrMode,
 		"--flake", ".#" + host.FlakeName,
 		"--target-host", host.FQDN(),
-	}
-	argv = append(argv, buildHostArgs(ctx.LocalBuild)...)
-	argv = append(argv,
 		"--use-substitutes",
 		"--sudo",
 		"--no-reexec",
-	)
+	}
 	res := ctx.Runner.Run(cctx, argv, RunOpts{Stream: true})
 	if res.Failed() {
 		fmt.Printf("  ✗ nixos-rebuild %s failed\n", nrMode)
@@ -224,9 +208,8 @@ func deployUnsafe(ctx *DeployContext, host Host, nrMode string) bool {
 
 // BuildOnly builds a host's configuration without touching the target: no
 // closure copy, no activation, no persist. Used by --build to verify that every
-// selected host still evaluates and compiles. With local set, the build runs
-// here instead of on BuildHost.
-func BuildOnly(runner Runner, host Host, local bool) bool {
+// selected host still evaluates and compiles.
+func BuildOnly(runner Runner, host Host) bool {
 	fmt.Printf("\n%s\n", strings.Repeat("=", 60))
 	fmt.Printf("Building %s\n", host.Name)
 	fmt.Printf("%s\n", strings.Repeat("=", 60))
@@ -236,12 +219,9 @@ func BuildOnly(runner Runner, host Host, local bool) bool {
 	argv := []string{
 		"nixos-rebuild", "build",
 		"--flake", ".#" + host.FlakeName,
-	}
-	argv = append(argv, buildHostArgs(local)...)
-	argv = append(argv,
 		"--use-substitutes",
 		"--no-reexec",
-	)
+	}
 	if res := runner.Run(cctx, argv, RunOpts{Stream: true}); res.Failed() {
 		fmt.Printf("  ✗ build for %s failed\n", host.Name)
 		return false
@@ -250,27 +230,22 @@ func BuildOnly(runner Runner, host Host, local bool) bool {
 	return true
 }
 
-// buildAndCopy runs `nixos-rebuild build --build-host talos --target-host
-// <host> --use-substitutes`. This evaluates+builds on talos and has the
-// target pull the closure from talos's harmonia substituter, populating
-// the target's nix store BEFORE we arm the watchdog. Returns the system path.
-//
-// Under --local the build happens here and the closure is pushed to the target
-// from this machine instead; the pre-watchdog placement is the same.
+// buildAndCopy runs `nixos-rebuild build --target-host <host>
+// --use-substitutes`. The build happens on this machine; the target pulls what
+// it can from public substituters and the rest is pushed over SSH. Either way
+// the target's nix store is populated BEFORE we arm the watchdog. Returns the
+// system path.
 func buildAndCopy(ctx *DeployContext, host Host) (string, bool) {
 	cctx, cancel := WithTimeout(30 * time.Minute) // builds can be slow
 	defer cancel()
 	argv := []string{
 		"nixos-rebuild", "build",
 		"--flake", ".#" + host.FlakeName,
-	}
-	argv = append(argv, buildHostArgs(ctx.LocalBuild)...)
-	argv = append(argv,
 		"--target-host", host.FQDN(),
 		"--use-substitutes",
 		"--sudo",
 		"--no-reexec",
-	)
+	}
 	if res := ctx.Runner.Run(cctx, argv, RunOpts{Stream: true}); res.Failed() {
 		fmt.Printf("  ✗ build for %s failed\n", host.FQDN())
 		return "", false

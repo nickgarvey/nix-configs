@@ -56,14 +56,6 @@ creation_rules:
       - *wabbajack
       - *dovahkiin
       - *lydia
-  - path_regex: secrets/nix-builder.yaml
-    key_groups:
-    - age:
-      - *ngarvey
-      - *workstation
-      - *dovahkiin
-      - *wabbajack
-      - *lydia
   - path_regex: secrets/storj-gateway.yaml
     key_groups:
     - age:

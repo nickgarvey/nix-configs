@@ -5,7 +5,7 @@ Go rewrite of the NixOS deploy orchestrator. Replaces `scripts/deploy.py`.
 ## What it does
 
 Deploys NixOS configs to managed hosts using a watchdog-protected flow:
-build on `talos`, pre-copy the closure to the target, arm a
+build locally, pre-copy the closure to the target, arm a
 `systemd-run` reboot timer, activate via `switch-to-configuration test`,
 verify connectivity + system path, persist via `switch-to-configuration boot`,
 disarm. If anything between arm and disarm fails (network breakage,
@@ -46,7 +46,6 @@ nix run .#deploy -- --hosts ro
 | `--mode` | `safe` \| `switch` \| `boot` | `safe` | See modes below. |
 | `--reboot` | `never` \| `auto` \| `always` \| `ask` | `never` | See reboot table below. `--mode boot` accepts only `never` and `always`. |
 | `--force` | flag | false | Skip safety pre-checks (e.g. active print on printer hosts). |
-| `--local` | flag | false | Build on this machine instead of offloading to `talos`. Drops `--build-host` and skips the build-host reachability pre-flight; the closure is pushed to the target from here. Use when `talos` is down or is itself the target. |
 
 ### Modes
 
@@ -86,10 +85,10 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 |---|---|---|---|---|
 | fus / ro / dah | 10–12 | ✓ | ✓ | SSH + IPv6 gateway ping |
 | wabbajack | 20 | – | ✓ | SSH + gateway ping |
-| talos | 21 | – | ✓ | also the build host; SSH + gateway ping |
+| talos | 21 | – | ✓ | SSH + gateway ping |
 | lydia | 30 | – | ✓ | SSH + gateway ping |
 | dovahkiin | 40 | – | opt-in | only deploys when named explicitly |
-| skyforge | 50 | – | ✓ | aarch64; built via talos binfmt; printer idle pre-check |
+| skyforge | 50 | – | ✓ | aarch64; needs binfmt on the deploying machine; printer idle pre-check |
 | dragonsreach | 99 | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
 
 ### Printer pre-check (skyforge)
@@ -101,7 +100,7 @@ moonraker to check if a print is active. If the printer is busy, the host is
 ## Safe deploy flow
 
 ```
-1. Build on talos + copy closure to target   ─┐ pre-watchdog
+1. Build locally + copy closure to target    ─┐ pre-watchdog
 2. Stop stale deploy-watchdog-* + nixos-rebuild   │ (slow OK)
    units from prior runs                          ─┘
 3. Arm watchdog (systemd-run, 2 min)              ─┐
@@ -123,7 +122,7 @@ stability).
 
 ### Why we don't use `nixos-rebuild test` / `nixos-rebuild boot` under the watchdog
 
-`nixos-rebuild` re-evals on talos and re-checks the closure on every
+`nixos-rebuild` re-evals and re-checks the closure on every
 invocation. The build at step 1 already populated the target's nix store
 (via `--target-host` + `--use-substitutes`), so we can call
 `switch-to-configuration` directly on the known store path. This keeps the

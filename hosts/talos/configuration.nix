@@ -7,8 +7,6 @@
     ../../modules/networking/networkd.nix
     ../../modules/icmpv6-archive
     ../../modules/icmpv6-archive/sops.nix
-    ../../modules/nix/nix-binary-cache.nix
-    ../../modules/nix/temporal-nix-builder.nix
     inputs.sops-nix.nixosModules.sops
   ];
 
@@ -73,16 +71,6 @@
 
   zramSwap.enable = true;
 
-  services.temporalNixBuilder.enable = true;
-
-  services.nixBinaryCache = {
-    enable = true;
-    signingKeySopsFile = ../../secrets/nix-builder.yaml;
-    authorizedKeys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJNvgPFo276pFe75SimIDp5JwKrIhSzD+ypRzt4GArzZ nix-builder"
-    ];
-  };
-
   # resolved handles split-DNS: Tailscale pushes its nameservers for ts.net
   # domains, while DHCP-provided DNS is used for everything else.
   services.resolved = {
@@ -102,8 +90,6 @@
   };
 
   boot = {
-    binfmt.emulatedSystems = [ "aarch64-linux" ];
-
     kernelPackages = pkgs.linuxPackages_latest;
 
     loader.systemd-boot.enable = true;

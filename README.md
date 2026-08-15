@@ -36,7 +36,7 @@ Services running on that cluster are found in the [k8s-gitops](https://github.co
 
 ### Big Servers
 
-`talos` has a 9950x3d and RTX 5090. This runs LLMs, performs Nix builds for other hosts, and serves the Nix cache.
+`talos` has a 9950x3d and RTX 5090. This runs LLMs.
 
 `lydia` has 128GB of DDR4 ECC RAM, so it acts as a storage/VM server.
 

@@ -31,11 +31,6 @@ type Host struct {
 	ConnChecks     []ConnCheck
 }
 
-// BuildHost is the remote builder every deploy offloads to unless --local is
-// passed. aarch64 targets (skyforge) build via talos's binfmt emulation.
-// Centralised here so a future move would be one constant.
-const BuildHost = "talos"
-
 func (h Host) FQDN() string {
 	if h.SSHAddress != "" {
 		return h.SSHAddress

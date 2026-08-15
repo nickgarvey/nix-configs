@@ -395,50 +395,26 @@ func (p *probeFailRunner) Run(_ context.Context, argv []string, _ RunOpts) RunRe
 	return RunResult{}
 }
 
-// --local drops the --build-host offload flag from every nixos-rebuild call.
-func TestLocalBuildOmitsBuildHost(t *testing.T) {
+// Every build runs on this machine, so no nixos-rebuild call may offload.
+func TestBuildsNeverOffload(t *testing.T) {
 	host := AllHosts[1] // ro
 	host.K8sHealthCheck = false
 
 	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
-	ctx := testCtx(fake)
-	ctx.LocalBuild = true
-	if !Deploy(ctx, host, ModeSafe) {
+	if !Deploy(testCtx(fake), host, ModeSafe) {
 		t.Fatal("expected success")
 	}
-	for _, c := range fake.CallsContaining("nixos-rebuild") {
-		if strings.Contains(strings.Join(c, " "), "--build-host") {
-			t.Errorf("--local call still offloads: %s", CallString(c))
+
+	buildFake := &FakeRunner{}
+	if !BuildOnly(buildFake, host) {
+		t.Fatal("expected success")
+	}
+
+	for _, f := range []*FakeRunner{fake, buildFake} {
+		for _, c := range f.CallsContaining("nixos-rebuild") {
+			if strings.Contains(strings.Join(c, " "), "--build-host") {
+				t.Errorf("call still offloads: %s", CallString(c))
+			}
 		}
-	}
-
-	// Without it, the offload flag is present.
-	fake2 := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
-	ctx2 := testCtx(fake2)
-	if !Deploy(ctx2, host, ModeSafe) {
-		t.Fatal("expected success")
-	}
-	if len(fake2.CallsContaining("nixos-rebuild", "--build-host "+BuildHost)) == 0 {
-		t.Error("default deploy should offload to the build host")
-	}
-}
-
-func TestBuildOnlyLocalOmitsBuildHost(t *testing.T) {
-	host := AllHosts[1]
-
-	fake := &FakeRunner{}
-	if !BuildOnly(fake, host, true) {
-		t.Fatal("expected success")
-	}
-	if len(fake.CallsContaining("--build-host")) != 0 {
-		t.Error("BuildOnly(local=true) should not offload")
-	}
-
-	fake2 := &FakeRunner{}
-	if !BuildOnly(fake2, host, false) {
-		t.Fatal("expected success")
-	}
-	if len(fake2.CallsContaining("--build-host "+BuildHost)) == 0 {
-		t.Error("BuildOnly(local=false) should offload")
 	}
 }

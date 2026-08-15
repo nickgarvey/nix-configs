@@ -26,14 +26,6 @@ in
     ./hardware-configuration.nix
   ];
 
-  services.nixRemoteBuilderClient = {
-    enable = true;
-    hostName = "talos";
-    cachePublicKey = "desktop-nixos-cache:dwK3Z7fL5Kfd3AMiWJhkKI1hSh5M8mm5nGeYeG2mSdE=";
-    hostPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPZcTP3OJYZenl8bb9fC9NTIvFCOaxs2gi1Mz4OhAByw";
-    sshKeySopsFile = ../../secrets/nix-builder.yaml;
-  };
-
   services.icmpv6-archive.enable = true;
 
   # The Arctis Nova Pro Wireless's hardware mic-mute reaches OS-level mute,
@@ -75,6 +67,8 @@ in
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+
+  boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
   # AMD Strix Halo iGPU configuration for large LLM models
   # https://github.com/kyuz0/amd-strix-halo-vllm-toolboxes/
