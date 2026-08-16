@@ -23,6 +23,8 @@
     # PCIe ASPM leaves the RTX 5090's link in a low-power state the driver
     # trips over; keep the link out of L0s/L1 entirely.
     kernelParams = [ "pcie_aspm=off" ];
+
+    binfmt.emulatedSystems = [ "aarch64-linux" ];
   };
 
   hardware.nvidia = {
