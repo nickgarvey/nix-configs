@@ -1,4 +1,4 @@
-{ config, lib, pkgs, modulesPath, ... }:
+{ config, lib, pkgs, inputs, modulesPath, ... }:
 
 {
   imports = [
@@ -44,6 +44,7 @@
     curl
     smartmontools
     lshw
+    inputs.disko.packages.${pkgs.stdenv.hostPlatform.system}.disko
   ];
 
   # Ephemeral live system — no point running GC or optimise timers
