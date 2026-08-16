@@ -20,6 +20,8 @@ in
     ../core/nixos-common.nix
     ./printer.nix
     ./orca-slicer.nix
+    ./steam.nix
+    ./opencloud-desktop.nix
     ../services/smb-automount.nix
     ../home/ngarvey.nix
     ../llms/hf-to-garage.nix

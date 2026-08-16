@@ -6,10 +6,8 @@
     ../../modules/desktop/common-workstation.nix
     ../../modules/desktop/niri.nix
     ../../modules/networking/network-manager.nix
-    ../../modules/desktop/steam.nix
     ../../modules/nix/nix-remote-builder-client.nix
     ../../modules/desktop/upower-overlay.nix
-    ../../modules/desktop/opencloud-desktop.nix
   ];
 
   # pi reads its env file as the ngarvey user, so the secret must be owned by it.

@@ -16,9 +16,7 @@ in
     ../../modules/desktop/common-workstation.nix
     ../../modules/core/nixos-common.nix
     ../../modules/networking/network-manager.nix
-    ../../modules/desktop/steam.nix
     ../../modules/desktop/niri.nix
-    ../../modules/desktop/opencloud-desktop.nix
     ../../modules/desktop/mic-mute.nix
     ../../modules/nix/nix-remote-builder-client.nix
     ./hardware-configuration.nix
@@ -37,20 +35,6 @@ in
 
   # Add Xbox dongle firmware (append to existing firmware, don't replace)
   hardware.firmware = [ xone-dongle-firmware ];
-
-  # ASUS XG27UQDMS (4K 240Hz OLED), direct-connected on DP-2. niri otherwise
-  # auto-picks the 60Hz "preferred" mode, so pin the full rate. VRR is on-demand:
-  # it only engages for windows opted in via a window-rule (see the mpv rule in
-  # configs/niri.kdl), which avoids OLED gamma flicker on the desktop.
-  homelab.niri.outputs = ''
-    output "DP-2" {
-        mode "3840x2160@240.000"
-        scale 1.5
-        transform "normal"
-        variable-refresh-rate on-demand=true
-        position x=0 y=0
-    }
-  '';
 
   systemd.services.vector.environment.VECTOR_LOG = "warn,vector=debug";
 
