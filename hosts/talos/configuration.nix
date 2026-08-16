@@ -39,19 +39,11 @@
   services.xserver.videoDrivers = [ "nvidia" ];
 
   homelab.niri.outputs = ''
-    output "DP-4" {
+    output "ASUSTek COMPUTER INC XG27UQDMS W3LMAV000673" {
         mode "3840x2160@240.000"
         scale 1.5
         position x=0 y=0
         variable-refresh-rate
-    }
-
-    output "DP-1" {
-        off
-    }
-
-    output "HDMI-A-1" {
-        off
     }
   '';
 
