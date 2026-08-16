@@ -68,9 +68,17 @@ this is negligible.
 
 - `modules/router/default.nix` — br-lan config, has a short TODO
   referencing this file.
-- `modules/icmpv6-archive/` — ICMPv6 packet capture, enabled on all
-  hosts. Ships rotating tcpdump pcaps to garage S3 (bucket `icmpv6`).
-  This is where to look when re-deriving any of the above.
+- Re-deriving any of the above needs an ICMPv6 capture on the router:
+
+  ```
+  tcpdump -i br-lan -s 512 -nn -p -U -w /tmp/icmpv6.pcap \
+    '(icmp6 or (ip6[6] == 0 and ip6[40] == 58))'
+  ```
+
+  The second clause matters: libpcap's `icmp6` only matches an outer
+  next-header of 58, but MLD (types 130-132, 143) carries a Hop-by-Hop
+  Router Alert option, so its ICMPv6 header sits after the 8-byte HbH
+  header and `icmp6` alone drops exactly the packets in question.
 - Earlier PROBLEM.txt analysis in `ndp-debug/` is **superseded**: it
   asserted `MulticastQuerier=true` was a no-op because the bridge
   wasn't actually querying. Capture shows the bridge *does* query every

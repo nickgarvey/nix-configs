@@ -5,8 +5,6 @@
     ./hardware-configuration.nix
     ../../modules/core/nixos-common.nix
     ../../modules/networking/networkd.nix
-    ../../modules/icmpv6-archive
-    ../../modules/icmpv6-archive/sops.nix
     inputs.sops-nix.nixosModules.sops
   ];
 
@@ -16,8 +14,6 @@
   nixpkgs.config.cudaSupport = true;
 
   time.timeZone = "America/Los_Angeles";
-
-  services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
 

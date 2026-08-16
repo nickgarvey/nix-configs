@@ -5,14 +5,10 @@
     ../../modules/k3s/kata.nix
     ../../modules/core/nixos-common.nix
     ../../modules/services/ha-cert-probe.nix
-    ../../modules/icmpv6-archive
-    ../../modules/icmpv6-archive/sops.nix
     ./hardware-configuration.nix
   ];
 
   networking.hostName = "fus";
-
-  services.icmpv6-archive.enable = true;
 
   # Prevent unused secondary NIC from being created
   services.udev.extraRules = ''

@@ -16,7 +16,6 @@ narrowest matching subdir; create a new one only when you have ≥2 related file
 | `router/` | Router subsystem (nftables, DHCP, DNS, IPv6 tunnel, NAT64). Exposes a `default.nix` — import the directory. |
 | `containers/` | systemd-nspawn container definitions. Common networking lives in `common.nix`. |
 | `microvm/` | MicroVM guest definitions. |
-| `icmpv6-archive/` | ICMPv6 packet archiver service + SOPS secrets. Exposes a `default.nix` — import the directory. |
 
 ## Imports
 
@@ -30,8 +29,8 @@ imports = [
 ];
 ```
 
-No `default.nix` aggregators — except `router/` and `icmpv6-archive/`, which
-intentionally expose one. Hosts opt in to each module explicitly.
+No `default.nix` aggregators — except `router/`, which intentionally exposes
+one. Hosts opt in to each module explicitly.
 
 ## Host `configuration.nix` structure
 

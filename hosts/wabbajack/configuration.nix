@@ -16,8 +16,6 @@ in
     ../../modules/desktop/common-workstation.nix
     ../../modules/core/nixos-common.nix
     ../../modules/networking/network-manager.nix
-    ../../modules/icmpv6-archive
-    ../../modules/icmpv6-archive/sops.nix
     ../../modules/desktop/steam.nix
     ../../modules/desktop/niri.nix
     ../../modules/desktop/opencloud-desktop.nix
@@ -25,8 +23,6 @@ in
     ../../modules/nix/nix-remote-builder-client.nix
     ./hardware-configuration.nix
   ];
-
-  services.icmpv6-archive.enable = true;
 
   # The Arctis Nova Pro Wireless's hardware mic-mute reaches OS-level mute,
   # which silently breaks Discord mic input until manually unmuted. autoUnmute

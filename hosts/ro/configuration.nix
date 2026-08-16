@@ -4,14 +4,10 @@
     ../../modules/k3s/k3s-common.nix
     ../../modules/k3s/kata.nix
     ../../modules/core/nixos-common.nix
-    ../../modules/icmpv6-archive
-    ../../modules/icmpv6-archive/sops.nix
     ./hardware-configuration.nix
   ];
 
   networking.hostName = "ro";
-
-  services.icmpv6-archive.enable = true;
 
   # Prevent unused secondary NIC from being created
   services.udev.extraRules = ''

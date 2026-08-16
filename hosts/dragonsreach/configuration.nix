@@ -5,8 +5,6 @@
     ./hardware-configuration.nix
     ../../modules/core/nixos-common.nix
     ../../modules/router
-    ../../modules/icmpv6-archive
-    ../../modules/icmpv6-archive/sops.nix
     ../../modules/containers/trmnl-proxy.nix
     ../../modules/containers/storj-gateway.nix
     ../../modules/containers/unifi.nix
@@ -22,11 +20,6 @@
   # that pointed clients at the controller were removed while it is down;
   # modules/containers/unifi.nix documents everything needed to restore them.
   homelab.unifi.enable = false;
-
-  services.icmpv6-archive = {
-    enable = true;
-    interface = "br-lan";
-  };
 
   routerConfig = {
     wanInterface = "enp4s0";

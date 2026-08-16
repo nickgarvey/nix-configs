@@ -5,8 +5,6 @@
     ./hardware-configuration.nix
     ../../modules/core/nixos-common.nix
     ../../modules/networking/networkd.nix
-    ../../modules/icmpv6-archive
-    ../../modules/icmpv6-archive/sops.nix
     ../../modules/containers/frigate.nix
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
@@ -14,8 +12,6 @@
     ../../modules/nix/nix-remote-builder-client.nix
     ../../modules/services/fancontrol.nix
   ];
-
-  services.icmpv6-archive.enable = true;
 
   homelab.network.enable = true;
   # Required so the garage container (on vmbr0) can route to its peer's
