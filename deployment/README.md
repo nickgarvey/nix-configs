@@ -84,7 +84,7 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 | Host | Order | k8s health | Default | Notes |
 |---|---|---|---|---|
 | fus / ro / dah | 10–12 | ✓ | ✓ | SSH + IPv6 gateway ping |
-| wabbajack | 20 | – | ✓ | SSH + gateway ping |
+| wabbajack | 20 | – | ✓ | SSH + gateway ping + IPv6 gateway ping |
 | talos | 21 | – | ✓ | SSH + gateway ping |
 | lydia | 30 | – | ✓ | SSH + gateway ping |
 | dovahkiin | 40 | – | opt-in | only deploys when named explicitly |

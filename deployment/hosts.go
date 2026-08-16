@@ -73,8 +73,8 @@ var AllHosts = []Host{
 	},
 	{
 		Name: "wabbajack", FlakeName: "wabbajack",
-		Order: 20, Groups: []string{"workstation"}, Default: true,
-		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway},
+		Order: 20, Groups: []string{"infra"}, Default: true,
+		ConnChecks: []ConnCheck{CheckSSH, CheckPingGateway, CheckPing6Gateway},
 	},
 	{
 		Name: "talos", FlakeName: "talos",

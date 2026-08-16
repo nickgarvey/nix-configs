@@ -28,6 +28,7 @@
     { hostname = "camera";        mac = "c4:3c:b0:f9:df:19"; ipv4 = "10.28.4.2";     ipv6 = null; }
     { hostname = "pocketdmg";     mac = "00:03:7f:79:64:81"; ipv4 = "10.28.1.20";    ipv6 = null; }
     { hostname = "glkvm";         mac = "94:83:c4:bb:1c:0d"; ipv4 = "10.28.9.145";   ipv6 = "2001:470:482f::9683:c4ff:febb:1c0d"; }
+    { hostname = "wabbajack";     mac = "9c:bf:0d:01:0e:95"; ipv4 = "10.28.1.10";    ipv6 = "2001:470:482f::10"; }
     { hostname = "fus";           mac = "78:55:36:00:4c:c4"; ipv4 = "10.28.15.1";    ipv6 = "2001:470:482f::21"; podCIDR = "2001:470:482f:100::/64"; }
     { hostname = "ro";            mac = "78:55:36:00:47:f2"; ipv4 = "10.28.15.2";    ipv6 = "2001:470:482f::22"; podCIDR = "2001:470:482f:104::/64"; }
     { hostname = "dah";           mac = "78:55:36:00:4d:80"; ipv4 = "10.28.15.3";    ipv6 = "2001:470:482f::23"; podCIDR = "2001:470:482f:103::/64"; }

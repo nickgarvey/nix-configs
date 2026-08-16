@@ -22,7 +22,7 @@ This is a mono-repo for all my nix settings. Here are the sections:
 | [`fus`](hosts/fus) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`ro`](hosts/ro) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`dah`](hosts/dah) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
-| [`wabbajack`](hosts/wabbajack) | Framework Desktop | AMD Ryzen AI Max+ 395 (Strix Halo) | 128 GB | Radeon 8060S iGPU | WD_BLACK SN7100 2 TB NVMe |
+| [`wabbajack`](hosts/wabbajack) | Framework Desktop | AMD Ryzen AI Max+ 395 (Strix Halo) | 128 GB | Radeon 8060S iGPU | WD_BLACK SN850X 2 TB NVMe + WD_BLACK SN7100 2 TB NVMe |
 | [`dovahkiin`](hosts/dovahkiin) | Framework Laptop 13 | AMD Ryzen AI 7 350 | 64 GB | Radeon 860M iGPU | KIOXIA 2 TB NVMe |
 | [`dragonsreach`](hosts/dragonsreach) | Topton Fanless PC| Intel N150 | 16 GB | iGPU (Alder Lake-N) | Samsung 870 QVO 1 TB SATA |
 
@@ -34,16 +34,16 @@ This is a mono-repo for all my nix settings. Here are the sections:
 
 Services running on that cluster are found in the [k8s-gitops](https://github.com/nickgarvey/k8s-gitops) repository.
 
-### Big Servers
+### Servers
 
 `lydia` has 128GB of DDR4 ECC RAM, so it acts as a storage/VM server.
+
+`wabbajack` is the 128GB model of the Framework Desktop.
 
 ### Workstations
 Workstations run [niri](https://github.com/YaLTeR/niri), a scrollable-tiling Wayland compositor, configured via [`modules/desktop/niri.nix`](modules/desktop/niri.nix) and [`configs/niri.kdl`](configs/niri.kdl). Each host pins its own monitor mode/scale through the `homelab.niri.outputs` option.
 
 `talos` is the big desktop: 9950X3D and an RTX 5090, on a 500GB OS drive plus a 4TB btrfs carrying `/nix`, `/home` and `/var`.
-
-`wabbajack` is the 128GB model of the Framework Desktop. LLM performance was underwhelming, so it serves as a general workstation instead.
 
 `dovahkiin` is a AMD Ryzen AI 7 350 mainboard laptop with 64GB RAM I got off eBay. Eager to upgrade to a Panther Lake mainboard but going to wait for RAM to come down.
 

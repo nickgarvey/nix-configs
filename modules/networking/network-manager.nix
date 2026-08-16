@@ -11,8 +11,8 @@
 # AAAA and DHCP reservation stay valid. Cluster routes (pods/LB/delegated /64s)
 # are learned from the router's RFC 4191 2001:470:482f::/48 route-info RA — see
 # modules/router/lan-ipv6.nix — so none are configured here. Hosts with no
-# lan-hosts entry (e.g. dovahkiin, wabbajack) just SLAAC + DHCP with no wired
-# profile, reachable via Tailscale.
+# lan-hosts entry (e.g. dovahkiin) just SLAAC + DHCP with no wired profile,
+# reachable via Tailscale.
 
 let
   inherit (import ./lan-hosts.nix) lanHosts;
