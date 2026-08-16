@@ -1,4 +1,6 @@
 { lib, ... }:
+# Small OS disk holds /boot and /; the 4TB carries the bulk filesystems as
+# btrfs subvolumes.
 {
   disko.devices = {
     disk = {
@@ -29,10 +31,9 @@
         };
       };
 
-      # 2TB SN850X intentionally NOT declared — left as the staging btrfs
-      # (passive backup of pre-migration state). Will be added in a
-      # separate change when ready to use.
-
+      # Adding a subvolume later takes two steps: declare it here, and create
+      # it live with `btrfs subvolume create` — `nixos-rebuild` never re-runs
+      # disko's format mode.
       data4tb = {
         device = "/dev/disk/by-id/nvme-CT4000T705SSD3_2506E9A5D504";
         type = "disk";

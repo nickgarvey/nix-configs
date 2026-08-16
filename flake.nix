@@ -100,7 +100,7 @@
 
     # These are all NixOS configurations
     nixosConfigurations = {
-      # Desktop
+      # Workstation (MSI X870E / 9950X3D / RTX 5090)
       talos = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
         modules = [

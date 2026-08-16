@@ -17,7 +17,7 @@ This is a mono-repo for all my nix settings. Here are the sections:
 
 | Host | Machine | CPU | RAM | GPU | Primary storage |
 |------|---------|-----|-----|-----|-----------------|
-| [`talos`](hosts/talos) | MSI PRO X870E-P WIFI | AMD Ryzen 9 9950X3D | 64 GB | NVIDIA RTX 5090 | WD_BLACK SN850X 2 TB NVMe |
+| [`talos`](hosts/talos) | MSI PRO X870E-P WIFI | AMD Ryzen 9 9950X3D | 64 GB | NVIDIA RTX 5090 | Kingston SNV2S 500 GB NVMe + Crucial T705 4 TB NVMe |
 | [`lydia`](hosts/lydia) | ASRock Industrial IMB-X1314 | Intel i5-12600K | 128 GB | iGPU (UHD 770) | Samsung 980 Pro 2 TB NVMe + 2× WDC 6 TB HDD |
 | [`fus`](hosts/fus) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`ro`](hosts/ro) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
@@ -36,12 +36,12 @@ Services running on that cluster are found in the [k8s-gitops](https://github.co
 
 ### Big Servers
 
-`talos` has a 9950x3d and RTX 5090. This runs LLMs.
-
 `lydia` has 128GB of DDR4 ECC RAM, so it acts as a storage/VM server.
 
 ### Workstations
 Workstations run [niri](https://github.com/YaLTeR/niri), a scrollable-tiling Wayland compositor, configured via [`modules/desktop/niri.nix`](modules/desktop/niri.nix) and [`configs/niri.kdl`](configs/niri.kdl). Each host pins its own monitor mode/scale through the `homelab.niri.outputs` option.
+
+`talos` is the big desktop: 9950X3D and an RTX 5090, on a 500GB OS drive plus a 4TB btrfs carrying `/nix`, `/home` and `/var`.
 
 `wabbajack` is the 128GB model of the Framework Desktop. LLM performance was underwhelming, so it serves as a general workstation instead.
 
