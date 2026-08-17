@@ -15,7 +15,6 @@
   homelab.network.ipv6Forward = true;
 
   sops.defaultSopsFormat = "yaml";
-  sops.age.keyFile = "/root/.config/sops/age/keys.txt";
 
   # Bridge for the garage nspawn container to get LAN access (IPv6 auto-derived
   # from lan-hosts.nix). Mirrors lydia's setup.
