@@ -159,11 +159,9 @@
     hostBridgeAddress = "2001:470:482f:200::1";
     dataPath = "/fast/garage";
     hostname = "aboleth";
-    # Sized to the NVMe's free space, not the 1T advertised when the cluster
-    # was spread over two hosts.
-    capacity = "700G";
-    replicationFactor = 1;
-    peers = [ ];
+    capacity = "1.5T";
+    replicationFactor = 2;
+    peers = [ "40f0b39cd07b4d6a915d99b9a7382ba8d375445c6bb995c13da92e8c9f507c5c@[2001:470:482f:202::2]:3901" ];
   };
 
   nspawn.frigate = {

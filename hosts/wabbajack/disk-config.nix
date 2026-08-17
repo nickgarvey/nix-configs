@@ -37,14 +37,16 @@
         };
       };
 
-      # Whole-disk btrfs scratch space. Formatted empty and left unmounted;
-      # nothing on the host depends on it yet.
+      # Whole-disk btrfs holding the garage S3 node's data.
+      # The @garage subvolume is created here for a fresh install; the mount
+      # itself lives in configuration.nix, by-label, matching lydia.
       fast = {
         device = "/dev/disk/by-id/nvme-WD_BLACK_SN7100_2TB_25173X802585";
         type = "disk";
         content = {
           type = "btrfs";
           extraArgs = [ "-f" "-L" "fast" ];
+          subvolumes."@garage" = { };
         };
       };
     };

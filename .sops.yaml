@@ -18,6 +18,7 @@ creation_rules:
     - age:
       - *ngarvey
       - *lydia
+      - *wabbajack
       - *workstation
   # llm-models: dedicated garage S3 key for the LLM model store.
   #   - dovahkiin + wabbajack run the hf-to-garage upload tool and present

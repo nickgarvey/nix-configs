@@ -20,8 +20,9 @@ in rec {
     dragonsreach  = { v4 = [ "10.28.0.1" ];    v6 = [ "2001:470:482f::1" ]; };
     frigate       = { v4 = [ "10.28.12.109" ]; v6 = []; };
     smb           = { v4 = [ "10.28.12.110" ]; v6 = [ "2001:470:482f::14" ]; };
-    # The single garage node, in lydia's delegated /64.
-    garage        = { v4 = []; v6 = [ "2001:470:482f:200::2" ]; };
+    # Both garage nodes. Clients round-robin; any node serves the whole S3 API.
+    # Peer-to-peer RPC does not use this — see modules/containers/garage.nix.
+    garage        = { v4 = []; v6 = [ "2001:470:482f:200::2" "2001:470:482f:202::2" ]; };
     storj-gateway = { v4 = [ "10.28.0.3" ]; v6 = [ "2001:470:482f:300::2" ]; };
     k3s-api       = { v4 = []; v6 = map hostV6 [ "fus" "ro" "dah" ]; };
     # trmnl-display keeps A+AAAA: the ESP32 client is IPv4-only and hits an

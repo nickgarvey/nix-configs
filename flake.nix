@@ -139,6 +139,7 @@
         modules = [
           disko.nixosModules.disko
           nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
+          sops-nix.nixosModules.sops
           ./hosts/wabbajack/configuration.nix
           ./hosts/wabbajack/disk-config.nix
         ];

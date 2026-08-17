@@ -24,8 +24,8 @@ in
         # shadowed by that ECMP and break reply paths. The LB subnet is
         # made on-link for the router via the interface route below.
         #
-        # Router-side container delegated /64. Mirrors lydia (200::/64):
-        # the router's bridge address acts as
+        # Router-side container delegated /64. Mirrors lydia (200::/64) and
+        # wabbajack (202::/64): the router's bridge address acts as
         # the /48 next-hop for nspawn containers running on the router
         # (storj-gateway, trmnl-proxy, …).
         "2001:470:482f:300::1/64"
@@ -57,10 +57,11 @@ in
       # Kernel routes:
       #   - podRoutes (one /64 per k3s node) — return traffic from HE
       #     tunnel reaches the correct k3s node.
-      #   - lydia's delegated /64 — on-link on br-lan; NDP resolves to
-      #     the host's vmbr0.
+      #   - Per-host delegated /64s (lydia, wabbajack) — on-link on
+      #     br-lan; NDP resolves to the host's vmbr0.
       routes = podRoutes ++ [
         { Destination = "2001:470:482f:200::/64"; }  # lydia delegated /64
+        { Destination = "2001:470:482f:202::/64"; }  # wabbajack delegated /64
         # 300::/64 is on-link via the router's own address above; no
         # explicit route needed here (kernel installs it from the addr).
         # Cilium LB pool — on-link via br-lan so the router can
