@@ -32,8 +32,12 @@ in
       ];
       networkConfig.IPv6SendRA = true;
       ipv6SendRAConfig = {
-        Managed = false;        # SLAAC
-        OtherInformation = true; # Clients query DHCPv6 for DNS info
+        Managed = false;         # SLAAC
+        # RDNSS/DNSSL carry the resolver in the RA itself. No DHCPv6 server
+        # runs on this LAN, so OtherInformation stays false.
+        OtherInformation = false;
+        DNS = [ "${heCfg.routedPrefix}1" ];
+        Domains = [ cfg.domain ];
         # Advertise only the main LAN /64 for SLAAC — NOT the full /48.
         # Don't install this router as default IPv6 gateway.
         # HE tunnel broker prefixes are frequently flagged by Google et al.

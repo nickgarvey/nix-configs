@@ -64,7 +64,6 @@ in
             # by the forward chain (pod-CIDR sources permitted via the
             # general LAN→LAN pod-src rule below), not input.
 
-            iifname "${cfg.lanInterface}" udp dport { 546, 547 } accept
             iifname "${cfg.lanInterface}" icmp type echo-request accept
             iifname "${cfg.lanInterface}" icmpv6 type { echo-request, nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit, nd-router-advert } accept
 
