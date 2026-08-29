@@ -36,6 +36,11 @@
     package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
 
+  # Exposes the GPU to containers as the CDI device `nvidia.com/gpu=all`
+  # (`docker run --device=nvidia.com/gpu=all ...`). `--gpus all` does not work:
+  # the NixOS module wires CDI only, it installs no nvidia OCI runtime.
+  hardware.nvidia-container-toolkit.enable = true;
+
   # The RTX 5090 drives the display. xserver itself stays off (niri is a
   # Wayland compositor) — this only selects the DRM driver.
   services.xserver.videoDrivers = [ "nvidia" ];
