@@ -45,6 +45,10 @@
   # Wayland compositor) — this only selects the DRM driver.
   services.xserver.videoDrivers = [ "nvidia" ];
 
+  # The local ninfer llama server runs here (RTX 5090), so pi is given its
+  # provider and can be pointed at it. DeepSeek stays the default model.
+  homelab.pi.ninfer.enable = true;
+
   homelab.niri.outputs = ''
     output "ASUSTek COMPUTER INC XG27UQDMS W3LMAV000673" {
         mode "3840x2160@240.000"

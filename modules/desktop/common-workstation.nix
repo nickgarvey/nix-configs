@@ -26,14 +26,15 @@ in
     ../services/smb-automount.nix
     ../home/ngarvey.nix
     ../llms/hf-to-garage.nix
+    ../llms/pi.nix
     inputs.sops-nix.nixosModules.sops
-    inputs.pi-nix.nixosModules.default
   ];
-
-  programs.pi.coding-agent.enable = true;
 
   # Manual HuggingFace → garage llm-models bucket upload tool.
   homelab.hfToGarage.enable = true;
+
+  # pi coding agent for the ngarvey user.
+  homelab.pi.enable = true;
 
   # Workstation peripheral udev rules (rules for absent devices are inert).
   # Keychron: allow VIA / Keychron Launcher (WebHID) without root.

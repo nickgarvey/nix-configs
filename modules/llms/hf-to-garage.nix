@@ -12,7 +12,7 @@
 # s3://llm-models/<repo-basename>/ — the layout vLLM's run:ai streamer expects.
 #
 # Lives in modules/llms/ but is wired in via modules/desktop/common-workstation.nix
-# so every workstation (not talos) gets it. Credentials come from the dedicated
+# so every workstation gets it. Credentials come from the dedicated
 # `llm-models` garage key in secrets/llm-models.yaml, rendered to a sops template
 # owned by `ngarvey` so the (non-root) user running the tool can read it.
 

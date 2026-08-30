@@ -44,11 +44,13 @@ creation_rules:
     - age:
       - *ngarvey
       - *k3s
+  # deepseek: the API key pi uses. `workstation` is the identity both
+  # workstations present, so one recipient covers talos and dovahkiin.
   - path_regex: secrets/deepseek.yaml
     key_groups:
     - age:
       - *ngarvey
-      - *dovahkiin
+      - *workstation
   - path_regex: secrets/smb-credentials.yaml
     key_groups:
     - age:
