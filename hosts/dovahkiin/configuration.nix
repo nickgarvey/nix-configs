@@ -8,6 +8,7 @@
     ../../modules/networking/network-manager.nix
     ../../modules/nix/nix-remote-builder-client.nix
     ../../modules/desktop/upower-overlay.nix
+    ../../modules/desktop/rtl-sdr.nix
   ];
 
   # pi reads its env file as the ngarvey user, so the secret must be owned by it.
