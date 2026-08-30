@@ -385,7 +385,8 @@
         "nixpkgs": "nixpkgs_3",
         "pi-nix": "pi-nix",
         "sops-nix": "sops-nix",
-        "temporal-workflows": "temporal-workflows"
+        "temporal-workflows": "temporal-workflows",
+        "thinkrail": "thinkrail"
       }
     },
     "sops-nix": {
@@ -471,6 +472,28 @@
       "original": {
         "owner": "nickgarvey",
         "repo": "temporal-workflows",
+        "type": "github"
+      }
+    },
+    "thinkrail": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "thinkrail",
+        "lastModified": 1788060703,
+        "narHash": "sha256-kR6+p/efz9f5IGdtS4S9ck2p/Njsjz4DCfnvoz/z19o=",
+        "owner": "nickgarvey",
+        "repo": "homelab-nixpkgs",
+        "rev": "20dd70df5b50814c386c1d9a6578e1151ef112fd",
+        "type": "github"
+      },
+      "original": {
+        "dir": "thinkrail",
+        "owner": "nickgarvey",
+        "repo": "homelab-nixpkgs",
         "type": "github"
       }
     },

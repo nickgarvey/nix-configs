@@ -5,6 +5,7 @@ let
     helium-browser-pkg = inputs.helium-browser.packages.${pkgs.stdenv.hostPlatform.system}.default;
   };
   claude-code = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  thinkrail = inputs.thinkrail.packages.${pkgs.stdenv.hostPlatform.system}.thinkrail;
   anki-with-sync = pkgs.symlinkJoin {
     name = "anki-with-sync";
     paths = [ (pkgs.anki.withAddons (with pkgs.ankiAddons; [ anki-connect ])) ];
@@ -116,6 +117,7 @@ in
       mpv
       obsidian
       spotify
+      thinkrail
       virt-viewer
       wl-clipboard
     ];

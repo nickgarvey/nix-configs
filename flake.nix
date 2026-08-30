@@ -45,6 +45,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # ThinkRail, packaged in the homelab-nixpkgs repo.
+    thinkrail = {
+      url = "github:nickgarvey/homelab-nixpkgs?dir=thinkrail";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
 
     # Cartographer V3 klipper plugin (the current/active one — newer than
