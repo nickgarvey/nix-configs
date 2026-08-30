@@ -151,10 +151,9 @@ in
         message = ''
           homelab.audio.micMute expired on 2026-11-01: it is a temporary
           workaround plus diagnostic scaffolding for the Arctis mic-mute fault.
-          Either the cause was found (delete modules/desktop/mic-mute.nix and
-          its import and enable lines in hosts/wabbajack/configuration.nix), or
-          it was not and the deadline in that module needs pushing out
-          deliberately.
+          Either the cause was found (delete modules/desktop/mic-mute.nix, which
+          no host imports any more), or it was not and the deadline in that
+          module needs pushing out deliberately.
         '';
       }];
     })

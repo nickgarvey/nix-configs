@@ -27,7 +27,7 @@
       xdg.configFile."nvim/init.lua".source = ../../configs/nvim/init.lua;
     }
 
-    # niri-specific home config, only on hosts that run niri (e.g. wabbajack).
+    # niri-specific home config, only on hosts that run niri (talos, dovahkiin).
     (lib.mkIf config.programs.niri.enable {
       # niri compositor config, managed verbatim from the repo. It is run
       # through `niri validate` at build time, so a syntax error fails
