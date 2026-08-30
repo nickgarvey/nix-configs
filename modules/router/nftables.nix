@@ -203,6 +203,23 @@ in
           }
         '';
       };
+
+      # RA guard on the physical LAN ports.
+      #
+      # The router advertises RouterLifetimeSec = 0 (see lan-ipv6.nix), so
+      # there is no legitimate default-gateway RA on this LAN and nothing
+      # else here should be sending RAs at all. That also means any device
+      # that emits one wins uncontested for every client on the segment,
+      # so drop them at the edge.
+      ra_guard = {
+        family = "netdev";
+        content = lib.concatMapStrings (dev: ''
+          chain ra_guard_${dev} {
+            type filter hook ingress device "${dev}" priority 0; policy accept;
+            icmpv6 type { nd-router-advert, nd-redirect } drop
+          }
+        '') cfg.lanInterfaces;
+      };
     };
   };
 }
