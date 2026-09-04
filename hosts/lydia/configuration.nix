@@ -161,6 +161,7 @@
     hostname = "aboleth";
     capacity = "1.5T";
     replicationFactor = 2;
+    tls.enable = true;
     peers = [ "40f0b39cd07b4d6a915d99b9a7382ba8d375445c6bb995c13da92e8c9f507c5c@[2001:470:482f:202::2]:3901" ];
   };
 

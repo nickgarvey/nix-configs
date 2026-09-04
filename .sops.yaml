@@ -20,6 +20,19 @@ creation_rules:
       - *lydia
       - *wabbajack
       - *workstation
+  # garage-acme: the TSIG key for the garage nodes' DNS-01 challenges.
+  #   - dragonsreach serves the zone, so knot-auth needs the same key to
+  #     validate the updates (modules/containers/knot-auth.nix).
+  #   - lydia + wabbajack run lego. Every garage node holds this key; the Knot
+  #     ACL is scoped to the one owner name they all write, not to a host, so
+  #     adding a node is just another recipient here.
+  - path_regex: secrets/garage-acme.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *dragonsreach
+      - *lydia
+      - *wabbajack
   # llm-models: dedicated garage S3 key for the LLM model store.
   #   - dovahkiin + wabbajack present their own host keys; dovahkiin runs the
   #     hf-to-garage upload tool, wabbajack retains access from when it did.

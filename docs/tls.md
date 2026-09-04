@@ -15,7 +15,7 @@ owns cert-manager, acme-dns, and the services themselves.
 | Path | Names | Issued by | Config |
 |---|---|---|---|
 | cert-manager + acme-dns | `*.garvey.sh` | Let's Encrypt, DNS-01 | `k8s-gitops/manifests/cert-manager/cluster-issuer-acmedns-{prod,staging}.yaml` |
-| On-box certbot | `homeassistant.home.garvey.sh` | Let's Encrypt, DNS-01 via RFC2136 | HAOS itself; TSIG ACL in `modules/containers/knot-auth.nix` |
+| On-box ACME | `homeassistant.home.garvey.sh`, `garage.home.garvey.sh` | Let's Encrypt, DNS-01 via RFC2136 | HAOS itself / `security.acme` on lydia + wabbajack; TSIG ACLs in `modules/containers/knot-auth.nix` |
 | Tailscale | `*.bigeye-turtle.ts.net` | Tailscale | `ingressClassName: tailscale` on the Ingress |
 
 Kubernetes' own internal PKI (apiserver, kubelet, etcd, Cilium) is separate from all of
@@ -51,28 +51,64 @@ Full step-by-step onboarding, including the gotchas that can orphan an account, 
 `k8s-gitops/manifests/acme-dns/ONBOARDING.md`. Don't improvise it — acme-dns has no
 lookup-by-name, so a lost registration response is unrecoverable.
 
-### 2. Home Assistant issues its own
+### 2. On-box ACME against our own Knot
 
-HA runs HAOS, not NixOS, so cert-manager cannot deliver a cert to it. Instead HA's Let's
-Encrypt add-on does DNS-01 itself using **RFC2136 dynamic update against our own Knot**
-server.
+For the two things cert-manager cannot deliver a cert to — Home Assistant, which runs HAOS
+rather than NixOS, and garage, which runs in nspawn containers on lydia and wabbajack — the
+box issues its own cert with DNS-01 by **RFC2136 dynamic update against our own Knot**.
 
-The interesting part is the ACL in `modules/containers/knot-auth.nix`. The TSIG key handed
-to HA is scoped to a single owner name and a single record type:
+The interesting part is the ACLs in `modules/containers/knot-auth.nix`. Every TSIG key
+handed out is scoped to a single owner name and a single record type:
 
 ```
 update-owner-name = [ "_acme-challenge.homeassistant.home.garvey.sh." ]
 update-type       = [ "TXT" ]
 ```
 
-So compromising the HA box cannot repoint any real record in the zone — it can only write
-TXT at that one challenge name. That scoping is what makes on-box issuance an acceptable
-substitute for routing HA through acme-dns.
+So compromising a box that holds one cannot repoint any real record in the zone — it can
+only write TXT at that one challenge name. That scoping is what makes on-box issuance an
+acceptable substitute for routing these through acme-dns. It is also why the `acme-garage`
+key can be shared by *every* garage node: the ACL is scoped to the one name they all write,
+not to a host, so adding a node is a new recipient on `secrets/garage-acme.yaml` and
+nothing else.
 
 Knot's zone is loaded from the Nix store and never written back
 (`zonefile-sync = -1`), so the zone stays reproducible in git while still accepting these
 dynamic TXT updates — `zonefile-load = "difference"` plus `journal-content = "changes"` is
 what keeps an in-flight challenge from being wiped by an unrelated config reload.
+
+**Garage's shape is worth knowing**, because the cert is issued on one machine and used on
+another. Garage speaks no TLS itself, so nginx inside the container terminates it and
+proxies to garage on the loopback; the container has no route to the internet
+(`modules/containers/common.nix` gives it no IPv6 default route and no IPv4 at all), so
+lego runs on the *host* and `/var/lib/acme/garage.home.garvey.sh` is bind-mounted in.
+nginx reads its cert at startup, so the renewal hook is a `systemctl -M garage restart
+nginx.service` from the host's acme unit.
+
+Two consequences: **each node issues its own copy** of the same name, so a cluster-wide
+first issuance spends one of Let's Encrypt's 5-per-week duplicate certificates per node
+(renewals stagger themselves and come nowhere near it); and **port 3900 stays plaintext**,
+so a failed cert degrades to what garage did before rather than taking the service down.
+Consumers move to `https://garage.home.garvey.sh` one at a time.
+
+**`dnsPropagationCheck = false` is load-bearing, not a shortcut.** lego's default
+propagation check ignores `dnsResolver`: it looks up the zone's NS (`ns1` → our WAN
+address) and queries *that*. From the LAN the `:53` DNAT does not apply — it matches on the
+WAN interface — so the query lands on blocky rather than dnsdist, and blocky's 1m negative
+cache (`modules/router/blocky-dns.nix`) outlives lego's 60s propagation timeout. This is
+the same hairpin dead end `modules/router/knot-resolver.nix` documents for
+`acme.garvey.sh`, and it fails *intermittently*: one node can win the race against the
+cache entry while the other times out with
+
+```
+propagation: time limit exceeded: last error: authoritative nameservers:
+NS ns1.home.garvey.sh.:53 returned REFUSED for _acme-challenge.garage.home.garvey.sh.
+```
+
+Nothing is lost by disabling it. Knot is the only authoritative server and its DDNS update
+is committed before lego proceeds, so there is no propagation to await; Let's Encrypt
+validates from the public internet, where the DNAT does apply. Any future on-box ACME
+client on this network needs the same setting.
 
 ### 3. Tailscale Ingress
 
@@ -193,6 +229,11 @@ key lives in XCA outside these repos.
 ---
 
 ## Adding a new public service: the short version
+
+This is the in-cluster path. A service on a NixOS host instead takes path 2 above: add a
+TSIG identity to `acmeKeys` in `modules/containers/knot-auth.nix`, a sops file holding the
+key encrypted to both dragonsreach and the host, and `security.acme` with
+`dnsProvider = "rfc2136"` — see `modules/containers/garage.nix` for a worked example.
 
 1. Register an acme-dns account and add the `_acme-challenge` CNAME in Cloudflare —
    follow `k8s-gitops/manifests/acme-dns/ONBOARDING.md` exactly.
