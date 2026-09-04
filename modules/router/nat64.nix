@@ -25,11 +25,17 @@ let
     instance = "default";
     framework = "netfilter";
     global.pool6 = "64:ff9b::/96";
-    pool4 = [
-      { protocol = "TCP";  prefix = "10.99.0.2/32"; "port range" = "1-65535"; }
-      { protocol = "UDP";  prefix = "10.99.0.2/32"; "port range" = "1-65535"; }
-      { protocol = "ICMP"; prefix = "10.99.0.2/32"; "port range" = "1-65535"; }
-    ];
+    # Jool rejects a pool4 range that overlaps the namespace's ephemeral range
+    # (net.ipv4.ip_local_port_range, 32768-60999), so straddle it instead of
+    # claiming 1-65535. ICMP's field is an identifier range rather than a port
+    # range, but it shares the number space and is validated the same way.
+    pool4 =
+      let
+        ranges = [ "1-32767" "61000-65535" ];
+        entries = protocol:
+          map (r: { inherit protocol; prefix = "10.99.0.2/32"; "port range" = r; }) ranges;
+      in
+      entries "TCP" ++ entries "UDP" ++ entries "ICMP";
   };
 in
 {
@@ -48,6 +54,16 @@ in
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
+        Restart = "on-failure";
+        RestartSec = 10;
+        # Clear any leftovers from a partial start; ExecStop never runs when
+        # ExecStart fails, and "ip netns add" on an existing namespace is fatal.
+        ExecStartPre = pkgs.writeShellScript "jool-nat64-pre" ''
+          ip netns exec nat64 jool instance remove 2>/dev/null || true
+          ip -6 route del 64:ff9b::/96 2>/dev/null || true
+          ip link del jool0 2>/dev/null || true
+          ip netns del nat64 2>/dev/null || true
+        '';
         ExecStart = pkgs.writeShellScript "jool-nat64-start" ''
           set -e
 
@@ -60,7 +76,6 @@ in
           ip addr add 10.99.0.1/30 dev jool0
           ip addr add fd99::1/126 dev jool0
           ip link set jool0 up
-          ip route add 64:ff9b::/96 via fd99::2 dev jool0
 
           # Configure namespace side
           ip netns exec nat64 ip link set lo up
@@ -75,9 +90,14 @@ in
           # Load Jool and create instance inside the namespace
           modprobe jool
           ip netns exec nat64 jool file handle ${joolConf}
+
+          # Route NAT64 traffic in only once translation is actually up, so a
+          # failed instance gives clients an unreachable rather than a blackhole.
+          ip route add 64:ff9b::/96 via fd99::2 dev jool0
         '';
         ExecStop = pkgs.writeShellScript "jool-nat64-stop" ''
           ip netns exec nat64 jool instance remove || true
+          ip -6 route del 64:ff9b::/96 || true
           ip link del jool0 || true
           ip netns del nat64 || true
         '';
