@@ -12,6 +12,10 @@
   networking = {
     hostName = "talos";
     hostId = "a4c946db";
+
+    # ThinkRail's engine host, started by hand with `thinkrail --host ::`.
+    firewall.allowedTCPPorts = [ 24242 ];
+    firewall.allowedTCPPortRanges = [ { from = 8280; to = 8289; } ];
   };
 
   boot = {

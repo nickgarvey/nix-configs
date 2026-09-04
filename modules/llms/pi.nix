@@ -1,8 +1,9 @@
 { config, lib, inputs, ... }:
 
 # pi, a terminal coding agent, wired end to end for the ngarvey user: the
-# package, its settings.json, its DeepSeek credential and — on a host that runs
-# a local inference server — the model list that makes that server selectable.
+# package, its settings.json, its hosted-LLM credentials and — on a host that
+# runs a local inference server — the model list that makes that server
+# selectable.
 #
 # Wired in via modules/desktop/common-workstation.nix, so every workstation gets
 # it. The only per-host knob is homelab.pi.ninfer.enable. The home-manager NixOS
@@ -22,8 +23,11 @@
 #     never overwrites one. After editing configs/pi/models.json, delete that file
 #     to pick the change up.
 #
-# The DeepSeek API key is the only credential managed here. pi's other providers
-# live in ~/.pi/agent/auth.json, which pi owns and nix does not touch.
+# The hosted-provider API keys in secrets/llm-api-keys.yaml are the only
+# credentials managed here: DeepSeek and Fireworks, both of which pi has a
+# built-in provider and model catalog for, so the key in the environment is all
+# they need. pi's other providers live in ~/.pi/agent/auth.json, which pi owns
+# and nix does not touch.
 
 let
   cfg = config.homelab.pi;
@@ -47,9 +51,15 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # pi reads its env file as the ngarvey user, so the secret must be owned by it.
+    # pi reads its env file as the ngarvey user, so the secrets must be owned by
+    # it.
     sops.secrets.deepseek-api-key = {
-      sopsFile = ../../secrets/deepseek.yaml;
+      sopsFile = ../../secrets/llm-api-keys.yaml;
+      owner = "ngarvey";
+    };
+
+    sops.secrets.fireworks-api-key = {
+      sopsFile = ../../secrets/llm-api-keys.yaml;
       owner = "ngarvey";
     };
 
@@ -59,6 +69,7 @@ in
       enable = true;
 
       environment.DEEPSEEK_API_KEY.file = config.sops.secrets.deepseek-api-key.path;
+      environment.FIREWORKS_API_KEY.file = config.sops.secrets.fireworks-api-key.path;
 
       models = lib.mkIf cfg.ninfer.enable ../../configs/pi/models.json;
 

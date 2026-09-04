@@ -44,9 +44,9 @@ creation_rules:
     - age:
       - *ngarvey
       - *k3s
-  # deepseek: the API key pi uses. `workstation` is the identity both
-  # workstations present, so one recipient covers talos and dovahkiin.
-  - path_regex: secrets/deepseek.yaml
+  # llm-api-keys: the hosted-LLM API keys pi uses. `workstation` is the identity
+  # both workstations present, so one recipient covers talos and dovahkiin.
+  - path_regex: secrets/llm-api-keys.yaml
     key_groups:
     - age:
       - *ngarvey
