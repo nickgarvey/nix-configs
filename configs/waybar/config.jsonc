@@ -6,7 +6,7 @@
 
     "modules-left": ["niri/workspaces", "niri/window"],
     "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "cpu", "memory", "network", "tray"],
+    "modules-right": ["pulseaudio", "cpu", "memory", "custom/seadrive", "network", "tray"],
 
     "niri/workspaces": {
         "format": "{index}"
@@ -31,6 +31,13 @@
     "memory": {
         "format": "RAM {percentage}%",
         "interval": 5
+    },
+
+    "custom/seadrive": {
+        "exec": "seadrive-status --waybar",
+        "return-type": "json",
+        "interval": 2,
+        "tooltip": true
     },
 
     "network": {

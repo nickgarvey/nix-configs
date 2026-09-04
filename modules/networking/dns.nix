@@ -30,11 +30,14 @@ in rec {
     trmnl-display = { v4 = [ "10.28.0.2" ]; v6 = [ "2001:470:482f:2::5" ]; };
     # A Caddy sidecar in the anki pod terminates TLS on 443 off this LB IP.
     anki          = { v4 = []; v6 = [ "2001:470:482f:2::5003" ]; };
+    # Same sidecar pattern for seafile; file content lives in garage S3.
+    seafile       = { v4 = []; v6 = [ "2001:470:482f:2::5004" ]; };
   };
 
   # CNAMEs (targets are FQDNs with trailing dot).
   cnames = {
     "_acme-challenge.anki" = "0a95fd7d-b7d2-4827-96df-65575900f9ac.acme.garvey.sh.";
+    "_acme-challenge.seafile" = "493e79e1-86cc-48bc-aaad-ce58ce934529.acme.garvey.sh.";
   };
 
   # Split-horizon overrides: public (garvey.sh) names answered internally with

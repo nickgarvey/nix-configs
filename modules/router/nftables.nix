@@ -6,6 +6,15 @@ let
 in
 {
   config = {
+    # `nft -c` runs in the build sandbox, where enp1s0/enp2s0/enp3s0 do not
+    # exist, and a netdev ingress chain cannot be parsed without its device
+    # ("Could not process rule: No such file or directory"). Drop just the
+    # ra_guard table before the check so the rest of the ruleset is still
+    # validated at build time.
+    networking.nftables.preCheckRuleset = ''
+      sed -i '/^table netdev ra_guard/,/^}/d' ruleset.conf
+    '';
+
     networking.nftables.tables = {
       filter = {
         family = "inet";
@@ -213,12 +222,14 @@ in
       # so drop them at the edge.
       ra_guard = {
         family = "netdev";
-        content = lib.concatMapStrings (dev: ''
-          chain ra_guard_${dev} {
-            type filter hook ingress device "${dev}" priority 0; policy accept;
-            icmpv6 type { nd-router-advert, nd-redirect } drop
-          }
-        '') cfg.lanInterfaces;
+        # Chains are indented so the only brace in column 0 is the table's own,
+        # which is what lets preCheckRuleset above excise this table cleanly.
+        content = lib.concatMapStrings (dev:
+          "  chain ra_guard_${dev} {\n"
+          + "    type filter hook ingress device \"${dev}\" priority 0; policy accept;\n"
+          + "    icmpv6 type { nd-router-advert, nd-redirect } drop\n"
+          + "  }\n"
+        ) cfg.lanInterfaces;
       };
     };
   };

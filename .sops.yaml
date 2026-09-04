@@ -51,6 +51,14 @@ creation_rules:
     - age:
       - *ngarvey
       - *workstation
+  # seadrive: per-host SeaDrive device tokens (Seafile TokenV2). One key per
+  # workstation, so unlinking a machine server-side does not log the other out.
+  # `workstation` is the identity both talos and dovahkiin present.
+  - path_regex: secrets/seadrive.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *workstation
   - path_regex: secrets/smb-credentials.yaml
     key_groups:
     - age:
