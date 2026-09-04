@@ -24,10 +24,10 @@
 #     to pick the change up.
 #
 # The hosted-provider API keys in secrets/llm-api-keys.yaml are the only
-# credentials managed here: DeepSeek and Fireworks, both of which pi has a
-# built-in provider and model catalog for, so the key in the environment is all
-# they need. pi's other providers live in ~/.pi/agent/auth.json, which pi owns
-# and nix does not touch.
+# credentials managed here: DeepSeek, Fireworks and OpenAI, all of which pi has
+# a built-in provider and model catalog for, so the key in the environment is
+# all they need. pi's other providers live in ~/.pi/agent/auth.json, which pi
+# owns and nix does not touch.
 
 let
   cfg = config.homelab.pi;
@@ -63,6 +63,11 @@ in
       owner = "ngarvey";
     };
 
+    sops.secrets.openai-api-key = {
+      sopsFile = ../../secrets/llm-api-keys.yaml;
+      owner = "ngarvey";
+    };
+
     home-manager.sharedModules = [ inputs.pi-nix.homeModules.default ];
 
     home-manager.users.ngarvey.programs.pi.coding-agent = {
@@ -70,6 +75,7 @@ in
 
       environment.DEEPSEEK_API_KEY.file = config.sops.secrets.deepseek-api-key.path;
       environment.FIREWORKS_API_KEY.file = config.sops.secrets.fireworks-api-key.path;
+      environment.OPENAI_API_KEY.file = config.sops.secrets.openai-api-key.path;
 
       models = lib.mkIf cfg.ninfer.enable ../../configs/pi/models.json;
 
