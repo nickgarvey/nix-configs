@@ -6,7 +6,7 @@
 
     "modules-left": ["niri/workspaces", "niri/window"],
     "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "cpu", "memory", "custom/seadrive", "network", "tray"],
+    "modules-right": ["pulseaudio", "cpu", "memory", "custom/juicefs", "network", "tray"],
 
     "niri/workspaces": {
         "format": "{index}"
@@ -33,10 +33,10 @@
         "interval": 5
     },
 
-    "custom/seadrive": {
-        "exec": "seadrive-status --waybar",
+    "custom/juicefs": {
+        "exec": "juicefs-status --waybar",
         "return-type": "json",
-        "interval": 2,
+        "interval": 5,
         "tooltip": true
     },
 

@@ -36,7 +36,7 @@ window#waybar {
 #cpu,
 #memory,
 #network,
-#custom-seadrive,
+#custom-juicefs,
 #pulseaudio,
 #battery,
 #tray {
@@ -69,19 +69,16 @@ window#waybar {
     color: #7fc8ff;
 }
 
-#custom-seadrive.idle {
+#custom-juicefs.idle {
     color: #909090;
 }
 
-#custom-seadrive.syncing {
+#custom-juicefs.syncing {
     color: #7fc8ff;
 }
 
-#custom-seadrive.error,
-#custom-seadrive.stopped {
+#custom-juicefs.error,
+#custom-juicefs.stopped {
     color: #ff6b6b;
 }
 
-#custom-seadrive.busy {
-    color: #ffd166;
-}

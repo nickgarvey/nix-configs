@@ -22,7 +22,7 @@ in
     ./printer.nix
     ./orca-slicer.nix
     ./steam.nix
-    ./seadrive.nix
+    ../services/juicefs.nix
     ../services/smb-automount.nix
     ../home/ngarvey.nix
     ../llms/hf-to-garage.nix
@@ -32,6 +32,9 @@ in
 
   # Manual HuggingFace → garage llm-models bucket upload tool.
   homelab.hfToGarage.enable = true;
+
+  # Shared POSIX filesystem on garage S3.
+  homelab.juicefs.enable = true;
 
   # pi coding agent for the ngarvey user.
   homelab.pi.enable = true;
