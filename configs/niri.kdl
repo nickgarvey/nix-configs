@@ -454,6 +454,10 @@ binds {
     // e.g. by double-clicking on the titlebar.
     Ctrl+Alt+Shift+Super+M { maximize-window-to-edges; }
 
+    // True fullscreen: tells the client it is fullscreen, so games and video
+    // players switch to their own fullscreen presentation path.
+    Ctrl+Alt+Shift+F { fullscreen-window; }
+
     Ctrl+Alt+Shift+Super+C { center-column; }
 
     // Finer height adjustments when in column with other windows.
