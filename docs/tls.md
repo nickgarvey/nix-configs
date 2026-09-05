@@ -15,7 +15,7 @@ owns cert-manager, acme-dns, and the services themselves.
 | Path | Names | Issued by | Config |
 |---|---|---|---|
 | cert-manager + acme-dns | `*.garvey.sh` | Let's Encrypt, DNS-01 | `k8s-gitops/manifests/cert-manager/cluster-issuer-acmedns-{prod,staging}.yaml` |
-| On-box ACME | `homeassistant.home.garvey.sh`, `garage.home.garvey.sh` | Let's Encrypt, DNS-01 via RFC2136 | HAOS itself / `security.acme` on lydia + wabbajack; TSIG ACLs in `modules/containers/knot-auth.nix` |
+| On-box ACME | `homeassistant.home.garvey.sh`, `garage.home.garvey.sh`, `storj-gateway.home.garvey.sh` | Let's Encrypt, DNS-01 via RFC2136 | HAOS itself / `security.acme` on lydia + wabbajack / `security.acme` on dragonsreach; TSIG ACLs in `modules/containers/knot-auth.nix` |
 | Tailscale | `*.bigeye-turtle.ts.net` | Tailscale | `ingressClassName: tailscale` on the Ingress |
 
 Kubernetes' own internal PKI (apiserver, kubelet, etcd, Cilium) is separate from all of
@@ -53,9 +53,10 @@ lookup-by-name, so a lost registration response is unrecoverable.
 
 ### 2. On-box ACME against our own Knot
 
-For the two things cert-manager cannot deliver a cert to — Home Assistant, which runs HAOS
-rather than NixOS, and garage, which runs in nspawn containers on lydia and wabbajack — the
-box issues its own cert with DNS-01 by **RFC2136 dynamic update against our own Knot**.
+For the things cert-manager cannot deliver a cert to — Home Assistant, which runs HAOS
+rather than NixOS, and the two S3 endpoints, which run in nspawn containers (garage on
+lydia and wabbajack, the Storj gateway on dragonsreach) — the box issues its own cert with
+DNS-01 by **RFC2136 dynamic update against our own Knot**.
 
 The interesting part is the ACLs in `modules/containers/knot-auth.nix`. Every TSIG key
 handed out is scoped to a single owner name and a single record type:
@@ -91,6 +92,34 @@ first issuance spends one of Let's Encrypt's 5-per-week duplicate certificates p
 so a failed cert degrades to what garage did before rather than taking the service down.
 Consumers move to `https://garage.home.garvey.sh` one at a time.
 
+**The Storj gateway's shape is different, and the difference is instructive.** gateway-st
+embeds minio, which reads its own certificate from `<config-dir>/certs/{public.crt,
+private.key}` — `main.go` passes `--config-dir` and no `--certs-dir`, so the certs
+directory falls out of the config directory. There is no proxy: an import unit inside the
+container copies the host-issued pair into `/var/lib/storj-gateway/minio/certs` under the
+names minio expects, and the renewal hook restarts the gateway.
+
+**The degradation is not symmetric, and that bit us.** minio serves plain HTTP when it
+finds *no* certificate, but a certificate it cannot load is fatal — it aborts at startup.
+`security.acme` always plants a minica self-signed placeholder before the first successful
+order, and minica issues P-384, which minio rejects outright (Go has no constant-time
+P-384; `storj.io/minio` `cmd/config/certs.go:102`). So a first order that fails does not
+leave the gateway on HTTP — it leaves it crash-looping. The import unit therefore checks
+the key's curve and declines to install anything minio would refuse, which is what makes
+the "falls back to HTTP" claim actually true.
+
+The cost is that minio has exactly one listener, so **port 7777 converts** rather than
+gaining a sibling: there is no plaintext port left to migrate consumers off gradually. That
+was affordable here because Mimir is the only consumer. Prefer garage's shape when a
+service has several.
+
+One more local quirk: dragonsreach runs both lego *and* the Knot it updates, so a rebuild
+restarts them together. An order that starts before knot-auth is listening dies with a
+socket-level refusal — `could not find the start of authority ... connection refused` —
+and spends a Let's Encrypt failed-validation slot. The order unit waits for the zone's SOA
+to be answered before running. The garage nodes need no such wait: they query Knot across
+the LAN, where it is already up.
+
 **`dnsPropagationCheck = false` is load-bearing, not a shortcut.** lego's default
 propagation check ignores `dnsResolver`: it looks up the zone's NS (`ns1` → our WAN
 address) and queries *that*. From the LAN the `:53` DNAT does not apply — it matches on the
@@ -112,7 +141,7 @@ client on this network needs the same setting.
 
 ### 3. Tailscale Ingress
 
-The default for HTTP UIs that don't need a public name: `opencloud`, `anki`, `couchdb`,
+The default for HTTP UIs that don't need a public name: `anki`, `couchdb`,
 `authentik`, `grafana`, and jellyfin's UI. Tailscale terminates TLS with its own cert for
 `*.bigeye-turtle.ts.net` and the name is tailnet-only. Nothing in this repo manages those
 certs.

@@ -24,6 +24,9 @@ let
   #   acme-garage        -> lego on lydia and wabbajack, one cert per node for
   #                         the shared name garage.home.garvey.sh
   #                         (modules/containers/garage.nix)
+  #   acme-storj         -> lego on dragonsreach, for the S3 gateway container
+  #                         running on that same host
+  #                         (modules/containers/storj-gateway.nix)
   acmeKeys = [
     {
       name = "acme-homeassistant";
@@ -38,6 +41,13 @@ let
       sopsName = "garage-acme-tsig";
       sopsFile = ../../secrets/garage-acme.yaml;
       sopsKey = "acme_tsig_secret";
+    }
+    {
+      name = "acme-storj";
+      owner = "_acme-challenge.storj-gateway.${domain}.";
+      sopsName = "storj-acme-tsig";
+      sopsFile = ../../secrets/dragonsreach.yaml;
+      sopsKey = "storj-acme-tsig";
     }
   ];
 

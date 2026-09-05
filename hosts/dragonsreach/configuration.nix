@@ -21,6 +21,8 @@
   # modules/containers/unifi.nix documents everything needed to restore them.
   homelab.unifi.enable = false;
 
+  nspawn.storj-gateway.tls.enable = true;
+
   routerConfig = {
     wanInterface = "enp4s0";
     wanMacAddress = "20:6d:31:ee:38:09";
