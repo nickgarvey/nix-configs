@@ -14,6 +14,11 @@
 # Blocks are uploaded concurrently, so write throughput is bounded by the link
 # and by garage rather than by a single indexing thread.
 #
+# The volume root inode is owned by ngarvey, set once by hand after
+# `juicefs format` (which leaves it root-owned). That ownership lives in the
+# metadata engine, so it applies on every host that mounts the volume and needs
+# no per-boot repair -- but reformatting the volume means redoing it.
+#
 # Lives in services/ rather than desktop/ because it is a network filesystem,
 # not a desktop feature -- same reasoning as services/smb-automount.nix, which
 # is likewise wired in from modules/desktop/common-workstation.nix.
@@ -46,8 +51,8 @@ in
       type = lib.types.str;
       default = "/home/ngarvey/local-drive";
       description = ''
-        Where the filesystem is mounted. Created by tmpfiles, since FUSE will
-        not mount onto a missing path.
+        Where the filesystem is mounted. Created by the unit ExecStartPre,
+        since FUSE will not mount onto a missing path.
 
         Living under /home means the unit needs RequiresMountsFor: /home is its
         own btrfs subvolume, and starting before it is mounted would put the
@@ -112,30 +117,31 @@ in
     let
       cacheDir = "/var/cache/juicefs";
 
-      # Read from the user definition rather than hardcoded, the same way
-      # modules/services/smb-automount.nix does it.
-      owner = config.users.users.ngarvey;
-
-      # The drive's root inode is created root-owned by `juicefs format`, which
-      # for a personal drive is just wrong. Chowning it writes to the metadata
-      # engine, so it persists and applies on every host that mounts the volume
-      # -- correct here only because uid 1000 is pinned in
-      # modules/desktop/common-workstation.nix rather than allocated per host.
+      # FUSE will not mount onto a path that does not exist, and juicefs does not
+      # create its mount point.
       #
-      # The wait is load-bearing. ExecStartPost fires as soon as the mount
-      # process has *started*, which is before FUSE has attached; chowning then
-      # would hit the bare 0555 mount point underneath and quietly undo the
-      # guard that stops writes to an unmounted drive. Only chown once the
-      # kernel agrees something is mounted there.
-      chownRoot = pkgs.writeShellScript "juicefs-chown-root" ''
-        for _ in $(seq 1 60); do
-          if ${pkgs.util-linux}/bin/mountpoint -q ${cfg.mountPoint}; then
-            exec ${pkgs.coreutils}/bin/chown ${toString owner.uid}:${owner.group} ${cfg.mountPoint}
-          fi
-          sleep 1
-        done
-        # Cosmetic only, so warn rather than failing an otherwise healthy mount.
-        echo "juicefs: ${cfg.mountPoint} never became a mountpoint; left unowned" >&2
+      # 0555 root:root is the guard, not an oversight. While the drive is
+      # mounted the mount's own root permissions apply and ngarvey has full
+      # access; while it is NOT mounted this bare directory is what is exposed,
+      # and read-only means a write fails with EACCES instead of quietly landing
+      # on the local disk. That matters in a home directory, where files get
+      # dropped in by a file manager rather than by someone who checked first.
+      #
+      # The unit is the only thing that creates this directory, deliberately.
+      # A systemd.tmpfiles `d` rule would re-apply that mode on every
+      # `systemd-tmpfiles --create` -- which a nixos-rebuild switch runs -- and
+      # tmpfiles cannot tell a bare mount point from a live mount, so a switch
+      # while mounted would stamp 0555 root:root onto the JuiceFS root itself
+      # and persist it into the metadata engine.
+      #
+      # The mountpoint check is load-bearing for Restart=on-failure: a restart
+      # that finds a stale FUSE mount still attached must not chmod the live
+      # volume root, for exactly that reason.
+      makeMountPoint = pkgs.writeShellScript "juicefs-make-mountpoint" ''
+        ${pkgs.util-linux}/bin/mountpoint -q ${cfg.mountPoint} && exit 0
+        ${pkgs.coreutils}/bin/mkdir -p ${cfg.mountPoint}
+        ${pkgs.coreutils}/bin/chown root:root ${cfg.mountPoint}
+        ${pkgs.coreutils}/bin/chmod 0555 ${cfg.mountPoint}
       '';
 
       # Reads the mount's own Prometheus endpoint: JuiceFS exposes no control
@@ -364,21 +370,7 @@ in
     {
       environment.systemPackages = [ pkgs.juicefs juicefs-status ];
 
-      # FUSE will not mount onto a path that does not exist, and juicefs does not
-      # create its mount point.
-      #
-      # 0555 root:root is the guard, not an oversight. While the drive is
-      # mounted the mount's own root permissions apply and ngarvey has full
-      # access; while it is NOT mounted this bare directory is what is exposed,
-      # and read-only means a write fails with EACCES instead of quietly landing
-      # on the local disk. That matters in a home directory, where files get
-      # dropped in by a file manager rather than by someone who checked first.
-      #
-      # The age field stays `-`: an age here would let
-      # systemd-tmpfiles-clean.timer walk into the mounted drive and delete from
-      # it.
       systemd.tmpfiles.rules = [
-        "d ${cfg.mountPoint} 0555 root root -"
         "d ${cacheDir} 0700 root root -"
       ];
 
@@ -422,6 +414,7 @@ in
             "AWS_REGION=${cfg.region}"
             "AWS_DEFAULT_REGION=${cfg.region}"
           ];
+          ExecStartPre = makeMountPoint;
           ExecStart = ''
             ${pkgs.juicefs}/bin/juicefs mount \
               --foreground \
@@ -432,7 +425,6 @@ in
               --metrics ${cfg.metricsAddr} \
               ${cfg.metaUrl} ${cfg.mountPoint}
           '';
-          ExecStartPost = "-${chownRoot}";
           # A crash otherwise leaves a stale mount that blocks the next start.
           ExecStopPost = "-/run/wrappers/bin/fusermount3 -u ${cfg.mountPoint}";
           Restart = "on-failure";
