@@ -102,7 +102,7 @@ in
 
     cacheSize = lib.mkOption {
       type = lib.types.int;
-      default = 10240;
+      default = 51200;
       description = "Local block cache budget in MiB.";
     };
 
