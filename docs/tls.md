@@ -141,7 +141,7 @@ client on this network needs the same setting.
 
 ### 3. Tailscale Ingress
 
-The default for HTTP UIs that don't need a public name: `anki`, `couchdb`,
+The default for HTTP UIs that don't need a public name: `couchdb`,
 `authentik`, `grafana`, and jellyfin's UI. Tailscale terminates TLS with its own cert for
 `*.bigeye-turtle.ts.net` and the name is tailnet-only. Nothing in this repo manages those
 certs.

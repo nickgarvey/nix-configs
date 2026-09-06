@@ -7,15 +7,6 @@ let
   claude-code = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
   codex = inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
   thinkrail = inputs.thinkrail.packages.${pkgs.stdenv.hostPlatform.system}.thinkrail;
-  anki-with-sync = pkgs.symlinkJoin {
-    name = "anki-with-sync";
-    paths = [ (pkgs.anki.withAddons (with pkgs.ankiAddons; [ anki-connect ])) ];
-    nativeBuildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      wrapProgram $out/bin/anki \
-        --set SYNC_ENDPOINT https://anki-sync-server.bigeye-turtle.ts.net/
-    '';
-  };
 in
 {
   imports = [
@@ -104,7 +95,9 @@ in
     extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" "input" "docker" ];
     packages = with pkgs; [
       android-tools # adb/fastboot for Android debugging
-      anki-with-sync
+      # Sync server: https://anki.home.garvey.sh/ (enter in Preferences → Syncing;
+      # SYNC_ENDPOINT is ignored by the desktop client).
+      (anki.withAddons (with ankiAddons; [ anki-connect ]))
       atop
       claude-code
       codex
