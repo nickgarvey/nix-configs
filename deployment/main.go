@@ -124,6 +124,22 @@ func main() {
 	fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
 	fmt.Printf("Mode: %s, Reboot: %s\n", args.Mode, args.Reboot)
 
+	// Precheck: resolve every toplevel in one eval, then probe all hosts at
+	// once. Everything decided here — unreachable, mid-print, already up to
+	// date — is decided before the first build instead of after it.
+	quiet := ExecRunner{Quiet: true}
+
+	fmt.Printf("\nResolving system paths for %d host(s) (single nix eval)...\n", len(hosts))
+	paths, err := ResolveToplevels(quiet, hosts)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Probing %d host(s)...\n", len(hosts))
+	pre := PrecheckAll(quiet, hosts, paths, args.Force)
+	printPlan(pre)
+
 	var warnings []string
 	ctx := &DeployContext{
 		Runner:     runner,
@@ -133,29 +149,42 @@ func main() {
 	}
 
 	var failed, skipped []string
-	for i, h := range hosts {
-		if h.InGroup("printer") && !args.Force {
-			idle, state, ok := CheckPrinterIdle(runner, h)
-			if !ok {
-				fmt.Printf("\n⊘ %s: moonraker unreachable, skipping (use --force to override)\n", h.Name)
-				skipped = append(skipped, h.Name)
-				continue
-			}
-			if !idle {
-				fmt.Printf("\n⊘ %s: print active (state=%s), skipping (use --force to override)\n", h.Name, state)
-				skipped = append(skipped, h.Name)
-				continue
-			}
-			fmt.Printf("\n✓ %s: printer idle (state=%s)\n", h.Name, state)
+	todo := make([]PrecheckResult, 0, len(pre))
+	for _, p := range pre {
+		switch {
+		case p.Skip && p.Failed:
+			failed = append(failed, p.Host.Name)
+		case p.Skip:
+			skipped = append(skipped, p.Host.Name)
+		default:
+			todo = append(todo, p)
 		}
-		if !Deploy(ctx, h, args.Mode) {
+	}
+
+	// A k3s node that failed the precheck aborts the run, the same way a k3s
+	// node that fails mid-deploy does today. The rolling deploy takes one node
+	// down at a time on the assumption that the other two are up; with one
+	// already unreachable, rolling a second would drop etcd quorum.
+	for _, p := range pre {
+		if p.Skip && p.Failed && p.Host.InGroup("k3s") {
+			fmt.Printf("\n✗ K3s node %s failed the precheck (%s) — not deploying anything.\n",
+				p.Host.Name, p.Reason)
+			fmt.Printf("  Rolling the remaining k3s nodes with one already down would risk quorum.\n")
+			printSummary(warnings, skipped, failed)
+			os.Exit(1)
+		}
+	}
+
+	for i, p := range todo {
+		h := p.Host
+		if !Deploy(ctx, h, args.Mode, p.Plan) {
 			failed = append(failed, h.Name)
 			if h.InGroup("k3s") {
 				fmt.Printf("\n✗ K3s rolling deploy failed at %s, stopping.\n", h.Name)
 				break
 			}
 			// No prompt if this was the last host — nothing to continue to.
-			if i == len(hosts)-1 {
+			if i == len(todo)-1 {
 				fmt.Printf("\n✗ %s failed.\n", h.Name)
 				break
 			}
@@ -165,6 +194,33 @@ func main() {
 		}
 	}
 
+	printSummary(warnings, skipped, failed)
+	if len(failed) > 0 {
+		os.Exit(1)
+	}
+	fmt.Println("\nAll hosts processed successfully!")
+}
+
+// printPlan reports what the precheck pass decided, in host order. The probes
+// themselves run concurrently, so printing here rather than inside them is what
+// keeps the output deterministic.
+func printPlan(pre []PrecheckResult) {
+	fmt.Printf("\n%s\nPlan\n%s\n", strings.Repeat("=", 60), strings.Repeat("=", 60))
+	for _, p := range pre {
+		switch {
+		case p.Skip && p.Failed:
+			fmt.Printf("  ✗ %-13s %s\n", p.Host.Name, p.Reason)
+		case p.Skip:
+			fmt.Printf("  ⊘ %-13s %s\n", p.Host.Name, p.Reason)
+		case p.Plan.UpToDate:
+			fmt.Printf("  = %-13s up to date (no build or copy)\n", p.Host.Name)
+		default:
+			fmt.Printf("  → %-13s deploy %s\n", p.Host.Name, p.Plan.SystemPath)
+		}
+	}
+}
+
+func printSummary(warnings, skipped, failed []string) {
 	fmt.Printf("\n%s\nSummary\n%s\n", strings.Repeat("=", 60), strings.Repeat("=", 60))
 	if len(warnings) > 0 {
 		fmt.Println("\nWarnings:")
@@ -177,9 +233,7 @@ func main() {
 	}
 	if len(failed) > 0 {
 		fmt.Printf("\nFailed hosts: %v\n", failed)
-		os.Exit(1)
 	}
-	fmt.Println("\nAll hosts processed successfully!")
 }
 
 func stdinPrompter(prompt string) bool {

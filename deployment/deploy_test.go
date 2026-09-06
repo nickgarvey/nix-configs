@@ -25,13 +25,13 @@ func buildOKResponses(systemPath string) []FakeResponse {
 	return []FakeResponse{
 		// SSH reachable check
 		{Match: MatchContains("echo ok"), Result: RunResult{Stdout: "ok\n"}},
-		// nix eval -> system path
-		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: systemPath}},
 		// boot default starts stale so the happy path does NOT trip the
 		// already-deployed skip (must precede the generic readlink matcher)
 		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: "/nix/store/STALE-system\n"}},
 		// readlink /run/current-system returns expected path
 		{Match: MatchContains("readlink"), Result: RunResult{Stdout: systemPath + "\n"}},
+		// Post-build system path query
+		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{Stdout: systemPath}},
 		// Kernel detection: no change
 		{Match: MatchContains("uname -r"), Result: RunResult{Stdout: "6.6.50\n"}},
 		{Match: MatchContains("kernel-modules"), Result: RunResult{Stdout: "6.6.50\n"}},
@@ -50,7 +50,7 @@ func TestSafeDeployHappyPath(t *testing.T) {
 	// k8s health: skip via removing the K8sHealthCheck field for this test
 	host.K8sHealthCheck = false
 
-	if !Deploy(ctx, host, ModeSafe) {
+	if !Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected success")
 	}
 
@@ -77,17 +77,17 @@ func TestSafeDeploySkipsIfAlreadyDeployed(t *testing.T) {
 	// path, so deploySafe should short-circuit after the build.
 	resps := []FakeResponse{
 		{Match: MatchContains("echo ok"), Result: RunResult{Stdout: "ok\n"}},
-		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: fakeSystemPath}},
 		// readlink -f /nix/var/nix/profiles/system (boot default)
 		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
 		// readlink /run/current-system (active)
 		{Match: MatchContains("readlink"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
+		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{Stdout: fakeSystemPath}},
 		{Match: func([]string) bool { return true }, Result: RunResult{}},
 	}
 	fake := &FakeRunner{Responses: resps}
 	ctx := testCtx(fake)
 
-	if !Deploy(ctx, host, ModeSafe) {
+	if !Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected success via already-deployed skip")
 	}
 
@@ -113,9 +113,9 @@ func TestSafeDeploySkipStillRebootsWhenOwed(t *testing.T) {
 	// kernel differs from the activated config, so a reboot is still owed.
 	resps := []FakeResponse{
 		{Match: MatchContains("echo ok"), Result: RunResult{Stdout: "ok\n"}},
-		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: fakeSystemPath}},
 		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
 		{Match: MatchContains("readlink"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
+		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{Stdout: fakeSystemPath}},
 		// running kernel != activated kernel -> reboot needed
 		{Match: MatchContains("uname -r"), Result: RunResult{Stdout: "6.6.50\n"}},
 		{Match: MatchContains("kernel-modules"), Result: RunResult{Stdout: "6.6.99\n"}},
@@ -125,7 +125,7 @@ func TestSafeDeploySkipStillRebootsWhenOwed(t *testing.T) {
 	ctx := testCtx(fake)
 	ctx.RebootFlag = RebootFlagAuto
 
-	if !Deploy(ctx, host, ModeSafe) {
+	if !Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected success (skip + reboot)")
 	}
 
@@ -154,7 +154,7 @@ func TestSafeDeployActivationTimeoutHostReachable(t *testing.T) {
 	fake := &FakeRunner{Responses: resps}
 	ctx := testCtx(fake)
 
-	if !Deploy(ctx, host, ModeSafe) {
+	if !Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected success via testTimedOut recovery")
 	}
 	// Must have cleared the unit a second time before persist.
@@ -183,7 +183,7 @@ func TestSafeDeployActivationFailNotReachable(t *testing.T) {
 	}
 	ctx := testCtx(wrapper)
 
-	if Deploy(ctx, host, ModeSafe) {
+	if Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected failure")
 	}
 	// Must NOT have called switch-to-configuration boot or disarmed.
@@ -210,7 +210,7 @@ func TestSafeDeployPathMismatchAborts(t *testing.T) {
 	fake := &FakeRunner{Responses: resps}
 	ctx := testCtx(fake)
 
-	if Deploy(ctx, host, ModeSafe) {
+	if Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected failure due to path mismatch")
 	}
 	// Must NOT have persisted or disarmed.
@@ -224,6 +224,63 @@ func TestSafeDeployPathMismatchAborts(t *testing.T) {
 	}
 }
 
+// The precheck eval and the build are two separate evaluations, so the flake
+// source can move between them (a dirty tree re-times inputs.self.lastModified;
+// a commit mid-run moves the rev). The path the build produced is the only one
+// that exists on the target, so everything downstream must use it.
+func TestSafeDeployPrefersBuiltPathOverPlanPath(t *testing.T) {
+	host := AllHosts[1] // ro
+	host.K8sHealthCheck = false
+
+	const planPath = "/nix/store/stale123-nixos-system-test-25.11"
+
+	resps := []FakeResponse{
+		// The post-build eval disagrees with the precheck path.
+		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{Stdout: fakeSystemPath}},
+	}
+	resps = append(resps, buildOKResponses(fakeSystemPath)...)
+	fake := &FakeRunner{Responses: resps}
+
+	if !Deploy(testCtx(fake), host, ModeSafe, Plan{SystemPath: planPath}) {
+		t.Fatal("expected success using the built path")
+	}
+
+	for _, sub := range []string{"switch-to-configuration test", "switch-to-configuration boot", "nix-env --profile"} {
+		calls := fake.CallsContaining(sub)
+		if len(calls) == 0 {
+			t.Fatalf("expected a %q call", sub)
+		}
+		for _, c := range calls {
+			joined := strings.Join(c, " ")
+			if !strings.Contains(joined, fakeSystemPath) {
+				t.Errorf("expected %q to use the built path, got %s", sub, CallString(c))
+			}
+			if strings.Contains(joined, planPath) {
+				t.Errorf("expected %q to drop the stale precheck path, got %s", sub, CallString(c))
+			}
+		}
+	}
+}
+
+// A build that succeeds but whose system path cannot be determined must fail
+// before the watchdog is armed: there is no path to activate.
+func TestSafeDeployFailsWhenPathQueryFails(t *testing.T) {
+	host := AllHosts[1]
+	host.K8sHealthCheck = false
+
+	resps := []FakeResponse{
+		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{ExitCode: 1}},
+	}
+	resps = append(resps, buildOKResponses(fakeSystemPath)...)
+	fake := &FakeRunner{Responses: resps}
+
+	if Deploy(testCtx(fake), host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
+		t.Fatal("expected failure when the system path cannot be determined")
+	}
+	if len(fake.CallsContaining("systemd-run")) > 0 {
+		t.Error("watchdog must not be armed without a known system path")
+	}
+}
 func TestSafeDeployArmFailureAbortsEarly(t *testing.T) {
 	host := AllHosts[1]
 	host.K8sHealthCheck = false
@@ -235,7 +292,7 @@ func TestSafeDeployArmFailureAbortsEarly(t *testing.T) {
 	fake := &FakeRunner{Responses: resps}
 	ctx := testCtx(fake)
 
-	if Deploy(ctx, host, ModeSafe) {
+	if Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected failure")
 	}
 	for _, c := range joinedCalls(fake) {
@@ -259,7 +316,7 @@ func TestSafeDeployPersistFailureStillDisarms(t *testing.T) {
 	fake := &FakeRunner{Responses: resps}
 	ctx := testCtx(fake)
 
-	if Deploy(ctx, host, ModeSafe) {
+	if Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected failure")
 	}
 	disarmed := false
@@ -279,7 +336,7 @@ func TestModeDispatchSwitch(t *testing.T) {
 	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
 	ctx := testCtx(fake)
 
-	if !Deploy(ctx, host, ModeSwitch) {
+	if !Deploy(ctx, host, ModeSwitch, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected success")
 	}
 	joined := joinedCalls(fake)
@@ -301,7 +358,7 @@ func TestModeDispatchBoot(t *testing.T) {
 	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
 	ctx := testCtx(fake)
 
-	if !Deploy(ctx, host, ModeBoot) {
+	if !Deploy(ctx, host, ModeBoot, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected success")
 	}
 	joined := joinedCalls(fake)
@@ -323,7 +380,7 @@ func TestModeDispatchBootRebootAlways(t *testing.T) {
 	ctx := testCtx(fake)
 	ctx.RebootFlag = RebootFlagAlways
 
-	if !Deploy(ctx, host, ModeBoot) {
+	if !Deploy(ctx, host, ModeBoot, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected success")
 	}
 	joined := joinedCalls(fake)
@@ -382,9 +439,6 @@ func (p *probeFailRunner) Run(_ context.Context, argv []string, _ RunOpts) RunRe
 	if strings.Contains(joined, "switch-to-configuration test") {
 		return RunResult{TimedOut: true}
 	}
-	if strings.Contains(joined, "nix") && strings.Contains(joined, "eval") {
-		return RunResult{Stdout: p.systemPath}
-	}
 	if strings.Contains(joined, "profiles/system") {
 		// boot default is stale, so the already-deployed skip does not trip
 		return RunResult{Stdout: "/nix/store/STALE-system\n"}
@@ -401,7 +455,7 @@ func TestBuildsNeverOffload(t *testing.T) {
 	host.K8sHealthCheck = false
 
 	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
-	if !Deploy(testCtx(fake), host, ModeSafe) {
+	if !Deploy(testCtx(fake), host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected success")
 	}
 

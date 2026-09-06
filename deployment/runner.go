@@ -42,10 +42,16 @@ func (r RunResult) Failed() bool {
 	return r.Err != nil || r.TimedOut || r.ExitCode != 0
 }
 
-type ExecRunner struct{}
+type ExecRunner struct {
+	// Quiet suppresses the "Running:" echo. Used by the precheck pass, whose
+	// probes run concurrently and would otherwise interleave into noise.
+	Quiet bool
+}
 
-func (ExecRunner) Run(ctx context.Context, argv []string, opts RunOpts) RunResult {
-	fmt.Printf("  Running: %s\n", strings.Join(argv, " "))
+func (r ExecRunner) Run(ctx context.Context, argv []string, opts RunOpts) RunResult {
+	if !r.Quiet {
+		fmt.Printf("  Running: %s\n", strings.Join(argv, " "))
+	}
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	if len(opts.Env) > 0 {
 		cmd.Env = append(os.Environ(), opts.Env...)

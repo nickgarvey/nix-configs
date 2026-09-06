@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // FakeRunner records command invocations and returns scripted responses. Used
 // in tests; lives in a non-test file so other test files in the package can use
 // it without import cycles.
 type FakeRunner struct {
+	// mu guards Calls: the precheck pass probes hosts concurrently, so a
+	// single FakeRunner is shared across goroutines in those tests.
+	mu sync.Mutex
 	// Calls is the ordered list of argv slices that have been invoked.
 	Calls [][]string
 	// Responses maps a command-match predicate to a result. The first matcher
@@ -25,7 +29,9 @@ type FakeResponse struct {
 }
 
 func (f *FakeRunner) Run(_ context.Context, argv []string, _ RunOpts) RunResult {
+	f.mu.Lock()
 	f.Calls = append(f.Calls, argv)
+	f.mu.Unlock()
 	for _, r := range f.Responses {
 		if r.Match(argv) {
 			return r.Result
@@ -50,6 +56,8 @@ func MatchContains(parts ...string) func([]string) bool {
 
 // CallsContaining returns calls whose joined argv contains all of the parts.
 func (f *FakeRunner) CallsContaining(parts ...string) [][]string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	var out [][]string
 	for _, c := range f.Calls {
 		joined := strings.Join(c, " ")

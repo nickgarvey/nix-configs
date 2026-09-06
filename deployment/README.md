@@ -4,16 +4,19 @@ Go rewrite of the NixOS deploy orchestrator. Replaces `scripts/deploy.py`.
 
 ## What it does
 
-Deploys NixOS configs to managed hosts using a watchdog-protected flow:
-build locally, pre-copy the closure to the target, arm a
+Deploys NixOS configs to managed hosts. A precheck pass first resolves every
+host's system path in one eval and probes all hosts concurrently (see below),
+then each remaining host goes through a watchdog-protected flow: build locally,
+pre-copy the closure to the target, arm a
 `systemd-run` reboot timer, activate via `switch-to-configuration test`,
 verify connectivity + system path, persist via `switch-to-configuration boot`,
 disarm. If anything between arm and disarm fails (network breakage,
 mis-activation, mid-deploy reboot), the watchdog reboots the target to its
 previous boot generation.
 
-The closure transfer and `nix eval` happen **before** the watchdog is armed,
-so the at-risk window contains only fast SSH RPCs.
+The closure transfer happens **before** the watchdog is armed, so the at-risk
+window contains only fast SSH RPCs. The path activated there is the one the
+build reported, not the one the precheck resolved (see Precheck pass).
 
 ## Quick start
 
@@ -93,15 +96,57 @@ Source of truth: `hosts.go` `AllHosts`. Summary:
 
 ### Printer pre-check (skyforge)
 
-Before deploying to any host in the `printer` group, the deploy script queries
-moonraker to check if a print is active. If the printer is busy, the host is
-**skipped** (not failed). Pass `--force` to override and deploy regardless.
+During the precheck pass, any host in the `printer` group is queried via
+moonraker to check if a print is active — before anything is built. If the
+printer is busy, the host is **skipped** (not failed). Pass `--force` to
+override and deploy regardless.
+
+## Precheck pass
+
+Before any host is touched, the run does two things for the whole fleet at once:
+
+1. **Resolve** every selected host's system toplevel in a single `nix eval`.
+   One process means nixpkgs is evaluated once for the fleet rather than once
+   per host (~30s for nine hosts).
+2. **Probe** all hosts concurrently: SSH reachability, moonraker print state for
+   the `printer` group, and whether the host already runs *and* boots the
+   resolved path.
+
+The result is printed as a `Plan` block in host order (the probes are
+concurrent; the reporting is not, so the output stays deterministic).
+
+This decides three things before the first build runs:
+
+- **Up to date** hosts skip build and copy entirely. They still go through the
+  post-deploy path, because a host can be running the right config and still owe
+  a reboot from an earlier one.
+- **Mid-print** printer hosts are skipped without having built the most
+  expensive closure in the fleet first. `--force` overrides.
+- **Unreachable** hosts fail in seconds instead of after a multi-minute build.
+
+A k3s node that fails the precheck aborts the whole run: the rolling deploy
+takes one node down at a time assuming the other two are up, so rolling a second
+with one already down would risk etcd quorum. This mirrors what a mid-deploy k3s
+failure already does.
+
+The precheck path decides *whether* a host needs a build; it is not what gets
+activated. After the build, a single-host `nix eval` reports the path the build
+actually produced, and that is what is activated and persisted. The two agree
+whenever the flake source is unchanged between them — they disagree if the
+working tree is dirty (`inputs.self.lastModified` is re-timed on every eval,
+which reaches the closure of any host importing `modules/containers/knot-auth.nix`)
+or if a commit lands mid-run. When they differ the run warns and continues with
+the built path, since it is the one that exists on the target.
 
 ## Safe deploy flow
 
 ```
+0. Precheck: resolve all paths (1 eval) + probe all hosts (concurrent)
+
 1. Build locally + copy closure to target    ─┐ pre-watchdog
-2. Stop stale deploy-watchdog-* + nixos-rebuild   │ (slow OK)
+   (skipped entirely if the precheck said     │ (slow OK)
+    the host is already up to date)           │
+2. Stop stale deploy-watchdog-* + nixos-rebuild   │
    units from prior runs                          ─┘
 3. Arm watchdog (systemd-run, 2 min)              ─┐
 4. switch-to-configuration test                    │

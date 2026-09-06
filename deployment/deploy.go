@@ -58,8 +58,9 @@ func (c *DeployContext) now() time.Time {
 	return c.Now()
 }
 
-// Deploy is the top-level per-host entry point. Dispatches on Mode.
-func Deploy(ctx *DeployContext, host Host, mode Mode) bool {
+// Deploy is the top-level per-host entry point. Dispatches on Mode. The plan
+// carries what the precheck pass already resolved for this host.
+func Deploy(ctx *DeployContext, host Host, mode Mode, plan Plan) bool {
 	fmt.Printf("\n%s\n", strings.Repeat("=", 60))
 	fmt.Printf("Processing %s (mode=%s)\n", host.Name, mode)
 	fmt.Printf("%s\n", strings.Repeat("=", 60))
@@ -71,7 +72,7 @@ func Deploy(ctx *DeployContext, host Host, mode Mode) bool {
 
 	switch mode {
 	case ModeSafe:
-		return deploySafe(ctx, host)
+		return deploySafe(ctx, host, plan)
 	case ModeSwitch:
 		return deployUnsafe(ctx, host, "switch")
 	case ModeBoot:
@@ -84,11 +85,30 @@ func Deploy(ctx *DeployContext, host Host, mode Mode) bool {
 // target's nix store) happen BEFORE the watchdog is armed. Under the armed
 // watchdog we only call switch-to-configuration directly on the known system
 // path — no nix eval, no closure transfer.
-func deploySafe(ctx *DeployContext, host Host) bool {
-	fmt.Println("\n  [1/9] Building and copying closure to target...")
-	systemPath, ok := buildAndCopy(ctx, host)
-	if !ok {
-		return false
+func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
+	systemPath := plan.SystemPath
+
+	// The precheck pass already compared this host against systemPath. When it
+	// is up to date there is nothing to build or transfer, so skip straight to
+	// the already-deployed handling below rather than spending a build on a
+	// closure the host is provably already running.
+	if plan.UpToDate {
+		fmt.Println("\n  [1/9] Already up to date — skipping build and copy")
+	} else {
+		fmt.Println("\n  [1/9] Building and copying closure to target...")
+		built, ok := buildAndCopy(ctx, host)
+		if !ok {
+			return false
+		}
+		// The built path, not the precheck path, is what was copied to the
+		// target. They differ when the flake source changed between the two
+		// evals — a dirty tree re-times inputs.self.lastModified, and a commit
+		// mid-run moves the whole rev. Activating the precheck path would then
+		// name a store path that exists nowhere.
+		if built != systemPath {
+			fmt.Printf("  ⚠ source changed between precheck and build — deploying %s\n", built)
+			systemPath = built
+		}
 	}
 
 	if alreadyDeployed(ctx, host, systemPath) {
@@ -233,8 +253,13 @@ func BuildOnly(runner Runner, host Host) bool {
 // buildAndCopy runs `nixos-rebuild build --target-host <host>
 // --use-substitutes`. The build happens on this machine; the target pulls what
 // it can from public substituters and the rest is pushed over SSH. Either way
-// the target's nix store is populated BEFORE we arm the watchdog. Returns the
-// system path.
+// the target's nix store is populated BEFORE we arm the watchdog.
+//
+// Returns the path that was actually built. ResolveToplevels resolved a path
+// for this host too, but that was a separate, earlier eval: it decides whether
+// a build is needed at all, and only the query here says what the build
+// produced. Activating anything else risks naming a store path that exists
+// nowhere.
 func buildAndCopy(ctx *DeployContext, host Host) (string, bool) {
 	cctx, cancel := WithTimeout(30 * time.Minute) // builds can be slow
 	defer cancel()
@@ -251,8 +276,8 @@ func buildAndCopy(ctx *DeployContext, host Host) (string, bool) {
 		return "", false
 	}
 
-	// Eval-only query for the system path. The build above populates the
-	// eval cache, so this is fast.
+	// Eval-only query for the system path. The build above populates the eval
+	// cache, so this is fast.
 	evalCtx, evalCancel := WithTimeout(30 * time.Second)
 	defer evalCancel()
 	evalRes := ctx.Runner.Run(evalCtx, []string{
@@ -264,6 +289,10 @@ func buildAndCopy(ctx *DeployContext, host Host) (string, bool) {
 		return "", false
 	}
 	path := strings.TrimSpace(evalRes.Stdout)
+	if path == "" {
+		fmt.Println("  ✗ empty system path after build")
+		return "", false
+	}
 	fmt.Printf("  ✓ built and copied: %s\n", path)
 	return path, true
 }
@@ -349,8 +378,20 @@ func activate(ctx *DeployContext, host Host, systemPath, sub string, timedOut *b
 // system-N-link generation, so we resolve it with `readlink -f` to reach the
 // toplevel for comparison.
 func alreadyDeployed(ctx *DeployContext, host Host, systemPath string) bool {
-	active := SSHRun(ctx.Runner, host, "readlink /run/current-system", 15*time.Second)
-	boot := SSHRun(ctx.Runner, host, "readlink -f /nix/var/nix/profiles/system", 15*time.Second)
+	return hostAtPath(ctx.Runner, host, systemPath)
+}
+
+// hostAtPath is the Runner-level form of alreadyDeployed, shared with the
+// precheck pass so both answer "is this host up to date?" identically.
+//
+// An empty systemPath is never a match: two failed readlinks both trim to ""
+// and would otherwise look like agreement.
+func hostAtPath(r Runner, host Host, systemPath string) bool {
+	if systemPath == "" {
+		return false
+	}
+	active := SSHRun(r, host, "readlink /run/current-system", 15*time.Second)
+	boot := SSHRun(r, host, "readlink -f /nix/var/nix/profiles/system", 15*time.Second)
 	return strings.TrimSpace(active.Stdout) == systemPath &&
 		strings.TrimSpace(boot.Stdout) == systemPath
 }
