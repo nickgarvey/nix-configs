@@ -14,9 +14,7 @@
     file
     ghostty.terminfo  # For terminfo support when SSH'ing from Ghostty
     neovim
-    parallel
     pciutils
-    ripgrep
     tmux
     unzip
     usbutils

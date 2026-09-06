@@ -115,6 +115,8 @@ in
       libnotify
       mpv
       obsidian
+      parallel
+      ripgrep
       spotify
       thinkrail
       virt-viewer
