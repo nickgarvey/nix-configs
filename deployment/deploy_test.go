@@ -472,3 +472,85 @@ func TestBuildsNeverOffload(t *testing.T) {
 		}
 	}
 }
+
+// deployFake is a FakeRunner that carries an ssh control, so the deploy flow
+// takes its multiplexed paths and emits `ssh -O exit` where it should.
+type deployFake struct {
+	*FakeRunner
+	ctl *SSHControl
+}
+
+func (d deployFake) SSHControl() *SSHControl { return d.ctl }
+
+func newDeployFake(resps []FakeResponse) deployFake {
+	return deployFake{
+		FakeRunner: &FakeRunner{Responses: resps},
+		ctl:        &SSHControl{Dir: "/tmp/deploy-ssh-test"},
+	}
+}
+
+func masterDrops(f *FakeRunner) int {
+	n := 0
+	for _, c := range f.Calls {
+		for _, a := range c {
+			if a == "-O" {
+				n++
+				break
+			}
+		}
+	}
+	return n
+}
+
+// Activation restarts networkd, so the master must be discarded even when
+// switch-to-configuration exits 0 — a master pointing at a dropped session
+// looks alive and would stall the connectivity check that gates the watchdog.
+func TestActivateDropsMasterOnSuccess(t *testing.T) {
+	fake := newDeployFake(buildOKResponses(fakeSystemPath))
+	timedOut := false
+	if !activate(testCtx(fake), AllHosts[1], fakeSystemPath, "test", &timedOut) {
+		t.Fatal("expected activation to succeed")
+	}
+	if got := masterDrops(fake.FakeRunner); got != 1 {
+		t.Errorf("expected the master to be dropped once, got %d", got)
+	}
+}
+
+// The reboot wait must not question a socket about a host that is going down:
+// the master is dropped, and each poll dials its own connection.
+func TestRebootDropsMasterAndPollsDirectly(t *testing.T) {
+	fake := newDeployFake(buildOKResponses(fakeSystemPath))
+	if !rebootAndWait(testCtx(fake), AllHosts[1]) {
+		t.Fatal("expected the host to come back")
+	}
+	if got := masterDrops(fake.FakeRunner); got != 1 {
+		t.Errorf("expected the master to be dropped once, got %d", got)
+	}
+	probes := 0
+	for _, c := range joinedCalls(fake.FakeRunner) {
+		if strings.Contains(c, "echo ok") {
+			probes++
+			if !strings.Contains(c, "ControlPath=none") {
+				t.Errorf("reboot probe must bypass the master: %s", c)
+			}
+		}
+	}
+	if probes == 0 {
+		t.Error("expected at least one reachability probe")
+	}
+}
+
+// The closure copy shares our master rather than opening its own.
+func TestBuildAndCopyPassesControlToNixosRebuild(t *testing.T) {
+	fake := newDeployFake([]FakeResponse{
+		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: fakeSystemPath}},
+		{Match: func([]string) bool { return true }, Result: RunResult{}},
+	})
+	if _, ok := buildAndCopy(testCtx(fake), AllHosts[1]); !ok {
+		t.Fatal("expected build to succeed")
+	}
+	env := nixSSHOptsFor(fake)
+	if len(env) != 1 || !strings.Contains(env[0], "ControlPath=/tmp/deploy-ssh-test/%C") {
+		t.Errorf("nixos-rebuild must inherit our control path, got %v", env)
+	}
+}

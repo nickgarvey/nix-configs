@@ -101,10 +101,11 @@ func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
 			return false
 		}
 		// The built path, not the precheck path, is what was copied to the
-		// target. They differ when the flake source changed between the two
-		// evals — a dirty tree re-times inputs.self.lastModified, and a commit
-		// mid-run moves the whole rev. Activating the precheck path would then
-		// name a store path that exists nowhere.
+		// target. The two disagree when HEAD moves between the precheck eval
+		// and the build: inputs.self.lastModified follows the commit, and it
+		// reaches the closure of any host importing modules/containers/
+		// knot-auth.nix (the zone serial). Activating the precheck path would
+		// then name a store path that exists nowhere.
 		if built != systemPath {
 			fmt.Printf("  ⚠ source changed between precheck and build — deploying %s\n", built)
 			systemPath = built
@@ -198,7 +199,10 @@ func deployUnsafe(ctx *DeployContext, host Host, nrMode string) bool {
 		"--sudo",
 		"--no-reexec",
 	}
-	res := ctx.Runner.Run(cctx, argv, RunOpts{Stream: true})
+	res := ctx.Runner.Run(cctx, argv, RunOpts{Stream: true, Env: nixSSHOptsFor(ctx.Runner)})
+	// `switch` activates, and activation can restart networkd underneath the
+	// connection — the same reason activate() drops the master.
+	dropSSHMaster(ctx.Runner, host)
 	if res.Failed() {
 		fmt.Printf("  ✗ nixos-rebuild %s failed\n", nrMode)
 		return false
@@ -271,7 +275,7 @@ func buildAndCopy(ctx *DeployContext, host Host) (string, bool) {
 		"--sudo",
 		"--no-reexec",
 	}
-	if res := ctx.Runner.Run(cctx, argv, RunOpts{Stream: true}); res.Failed() {
+	if res := ctx.Runner.Run(cctx, argv, RunOpts{Stream: true, Env: nixSSHOptsFor(ctx.Runner)}); res.Failed() {
 		fmt.Printf("  ✗ build for %s failed\n", host.FQDN())
 		return "", false
 	}
@@ -317,18 +321,22 @@ func cleanupStaleUnits(ctx *DeployContext, host Host) {
 // activation disconnected and we need to ensure the rebuild service isn't
 // stuck before invoking the boot step.
 func clearRebuildUnit(ctx *DeployContext, host Host) {
-	for _, action := range []string{"stop", "reset-failed"} {
-		SSHRun(ctx.Runner, host,
-			"sudo systemctl "+action+" nixos-rebuild-switch-to-configuration.service",
-			10*time.Second)
-	}
+	cmd := strings.Join([]string{
+		"sudo systemctl stop nixos-rebuild-switch-to-configuration.service",
+		"sudo systemctl reset-failed nixos-rebuild-switch-to-configuration.service",
+	}, "; ")
+	SSHRun(ctx.Runner, host, cmd, 10*time.Second)
 }
 
 func armWatchdog(ctx *DeployContext, host Host, timeout time.Duration) (string, bool) {
 	unit := fmt.Sprintf("deploy-watchdog-%d", ctx.now().Unix())
 	cmd := fmt.Sprintf("sudo systemd-run --unit=%s --on-active=%ds systemctl reboot",
 		unit, int(timeout.Seconds()))
-	res := SSHRun(ctx.Runner, host, cmd, 30*time.Second)
+	// Deliberately not retried: if the first attempt armed the timer before the
+	// connection died, a second would fail with "unit already exists" and abort
+	// a deploy whose watchdog is live. cleanupStaleUnits sweeps the leftover on
+	// the next run.
+	res := SSHRunOnce(ctx.Runner, host, cmd, 30*time.Second)
 	if res.Failed() {
 		fmt.Printf("  ✗ could not arm watchdog: %s\n", strings.TrimSpace(res.Stderr))
 		return "", false
@@ -338,11 +346,15 @@ func armWatchdog(ctx *DeployContext, host Host, timeout time.Duration) (string, 
 }
 
 func disarmWatchdog(ctx *DeployContext, host Host, unit string) {
-	// Try both ".timer" and bare unit name — depending on systemd version
-	// either form may be the one that exists.
-	for _, suffix := range []string{".timer", ""} {
-		SSHRun(ctx.Runner, host, "sudo systemctl stop "+unit+suffix, 30*time.Second)
-	}
+	// Both ".timer" and the bare unit name — depending on systemd version
+	// either form may be the one that exists. Sequenced rather than passed as
+	// two units to one systemctl: this is the call that stops a live reboot
+	// timer, so it must not depend on how systemctl treats a missing unit
+	// named alongside a present one.
+	SSHRun(ctx.Runner, host, strings.Join([]string{
+		"sudo systemctl stop " + unit + ".timer 2>/dev/null || true",
+		"sudo systemctl stop " + unit,
+	}, "; "), 30*time.Second)
 }
 
 // activate runs switch-to-configuration directly on the known system path.
@@ -352,7 +364,14 @@ func disarmWatchdog(ctx *DeployContext, host Host, unit string) {
 // stale unit before the boot step.
 func activate(ctx *DeployContext, host Host, systemPath, sub string, timedOut *bool) bool {
 	cmd := fmt.Sprintf("sudo %s/bin/switch-to-configuration %s", systemPath, sub)
-	res := SSHRun(ctx.Runner, host, cmd, activationTimeout)
+	// Not retried: this call does its own disconnect handling below, and it
+	// must distinguish "activation disconnected us" from "activation failed".
+	res := SSHRunOnce(ctx.Runner, host, cmd, activationTimeout)
+	// Unconditionally discard the master, success or not. Activation restarts
+	// networkd, and an exit status of 0 does not mean the connection survived —
+	// a master left pointing at a dropped TCP session looks alive and would
+	// stall the connectivity check that gates the watchdog.
+	dropSSHMaster(ctx.Runner, host)
 	if !res.Failed() {
 		fmt.Printf("  ✓ switch-to-configuration %s succeeded\n", sub)
 		return true
@@ -360,7 +379,7 @@ func activate(ctx *DeployContext, host Host, systemPath, sub string, timedOut *b
 	if sub == "test" {
 		// Sub-second wait for networkd to settle, then probe.
 		ctx.sleep(5 * time.Second)
-		if CheckSSHReachable(ctx.Runner, host) {
+		if CheckSSHReachableDirect(ctx.Runner, host) {
 			fmt.Printf("  ⚠ activation disconnected but host reachable — assuming success\n")
 			*timedOut = true
 			return true
@@ -476,15 +495,20 @@ const (
 
 func rebootAndWait(ctx *DeployContext, host Host) bool {
 	fmt.Printf("  Rebooting %s...\n", host.FQDN())
-	// SSH will drop; ignore errors.
-	SSHRun(ctx.Runner, host, "sudo systemctl reboot", 10*time.Second)
+	// SSH will drop; ignore errors. Not retried, for the same reason: the
+	// connection dying here is the expected outcome, not a fault to redial.
+	SSHRunOnce(ctx.Runner, host, "sudo systemctl reboot", 10*time.Second)
+	// The host is on its way down, so the master is about to point at nothing.
+	dropSSHMaster(ctx.Runner, host)
 
 	fmt.Printf("  Waiting %s for %s to start rebooting...\n", rebootWaitInitial, host.FQDN())
 	ctx.sleep(rebootWaitInitial)
 
 	deadline := ctx.now().Add(rebootWaitMax)
 	for ctx.now().Before(deadline) {
-		if CheckSSHReachable(ctx.Runner, host) {
+		// Each poll dials its own connection: "has the host come back?" is a
+		// question only a fresh handshake can answer.
+		if CheckSSHReachableDirect(ctx.Runner, host) {
 			fmt.Printf("  ✓ %s back online\n", host.FQDN())
 			return true
 		}

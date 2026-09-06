@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
 // CLIArgs are the parsed command-line arguments. Lifted out of main() so they
@@ -74,18 +76,23 @@ func parseArgs(argv []string) (CLIArgs, error) {
 	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force, Self: *self, Build: *build}, nil
 }
 
-func main() {
+func main() { os.Exit(run()) }
+
+// run is main's body. It returns an exit code rather than calling os.Exit so
+// that the deferred SSH control cleanup actually runs — os.Exit skips defers,
+// which would strand ControlMaster processes and their socket directory.
+func run() int {
 	args, err := parseArgs(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(2)
+		return 2
 	}
 
 	if args.Self {
 		hn, err := os.Hostname()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: --self: cannot determine hostname: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		args.Hosts = append(args.Hosts, strings.SplitN(hn, ".", 2)[0])
 	}
@@ -93,33 +100,46 @@ func main() {
 	hosts, err := SelectHosts(AllHosts, args.Hosts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
-
-	runner := ExecRunner{}
 
 	names := make([]string, len(hosts))
 	for i, h := range hosts {
 		names[i] = h.Name
 	}
 
+	// Build-only never touches a target, so it needs no control directory.
 	if args.Build {
 		fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
 		fmt.Println("Mode: build-only (no deploy)")
 		var failed []string
 		for _, h := range hosts {
-			if !BuildOnly(runner, h) {
+			if !BuildOnly(ExecRunner{}, h) {
 				failed = append(failed, h.Name)
 			}
 		}
 		fmt.Printf("\n%s\nSummary\n%s\n", strings.Repeat("=", 60), strings.Repeat("=", 60))
 		if len(failed) > 0 {
 			fmt.Printf("\nFailed builds: %v\n", failed)
-			os.Exit(1)
+			return 1
 		}
 		fmt.Println("\nAll hosts built successfully!")
-		return
+		return 0
 	}
+
+	// One ssh master per host for the whole run, instead of a fresh handshake
+	// per remote command.
+	ctl, err := NewSSHControl()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: cannot create ssh control directory: %v\n", err)
+		return 1
+	}
+	runner := ExecRunner{Control: ctl}
+	quiet := ExecRunner{Quiet: true, Control: ctl}
+	defer ctl.Close(quiet)
+	// The run blocks on stdin at the reboot and continue prompts, so Ctrl-C is
+	// a realistic exit path and needs the same cleanup as a normal return.
+	defer installSSHCleanup(ctl, quiet)()
 
 	fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
 	fmt.Printf("Mode: %s, Reboot: %s\n", args.Mode, args.Reboot)
@@ -127,13 +147,11 @@ func main() {
 	// Precheck: resolve every toplevel in one eval, then probe all hosts at
 	// once. Everything decided here — unreachable, mid-print, already up to
 	// date — is decided before the first build instead of after it.
-	quiet := ExecRunner{Quiet: true}
-
 	fmt.Printf("\nResolving system paths for %d host(s) (single nix eval)...\n", len(hosts))
 	paths, err := ResolveToplevels(quiet, hosts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	fmt.Printf("Probing %d host(s)...\n", len(hosts))
@@ -171,13 +189,17 @@ func main() {
 				p.Host.Name, p.Reason)
 			fmt.Printf("  Rolling the remaining k3s nodes with one already down would risk quorum.\n")
 			printSummary(warnings, skipped, failed)
-			os.Exit(1)
+			return 1
 		}
 	}
 
 	for i, p := range todo {
 		h := p.Host
-		if !Deploy(ctx, h, args.Mode, p.Plan) {
+		ok := Deploy(ctx, h, args.Mode, p.Plan)
+		// Close this host's master before moving to the next: one live master
+		// at a time, and nothing left behind if the run stops here.
+		ctl.Drop(quiet, h)
+		if !ok {
 			failed = append(failed, h.Name)
 			if h.InGroup("k3s") {
 				fmt.Printf("\n✗ K3s rolling deploy failed at %s, stopping.\n", h.Name)
@@ -196,9 +218,32 @@ func main() {
 
 	printSummary(warnings, skipped, failed)
 	if len(failed) > 0 {
-		os.Exit(1)
+		return 1
 	}
 	fmt.Println("\nAll hosts processed successfully!")
+	return 0
+}
+
+// installSSHCleanup closes the ssh control directory on SIGINT/SIGTERM, which
+// no defer would catch. Returns a function that uninstalls the handler.
+//
+// Best effort: it races with any in-flight ssh, and ControlPersist is the
+// backstop if it loses.
+func installSSHCleanup(ctl *SSHControl, r Runner) func() {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		if _, ok := <-ch; !ok {
+			return
+		}
+		fmt.Println("\nInterrupted — closing ssh connections...")
+		ctl.Close(r)
+		os.Exit(130)
+	}()
+	return func() {
+		signal.Stop(ch)
+		close(ch)
+	}
 }
 
 // printPlan reports what the precheck pass decided, in host order. The probes

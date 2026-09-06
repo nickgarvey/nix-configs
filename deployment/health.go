@@ -72,6 +72,10 @@ func VerifyConnectivity(r Runner, host Host, sleeper func(time.Duration)) bool {
 		if attempt < verifyRetries-1 {
 			fmt.Printf("  Connectivity check failed, retrying in %s (%d/%d)...\n",
 				verifyRetryDelay, attempt+1, verifyRetries)
+			// Start the next attempt on a new connection. A failure here is
+			// most likely the network having just moved under us, which is
+			// exactly the case where the master is stale.
+			dropSSHMaster(r, host)
 			sleeper(verifyRetryDelay)
 		}
 	}
@@ -81,7 +85,9 @@ func VerifyConnectivity(r Runner, host Host, sleeper func(time.Duration)) bool {
 func runConnCheck(r Runner, host Host, c ConnCheck) (string, bool) {
 	switch c {
 	case CheckSSH:
-		return "SSH", CheckSSHReachable(r, host)
+		// Direct: this check exists to prove the host is on the network after
+		// activation, which a reused socket cannot demonstrate.
+		return "SSH", CheckSSHReachableDirect(r, host)
 	case CheckPingGateway:
 		return "Ping gateway", pingVia(r, host.FQDN(), "10.28.0.1", false)
 	case CheckPing6Gateway:
@@ -98,16 +104,18 @@ func runConnCheck(r Runner, host Host, c ConnCheck) (string, bool) {
 	return string(c), false
 }
 
+// pingVia pings target from viaHost. It goes through SSHRun rather than
+// building its own argv so there is a single place where ssh options are
+// assembled; the synthetic host's FQDN matches the real one, so it shares that
+// host's master.
 func pingVia(r Runner, viaHost, target string, v6 bool) bool {
-	ctx, cancel := WithTimeout(25 * time.Second)
-	defer cancel()
 	pingCmd := "ping"
 	flags := []string{"-c", "3", "-W", "5"}
 	if v6 {
 		flags = append([]string{"-6"}, flags...)
 	}
 	remote := pingCmd + " " + strings.Join(flags, " ") + " " + target
-	res := r.Run(ctx, SSHArgv(Host{SSHAddress: viaHost}, remote, sshConnectTimeout), RunOpts{})
+	res := SSHRun(r, Host{SSHAddress: viaHost}, remote, 25*time.Second)
 	return !res.Failed()
 }
 

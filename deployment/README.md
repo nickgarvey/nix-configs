@@ -132,11 +132,11 @@ failure already does.
 The precheck path decides *whether* a host needs a build; it is not what gets
 activated. After the build, a single-host `nix eval` reports the path the build
 actually produced, and that is what is activated and persisted. The two agree
-whenever the flake source is unchanged between them — they disagree if the
-working tree is dirty (`inputs.self.lastModified` is re-timed on every eval,
-which reaches the closure of any host importing `modules/containers/knot-auth.nix`)
-or if a commit lands mid-run. When they differ the run warns and continues with
-the built path, since it is the one that exists on the target.
+unless the flake source moves between them — chiefly a commit landing mid-run,
+which re-times `inputs.self.lastModified` and so changes the closure of any host
+importing `modules/containers/knot-auth.nix` (the zone serial reads it). When
+they differ the run warns and continues with the built path, since it is the one
+that exists on the target.
 
 ## Safe deploy flow
 
@@ -172,6 +172,45 @@ invocation. The build at step 1 already populated the target's nix store
 (via `--target-host` + `--use-substitutes`), so we can call
 `switch-to-configuration` directly on the known store path. This keeps the
 watchdog window to seconds.
+
+## Connection reuse
+
+A safe deploy issues 15–25 remote commands per host. Each one used to be its own
+`ssh` process, and so its own TCP + key exchange + auth handshake. The run now
+opens **one ControlMaster per host** and every command rides it: `SSHControl`
+(`ssh.go`) owns a socket directory under `/tmp` for the life of the process,
+`ExecRunner` carries it, and `SSHArgv` splices in `ControlMaster=auto` +
+`ControlPath` + `ControlPersist`. `nixos-rebuild`'s own ssh calls join the same
+master via `NIX_SSHOPTS`.
+
+The interesting part is what happens when a connection drops — which it does
+routinely, since activation restarts networkd and reboots are a normal outcome.
+Without a master, a drop costs nothing: the next command simply dials again.
+With one, a drop leaves a socket that still *looks* alive, and a new session on
+it ignores `ConnectTimeout` and blocks for ~45s. Left unhandled that turns a
+healthy host into a failed connectivity check, and a failed connectivity check
+reboots the box. Three things prevent it:
+
+1. **Liveness probes never use the master.** The reboot wait, the
+   post-activation probe, and the `ssh` connectivity check use `SSHRunDirect`
+   (`ControlMaster=no`, `ControlPath=none`). Asking "is this host back?" is only
+   meaningful over a fresh handshake.
+2. **Everything else redials once.** `SSHRun` treats exit 255 or a timeout as a
+   transport failure, discards the master and retries. Every command routed this
+   way is idempotent. Arming the watchdog and activation use `SSHRunOnce`
+   instead — the first must not run twice, the second does its own disconnect
+   handling.
+3. **The master is dropped where a drop is expected**: after activation
+   (unconditionally — exiting 0 does not mean the connection survived), after
+   issuing a reboot, between connectivity retries, and after `nixos-rebuild
+   switch`.
+
+`ControlPersist=300` is the backstop for anything that escapes: an orphaned
+master reaps itself. Masters are closed per host as the run moves on, on normal
+exit, and on SIGINT/SIGTERM.
+
+Set `DEPLOY_NO_SSH_MUX=1` to turn all of this off; the argv is then identical to
+the pre-multiplexing tool.
 
 ## Tests / development
 
