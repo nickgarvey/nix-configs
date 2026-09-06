@@ -26,10 +26,17 @@
     ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x14c3", ATTR{device}=="0x0717", ATTR{link/l1_aspm}="0"
   '';
 
-  # Framework 13 internal panel (13.5" 2256x1504). Pin scale 2.0.
+  # Framework 13 internal panel (13.5" 2880x1920). Pin scale 2.0.
+  # The LG TV defaults to its EDID-preferred 3840x2160@60; pin 120 explicitly,
+  # which is the highest mode it offers. It reports no VRR support.
   homelab.niri.outputs = ''
     output "eDP-1" {
         scale 2.0
+    }
+
+    output "LG Electronics LG TV SSCR2 0x01010101" {
+        mode "3840x2160@120.000"
+        scale 1.0
     }
   '';
 
@@ -52,7 +59,23 @@
     signal-desktop
     vlc
     openmw
+    # Rhythm game. ITGmania is the maintained StepMania 5.1 fork; Zmod Simply
+    # Love is the community-standard theme, selected in Options -> Appearance.
+    (itgmania.override {
+      extraPackages = [ itgmaniaPackages.zmod-simply-love ];
+    })
   ];
+
+  systemd.user.tmpfiles.users.ngarvey.rules =
+    let
+      seed = pkgs.writeText "itgmania-preferences.ini" ''
+        [Options]
+        AdditionalSongFolders=/home/ngarvey/local-drive/stepmania
+      '';
+    in [
+      "d %h/.itgmania/Save 0755 - - -"
+      "C %h/.itgmania/Save/Preferences.ini 0644 - - - ${seed}"
+    ];
 
   systemd.sleep.settings.Sleep = {
     AllowSuspend = "yes";

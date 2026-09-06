@@ -325,6 +325,16 @@ window-rule {
     variable-refresh-rate true
 }
 
+// ITGmania is played on the TV, so open it there, fullscreen. If that output is
+// not connected niri falls back to the focused one, so this is inert on the
+// laptop alone. The dance pad needs the big screen; the internal panel is 3:2
+// and has no 16:9 mode, while the TV is natively 3840x2160.
+window-rule {
+    match app-id=r#"^ITGmania$"#
+    open-on-output "LG Electronics LG TV SSCR2 0x01010101"
+    open-fullscreen true
+}
+
 // Example: block out two password managers from screen capture.
 // (This example rule is commented out with a "/-" in front.)
 /-window-rule {
