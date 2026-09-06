@@ -81,36 +81,19 @@ func Deploy(ctx *DeployContext, host Host, mode Mode, plan Plan) bool {
 	return false
 }
 
-// deploySafe is the watchdog-protected flow. Slow steps (build + pre-copy to
-// target's nix store) happen BEFORE the watchdog is armed. Under the armed
-// watchdog we only call switch-to-configuration directly on the known system
-// path — no nix eval, no closure transfer.
+// deploySafe is the watchdog-protected flow. It begins with the closure already
+// present on the target: the pipeline built and copied it before handing the
+// host over. Under the armed watchdog we only call switch-to-configuration
+// directly on the known system path — no nix eval, no closure transfer.
+//
+// systemPath cannot drift from what was built. The pipeline builds the
+// derivation ResolveToplevels produced, not the flake reference, so nothing
+// between the precheck and activation can re-evaluate to a different path —
+// which matters here because inputs.self.lastModified reaches the closure of
+// every host importing modules/containers/knot-auth.nix or
+// modules/desktop/mic-mute.nix, so any change to the source tree moves them.
 func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
 	systemPath := plan.SystemPath
-
-	// The precheck pass already compared this host against systemPath. When it
-	// is up to date there is nothing to build or transfer, so skip straight to
-	// the already-deployed handling below rather than spending a build on a
-	// closure the host is provably already running.
-	if plan.UpToDate {
-		fmt.Println("\n  [1/9] Already up to date — skipping build and copy")
-	} else {
-		fmt.Println("\n  [1/9] Building and copying closure to target...")
-		built, ok := buildAndCopy(ctx, host)
-		if !ok {
-			return false
-		}
-		// The built path, not the precheck path, is what was copied to the
-		// target. The two disagree when HEAD moves between the precheck eval
-		// and the build: inputs.self.lastModified follows the commit, and it
-		// reaches the closure of any host importing modules/containers/
-		// knot-auth.nix (the zone serial). Activating the precheck path would
-		// then name a store path that exists nowhere.
-		if built != systemPath {
-			fmt.Printf("  ⚠ source changed between precheck and build — deploying %s\n", built)
-			systemPath = built
-		}
-	}
 
 	if alreadyDeployed(ctx, host, systemPath) {
 		// Config is already active and persisted as boot default, so the
@@ -127,17 +110,17 @@ func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
 		return true
 	}
 
-	fmt.Println("\n  [2/9] Cleaning up stale units from prior runs...")
+	fmt.Println("\n  [1/8] Cleaning up stale units from prior runs...")
 	cleanupStaleUnits(ctx, host)
 
-	fmt.Printf("\n  [3/9] Arming watchdog (%s)...\n", watchdogTimeout)
+	fmt.Printf("\n  [2/8] Arming watchdog (%s)...\n", watchdogTimeout)
 	unit, ok := armWatchdog(ctx, host, watchdogTimeout)
 	if !ok {
 		fmt.Println("  FATAL: cannot proceed without watchdog protection")
 		return false
 	}
 
-	fmt.Println("\n  [4/9] Activating (switch-to-configuration test)...")
+	fmt.Println("\n  [3/8] Activating (switch-to-configuration test)...")
 	testTimedOut := false
 	if !activate(ctx, host, systemPath, "test", &testTimedOut) {
 		fmt.Printf("  Activation failed. Watchdog will reboot %s in <=%s\n",
@@ -145,20 +128,20 @@ func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
 		return false
 	}
 
-	fmt.Println("\n  [5/9] Verifying connectivity...")
+	fmt.Println("\n  [4/8] Verifying connectivity...")
 	if !VerifyConnectivity(ctx.Runner, host, ctx.Sleeper) {
 		fmt.Printf("  Connectivity failed. Watchdog will reboot %s in <=%s\n",
 			host.Name, watchdogTimeout)
 		return false
 	}
 
-	fmt.Println("\n  [6/9] Verifying active system path matches build...")
+	fmt.Println("\n  [5/8] Verifying active system path matches build...")
 	if !verifyActivePath(ctx, host, systemPath) {
 		fmt.Printf("  Watchdog will reboot %s in <=%s\n", host.Name, watchdogTimeout)
 		return false
 	}
 
-	fmt.Println("\n  [7/9] Persisting as boot default...")
+	fmt.Println("\n  [6/8] Persisting as boot default...")
 	if testTimedOut {
 		clearRebuildUnit(ctx, host)
 	}
@@ -168,10 +151,10 @@ func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
 		return false
 	}
 
-	fmt.Println("\n  [8/9] Disarming watchdog...")
+	fmt.Println("\n  [7/8] Disarming watchdog...")
 	disarmWatchdog(ctx, host, unit)
 
-	fmt.Println("\n  [9/9] Post-deploy checks...")
+	fmt.Println("\n  [8/8] Post-deploy checks...")
 	if !handleReboot(ctx, host) {
 		return false
 	}
@@ -228,77 +211,6 @@ func deployUnsafe(ctx *DeployContext, host Host, nrMode string) bool {
 	}
 	fmt.Printf("  ✓ %s deployed (mode=%s)\n", host.Name, nrMode)
 	return true
-}
-
-// BuildOnly builds a host's configuration without touching the target: no
-// closure copy, no activation, no persist. Used by --build to verify that every
-// selected host still evaluates and compiles.
-func BuildOnly(runner Runner, host Host) bool {
-	fmt.Printf("\n%s\n", strings.Repeat("=", 60))
-	fmt.Printf("Building %s\n", host.Name)
-	fmt.Printf("%s\n", strings.Repeat("=", 60))
-
-	cctx, cancel := WithTimeout(30 * time.Minute) // builds can be slow
-	defer cancel()
-	argv := []string{
-		"nixos-rebuild", "build",
-		"--flake", ".#" + host.FlakeName,
-		"--use-substitutes",
-		"--no-reexec",
-	}
-	if res := runner.Run(cctx, argv, RunOpts{Stream: true}); res.Failed() {
-		fmt.Printf("  ✗ build for %s failed\n", host.Name)
-		return false
-	}
-	fmt.Printf("  ✓ %s built\n", host.Name)
-	return true
-}
-
-// buildAndCopy runs `nixos-rebuild build --target-host <host>
-// --use-substitutes`. The build happens on this machine; the target pulls what
-// it can from public substituters and the rest is pushed over SSH. Either way
-// the target's nix store is populated BEFORE we arm the watchdog.
-//
-// Returns the path that was actually built. ResolveToplevels resolved a path
-// for this host too, but that was a separate, earlier eval: it decides whether
-// a build is needed at all, and only the query here says what the build
-// produced. Activating anything else risks naming a store path that exists
-// nowhere.
-func buildAndCopy(ctx *DeployContext, host Host) (string, bool) {
-	cctx, cancel := WithTimeout(30 * time.Minute) // builds can be slow
-	defer cancel()
-	argv := []string{
-		"nixos-rebuild", "build",
-		"--flake", ".#" + host.FlakeName,
-		"--target-host", host.FQDN(),
-		"--use-substitutes",
-		"--sudo",
-		"--no-reexec",
-	}
-	if res := ctx.Runner.Run(cctx, argv, RunOpts{Stream: true, Env: nixSSHOptsFor(ctx.Runner)}); res.Failed() {
-		fmt.Printf("  ✗ build for %s failed\n", host.FQDN())
-		return "", false
-	}
-
-	// Eval-only query for the system path. The build above populates the eval
-	// cache, so this is fast.
-	evalCtx, evalCancel := WithTimeout(30 * time.Second)
-	defer evalCancel()
-	evalRes := ctx.Runner.Run(evalCtx, []string{
-		"nix", "eval", "--raw",
-		fmt.Sprintf(".#nixosConfigurations.%s.config.system.build.toplevel.outPath", host.FlakeName),
-	}, RunOpts{})
-	if evalRes.Failed() {
-		fmt.Println("  ✗ could not determine system path after build")
-		return "", false
-	}
-	path := strings.TrimSpace(evalRes.Stdout)
-	if path == "" {
-		fmt.Println("  ✗ empty system path after build")
-		return "", false
-	}
-	fmt.Printf("  ✓ built and copied: %s\n", path)
-	return path, true
 }
 
 // cleanupStaleUnits removes leftover units from prior failed/interrupted runs:

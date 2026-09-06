@@ -16,6 +16,10 @@ type Plan struct {
 	// SystemPath is the host's toplevel store path, resolved up front by
 	// ResolveToplevels.
 	SystemPath string
+	// DrvPath is the derivation that produces SystemPath. The pipeline builds
+	// this rather than the flake reference, so no re-evaluation can hand back a
+	// path other than SystemPath.
+	DrvPath string
 	// UpToDate reports that the host already runs SystemPath and already boots
 	// it, so building and copying the closure would be a no-op.
 	UpToDate bool
@@ -41,7 +45,7 @@ type PrecheckResult struct {
 //
 // Nothing here prints: results are reported by the caller in host order, so a
 // concurrent pass still produces a deterministic, readable plan.
-func PrecheckAll(r Runner, hosts []Host, paths map[string]string, force bool) []PrecheckResult {
+func PrecheckAll(r Runner, hosts []Host, tops map[string]Toplevel, force bool) []PrecheckResult {
 	out := make([]PrecheckResult, len(hosts))
 	sem := make(chan struct{}, precheckConcurrency)
 	var wg sync.WaitGroup
@@ -53,15 +57,16 @@ func PrecheckAll(r Runner, hosts []Host, paths map[string]string, force bool) []
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			// Distinct indices into a fixed-length slice: no lock needed.
-			out[i] = precheckHost(r, h, paths[h.Name], force)
+			out[i] = precheckHost(r, h, tops[h.Name], force)
 		}(i, h)
 	}
 	wg.Wait()
 	return out
 }
 
-func precheckHost(r Runner, host Host, systemPath string, force bool) PrecheckResult {
-	res := PrecheckResult{Host: host, Plan: Plan{SystemPath: systemPath}}
+func precheckHost(r Runner, host Host, top Toplevel, force bool) PrecheckResult {
+	systemPath := top.Out
+	res := PrecheckResult{Host: host, Plan: Plan{SystemPath: top.Out, DrvPath: top.Drv}}
 
 	// Unreachable is a failure, not a skip: the same as today, just discovered
 	// before the build instead of after it.

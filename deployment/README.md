@@ -5,18 +5,20 @@ Go rewrite of the NixOS deploy orchestrator. Replaces `scripts/deploy.py`.
 ## What it does
 
 Deploys NixOS configs to managed hosts. A precheck pass first resolves every
-host's system path in one eval and probes all hosts concurrently (see below),
-then each remaining host goes through a watchdog-protected flow: build locally,
-pre-copy the closure to the target, arm a
-`systemd-run` reboot timer, activate via `switch-to-configuration test`,
-verify connectivity + system path, persist via `switch-to-configuration boot`,
-disarm. If anything between arm and disarm fails (network breakage,
-mis-activation, mid-deploy reboot), the watchdog reboots the target to its
-previous boot generation.
+host's derivation and system path in one eval and probes all hosts concurrently
+(see below). The remaining hosts then move through a pipeline — build, copy,
+activate — that overlaps across hosts while keeping activation to one host at a
+time.
+
+Each activation is watchdog-protected: arm a `systemd-run` reboot timer, activate
+via `switch-to-configuration test`, verify connectivity + system path, persist via
+`switch-to-configuration boot`, disarm. If anything between arm and disarm fails
+(network breakage, mis-activation, mid-deploy reboot), the watchdog reboots the
+target to its previous boot generation.
 
 The closure transfer happens **before** the watchdog is armed, so the at-risk
-window contains only fast SSH RPCs. The path activated there is the one the
-build reported, not the one the precheck resolved (see Precheck pass).
+window contains only fast SSH RPCs, and the path activated is pinned by the
+derivation resolved in the precheck (see Precheck pass).
 
 ## Quick start
 
@@ -49,11 +51,16 @@ nix run .#deploy -- --hosts ro
 | `--mode` | `safe` \| `switch` \| `boot` | `safe` | See modes below. |
 | `--reboot` | `never` \| `auto` \| `always` \| `ask` | `never` | See reboot table below. `--mode boot` accepts only `never` and `always`. |
 | `--force` | flag | false | Skip safety pre-checks (e.g. active print on printer hosts). |
+| `--on-failure` | `stop` \| `continue` | `stop` | What to do with the hosts still queued when one fails. A k3s failure always stops. |
+| `--copy-jobs` | int | 4 | Concurrent closure copies. |
+| `--max-jobs` | int | (nix.conf) | Passed to `nix build`. 0 leaves it to nix. |
+| `--cores` | int | (nix.conf) | Passed to `nix build`. 0 leaves it to nix. |
 
 ### Modes
 
 - **`safe`** — full watchdog flow. Use this unless you have a reason not to.
-- **`switch`** — `nixos-rebuild switch`, no watchdog. Debug only.
+- **`switch`** — `nixos-rebuild switch`, no watchdog. Debug only. Not pipelined:
+  nixos-rebuild does its own build and copy per host, so hosts run one at a time.
 - **`boot`** — `nixos-rebuild boot`. Persists the new generation without
   activating it. Use for changes that require a reboot to take effect
   (e.g. dbus implementation switch). Nothing is activated, so there is nothing
@@ -82,7 +89,10 @@ differs (as a set) from `/run/current-system/kernel-params`.
 
 ## Per-host policy
 
-Source of truth: `hosts.go` `AllHosts`. Summary:
+Source of truth: `hosts.go` `AllHosts`. `Order` no longer decides when a host is
+deployed — in `safe` mode that is decided by readiness — it only orders this
+table, the precheck report, and hosts that become ready in the same poll tick.
+Summary:
 
 | Host | Order | k8s health | Default | Notes |
 |---|---|---|---|---|
@@ -129,49 +139,112 @@ takes one node down at a time assuming the other two are up, so rolling a second
 with one already down would risk etcd quorum. This mirrors what a mid-deploy k3s
 failure already does.
 
-The precheck path decides *whether* a host needs a build; it is not what gets
-activated. After the build, a single-host `nix eval` reports the path the build
-actually produced, and that is what is activated and persisted. The two agree
-unless the flake source moves between them — chiefly a commit landing mid-run,
-which re-times `inputs.self.lastModified` and so changes the closure of any host
-importing `modules/containers/knot-auth.nix` (the zone serial reads it). When
-they differ the run warns and continues with the built path, since it is the one
-that exists on the target.
+The precheck resolves each host's *derivation* as well as its output path, and
+the pipeline builds that derivation rather than the flake reference. Nothing
+re-evaluates between the precheck and activation, so the path that is activated
+is necessarily the one that was built.
+
+That pinning is load-bearing, not an optimisation. `inputs.self.lastModified`
+reaches the closure of every host importing `modules/containers/knot-auth.nix`
+(the zone serial reads it) or `modules/desktop/mic-mute.nix`, so *any* change to
+the source tree — a commit, or merely staging a file — moves those hosts' store
+paths. A build that re-evaluated could produce a different path than the precheck
+committed to, and the poller below would wait forever on one that never appears.
+
+The same coupling blunts the up-to-date skip: after editing anything in the repo,
+those hosts look stale even when nothing about them actually changed.
+
+## Pipelined deploy
+
+`--mode safe` overlaps the stages across hosts. A host copies as soon as its own
+build lands and activates as soon as its own copy lands, without waiting for any
+other host:
+
+```
+  ┌─ nix build  (ONE process, every changed host, --keep-going) ───────────┐
+  │     poller: nix path-info per pending host, every 2s                   │
+  └──────────┬─────────────────────────────────────────────────────────────┘
+             │ this host's path is valid
+             ▼
+      copy workers (--copy-jobs, default 4)   nix copy --to ssh-ng://…
+             │ this host's copy succeeded
+             ▼
+      activation worker (exactly ONE)         the safe flow below
+```
+
+Both queues are buffered to the host count, so no stage can block another.
+
+**One `nix build` for the whole fleet** is what bounds this machine. A single nix
+client is capped at nix's `max-jobs` no matter how many hosts are selected;
+N concurrent `nixos-rebuild` processes would each get their own budget, so the
+ceiling would be `max-jobs × N`. It also means derivations shared between hosts
+are built once rather than once per host. `--max-jobs` and `--cores` are passed
+through for when the machine is also in use.
+
+`--keep-going` is why one host failing does not abort the others' builds; per-host
+success is then decided by `nix path-info`, not by parsing the build log.
+
+**Activation stays serial** — exactly one host is ever inside a watchdog window.
+Everything that depended on that still holds for free: the k3s rolling gate
+(`WaitForK8sReady` runs inside the activation, so the next node cannot start
+until the previous one is Ready) and the `--reboot ask` prompt.
+
+Ordering is otherwise first-ready-first-served rather than fixed by `Order`;
+`Order` survives only as the tiebreak between hosts that become ready in the same
+poll tick, which keeps runs reproducible. In particular **the router is no longer
+deployed last**. Activating `dragonsreach` restarts its network, so a copy in
+flight to another host can fail; that host is reported failed and re-running
+redeploys only what did not land.
+
+The closure transfer is `nix copy --to ssh-ng://<host> --substitute-on-destination
+--no-check-sigs`, not `nixos-rebuild --target-host --sudo`. The remote nix-daemon
+does the store write, so no sudo is involved.
+
+`--no-check-sigs` is required, not an optimisation. Everything the pipeline
+copies was just built locally and carries no signature, and `nix copy` asks the
+destination to verify signatures by default — it does **not** relax that just
+because the connection is trusted. Without the flag a transfer dies partway with
+`cannot add path '...' because it lacks a signature by a trusted key`.
+
+The flag is a request, not a bypass: the destination only honours it for a
+connecting user in its `trusted-users`, which `modules/core/nixos-common.nix`
+sets fleet-wide. Both halves are needed — `nix store info --store ssh-ng://<host>`
+reporting `"trusted":true` only means the daemon *would permit* an unsigned add,
+not that `nix copy` will request one.
 
 ## Safe deploy flow
 
-```
-0. Precheck: resolve all paths (1 eval) + probe all hosts (concurrent)
+Per host, once its closure is already on the target:
 
-1. Build locally + copy closure to target    ─┐ pre-watchdog
-   (skipped entirely if the precheck said     │ (slow OK)
-    the host is already up to date)           │
-2. Stop stale deploy-watchdog-* + nixos-rebuild   │
-   units from prior runs                          ─┘
-3. Arm watchdog (systemd-run, 2 min)              ─┐
-4. switch-to-configuration test                    │
-5. Verify connectivity (per-host checks, 3 retries)│ at-risk window
-6. Verify /run/current-system == built path        │ (only fast SSH RPCs)
-7. Persist: nix-env --set + switch-to-config boot  │
-8. Disarm watchdog                                ─┘
-
-9. Reboot if needed (per the decision table above) + k8s health (if applicable)
 ```
+1. Stop stale deploy-watchdog-* + nixos-rebuild    (pre-watchdog)
+   units from prior runs
+2. Arm watchdog (systemd-run, 2 min)              ─┐
+3. switch-to-configuration test                    │
+4. Verify connectivity (per-host checks, 3 retries)│ at-risk window
+5. Verify /run/current-system == built path        │ (only fast SSH RPCs)
+6. Persist: nix-env --set + switch-to-config boot  │
+7. Disarm watchdog                                ─┘
+
+8. Reboot if needed (per the decision table above) + k8s health (if applicable)
+```
+
+A host the precheck found already up to date skips straight to step 8, since it
+may still owe a reboot from an earlier run.
 
 ### When the watchdog fires
 
-The target reboots to its previous boot generation. The script reports
-failure and exits the host (continuing with the rest unless it's a k3s
-node — k3s failures hard-stop the remaining k3s rollout for cluster
-stability).
+The target reboots to its previous boot generation. The run reports the host as
+failed and moves on according to `--on-failure`; a k3s node always hard-stops the
+remaining rollout, for cluster stability.
 
 ### Why we don't use `nixos-rebuild test` / `nixos-rebuild boot` under the watchdog
 
-`nixos-rebuild` re-evals and re-checks the closure on every
-invocation. The build at step 1 already populated the target's nix store
-(via `--target-host` + `--use-substitutes`), so we can call
+`nixos-rebuild` re-evals and re-checks the closure on every invocation. The
+pipeline already populated the target's nix store with `nix copy`, so we can call
 `switch-to-configuration` directly on the known store path. This keeps the
-watchdog window to seconds.
+watchdog window to seconds — and the re-eval would also be free to produce a
+different path than the one that was copied.
 
 ## Connection reuse
 

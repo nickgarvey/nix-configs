@@ -20,7 +20,7 @@ func upToDateResponses(path string) []FakeResponse {
 func precheckOne(t *testing.T, host Host, path string, force bool, resps []FakeResponse) (PrecheckResult, *FakeRunner) {
 	t.Helper()
 	fake := &FakeRunner{Responses: resps}
-	got := PrecheckAll(fake, []Host{host}, map[string]string{host.Name: path}, force)
+	got := PrecheckAll(fake, []Host{host}, map[string]Toplevel{host.Name: {Drv: path + ".drv", Out: path}}, force)
 	if len(got) != 1 {
 		t.Fatalf("want 1 result, got %d", len(got))
 	}
@@ -161,15 +161,15 @@ func TestPrecheckAllPreservesHostOrder(t *testing.T) {
 		{Name: "dragonsreach", FlakeName: "dragonsreach"},
 		{Name: "dovahkiin", FlakeName: "dovahkiin"},
 	}
-	paths := map[string]string{}
+	tops := map[string]Toplevel{}
 	for _, h := range hosts {
-		paths[h.Name] = "/nix/store/" + h.Name
+		tops[h.Name] = Toplevel{Drv: "/nix/store/" + h.Name + ".drv", Out: "/nix/store/" + h.Name}
 	}
 
 	fake := &FakeRunner{Responses: []FakeResponse{
 		{Match: MatchContains("echo ok"), Result: RunResult{Stdout: "ok\n"}},
 	}}
-	got := PrecheckAll(fake, hosts, paths, false)
+	got := PrecheckAll(fake, hosts, tops, false)
 
 	if len(got) != len(hosts) {
 		t.Fatalf("want %d results, got %d", len(hosts), len(got))
@@ -178,8 +178,11 @@ func TestPrecheckAllPreservesHostOrder(t *testing.T) {
 		if got[i].Host.Name != h.Name {
 			t.Errorf("index %d: want %s, got %s", i, h.Name, got[i].Host.Name)
 		}
-		if got[i].Plan.SystemPath != paths[h.Name] {
-			t.Errorf("%s: got path %q, want %q", h.Name, got[i].Plan.SystemPath, paths[h.Name])
+		if got[i].Plan.SystemPath != tops[h.Name].Out {
+			t.Errorf("%s: got path %q, want %q", h.Name, got[i].Plan.SystemPath, tops[h.Name].Out)
+		}
+		if got[i].Plan.DrvPath != tops[h.Name].Drv {
+			t.Errorf("%s: got drv %q, want %q", h.Name, got[i].Plan.DrvPath, tops[h.Name].Drv)
 		}
 	}
 }

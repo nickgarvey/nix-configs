@@ -13,12 +13,16 @@ import (
 // CLIArgs are the parsed command-line arguments. Lifted out of main() so they
 // can be tested independently.
 type CLIArgs struct {
-	Hosts  []string
-	Mode   Mode
-	Reboot RebootFlag
-	Force  bool
-	Self   bool
-	Build  bool
+	Hosts     []string
+	Mode      Mode
+	Reboot    RebootFlag
+	Force     bool
+	Self      bool
+	Build     bool
+	CopyJobs  int
+	MaxJobs   int
+	Cores     int
+	OnFailure OnFailure
 }
 
 // hostsFlagUsage renders the -hosts help text from AllHosts so the documented
@@ -42,6 +46,10 @@ func parseArgs(argv []string) (CLIArgs, error) {
 	force := fs.Bool("force", false, "Skip safety pre-checks (e.g. active print on printer hosts)")
 	self := fs.Bool("self", false, "Deploy to the host running this command (equivalent to -hosts $(hostname))")
 	build := fs.Bool("build", false, "Only build configurations for the selected hosts; do not deploy or activate anything")
+	copyJobs := fs.Int("copy-jobs", defaultCopyJobs, "Concurrent closure copies")
+	maxJobs := fs.Int("max-jobs", 0, "Passed to nix build as --max-jobs (0 = leave it to nix.conf)")
+	cores := fs.Int("cores", 0, "Passed to nix build as --cores (0 = leave it to nix.conf)")
+	onFailure := fs.String("on-failure", string(OnFailureStop), "When a host fails: stop|continue")
 	if err := fs.Parse(argv); err != nil {
 		return CLIArgs{}, err
 	}
@@ -73,7 +81,18 @@ func parseArgs(argv []string) (CLIArgs, error) {
 			}
 		}
 	}
-	return CLIArgs{Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force, Self: *self, Build: *build}, nil
+	onFail, err := ParseOnFailure(*onFailure)
+	if err != nil {
+		return CLIArgs{}, err
+	}
+	if *copyJobs < 1 {
+		return CLIArgs{}, fmt.Errorf("--copy-jobs must be at least 1, got %d", *copyJobs)
+	}
+
+	return CLIArgs{
+		Hosts: hosts, Mode: mode, Reboot: reboot, Force: *force, Self: *self, Build: *build,
+		CopyJobs: *copyJobs, MaxJobs: *maxJobs, Cores: *cores, OnFailure: onFail,
+	}, nil
 }
 
 func main() { os.Exit(run()) }
@@ -112,9 +131,21 @@ func run() int {
 	if args.Build {
 		fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
 		fmt.Println("Mode: build-only (no deploy)")
+		runner := ExecRunner{}
+		tops, err := ResolveToplevels(ExecRunner{Quiet: true}, hosts)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
+		}
+		drvs := make([]string, 0, len(hosts))
+		for _, h := range hosts {
+			drvs = append(drvs, tops[h.Name].Drv)
+		}
+		BuildAll(runner, drvs, args.buildOpts())
+
 		var failed []string
 		for _, h := range hosts {
-			if !BuildOnly(ExecRunner{}, h) {
+			if !BuiltOK(runner, tops[h.Name].Out) {
 				failed = append(failed, h.Name)
 			}
 		}
@@ -193,24 +224,30 @@ func run() int {
 		}
 	}
 
-	for i, p := range todo {
-		h := p.Host
-		ok := Deploy(ctx, h, args.Mode, p.Plan)
-		// Close this host's master before moving to the next: one live master
-		// at a time, and nothing left behind if the run stops here.
-		ctl.Drop(quiet, h)
-		if !ok {
-			failed = append(failed, h.Name)
-			if h.InGroup("k3s") {
-				fmt.Printf("\n✗ K3s rolling deploy failed at %s, stopping.\n", h.Name)
+	if args.Mode == ModeSafe {
+		// safe mode is pipelined: build, copy and activate overlap across
+		// hosts, with activation kept to one host at a time.
+		for _, r := range RunPipeline(ctx, quiet, todo, args.pipelineOpts()) {
+			if r.Status.failed() {
+				failed = append(failed, r.Host.Name)
+			}
+		}
+	} else {
+		// switch/boot are the debug paths: nixos-rebuild does its own build and
+		// copy per host, so there is nothing to overlap.
+		for _, p := range todo {
+			ok := Deploy(ctx, p.Host, args.Mode, p.Plan)
+			ctl.Drop(quiet, p.Host)
+			if ok {
+				continue
+			}
+			failed = append(failed, p.Host.Name)
+			if p.Host.InGroup("k3s") {
+				fmt.Printf("\n✗ K3s rolling deploy failed at %s, stopping.\n", p.Host.Name)
 				break
 			}
-			// No prompt if this was the last host — nothing to continue to.
-			if i == len(todo)-1 {
-				fmt.Printf("\n✗ %s failed.\n", h.Name)
-				break
-			}
-			if !confirmContinue(h.Name) {
+			if args.OnFailure == OnFailureStop {
+				fmt.Printf("\n✗ %s failed; stopping (--on-failure=continue to keep going).\n", p.Host.Name)
 				break
 			}
 		}
@@ -291,7 +328,25 @@ func stdinPrompter(prompt string) bool {
 	return strings.EqualFold(strings.TrimSpace(line), "y")
 }
 
-func confirmContinue(host string) bool {
-	return stdinPrompter(fmt.Sprintf("\n✗ %s failed. Continue with remaining hosts? [y/N]: ", host))
+
+// defaultCopyJobs bounds concurrent closure transfers. Separate from the build
+// bound because a copy is ssh plus sender-side compression, not a nix build job.
+const defaultCopyJobs = 4
+
+func (a CLIArgs) buildOpts() BuildOpts {
+	return BuildOpts{
+		MaxJobs: a.MaxJobs,
+		Cores:   a.Cores,
+		// A live build log and a stdin prompt cannot share a terminal, and
+		// -reboot ask prompts mid-run.
+		Stream: a.Reboot != RebootFlagAsk,
+	}
 }
 
+func (a CLIArgs) pipelineOpts() PipelineOpts {
+	return PipelineOpts{
+		CopyJobs:  a.CopyJobs,
+		OnFailure: a.OnFailure,
+		Build:     a.buildOpts(),
+	}
+}

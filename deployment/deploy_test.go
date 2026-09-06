@@ -30,14 +30,12 @@ func buildOKResponses(systemPath string) []FakeResponse {
 		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: "/nix/store/STALE-system\n"}},
 		// readlink /run/current-system returns expected path
 		{Match: MatchContains("readlink"), Result: RunResult{Stdout: systemPath + "\n"}},
-		// Post-build system path query
-		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{Stdout: systemPath}},
 		// Kernel detection: no change
 		{Match: MatchContains("uname -r"), Result: RunResult{Stdout: "6.6.50\n"}},
 		{Match: MatchContains("kernel-modules"), Result: RunResult{Stdout: "6.6.50\n"}},
 		{Match: MatchContains("booted-system/kernel-params"), Result: RunResult{Stdout: "quiet\n"}},
 		{Match: MatchContains("current-system/kernel-params"), Result: RunResult{Stdout: "quiet\n"}},
-		// Default for everything else (build, arm, activate, persist, disarm)
+		// Default for everything else (arm, activate, persist, disarm)
 		{Match: func([]string) bool { return true }, Result: RunResult{}},
 	}
 }
@@ -57,11 +55,11 @@ func TestSafeDeployHappyPath(t *testing.T) {
 	calls := joinedCalls(fake)
 	// Required call sequence (substring matches, in order):
 	wantOrder := []string{
-		"echo ok",                                                          // initial SSH check
-		"nixos-rebuild build",                                              // step 1
-		"systemd-run --unit=deploy-watchdog-1700000000 --on-active=120s",   // step 2
-		"switch-to-configuration test",                                     // step 3
-		"readlink /run/current-system",                                     // step 5
+		"echo ok", // initial SSH check
+		// No build or copy here: the pipeline did both before handing the host over.
+		"systemd-run --unit=deploy-watchdog-1700000000 --on-active=120s",
+		"switch-to-configuration test",
+		"readlink /run/current-system",
 		"nix-env --profile /nix/var/nix/profiles/system --set " + fakeSystemPath, // step 6
 		"switch-to-configuration boot",                                     // step 6
 		"systemctl stop deploy-watchdog-1700000000",                        // step 7
@@ -81,7 +79,6 @@ func TestSafeDeploySkipsIfAlreadyDeployed(t *testing.T) {
 		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
 		// readlink /run/current-system (active)
 		{Match: MatchContains("readlink"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
-		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{Stdout: fakeSystemPath}},
 		{Match: func([]string) bool { return true }, Result: RunResult{}},
 	}
 	fake := &FakeRunner{Responses: resps}
@@ -115,7 +112,6 @@ func TestSafeDeploySkipStillRebootsWhenOwed(t *testing.T) {
 		{Match: MatchContains("echo ok"), Result: RunResult{Stdout: "ok\n"}},
 		{Match: MatchContains("readlink", "profiles/system"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
 		{Match: MatchContains("readlink"), Result: RunResult{Stdout: fakeSystemPath + "\n"}},
-		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{Stdout: fakeSystemPath}},
 		// running kernel != activated kernel -> reboot needed
 		{Match: MatchContains("uname -r"), Result: RunResult{Stdout: "6.6.50\n"}},
 		{Match: MatchContains("kernel-modules"), Result: RunResult{Stdout: "6.6.99\n"}},
@@ -224,25 +220,15 @@ func TestSafeDeployPathMismatchAborts(t *testing.T) {
 	}
 }
 
-// The precheck eval and the build are two separate evaluations, so the flake
-// source can move between them (a dirty tree re-times inputs.self.lastModified;
-// a commit mid-run moves the rev). The path the build produced is the only one
-// that exists on the target, so everything downstream must use it.
-func TestSafeDeployPrefersBuiltPathOverPlanPath(t *testing.T) {
+// Activation uses exactly the path the pipeline pinned. Nothing re-evaluates
+// between the precheck and here, so there is no second path to prefer.
+func TestSafeDeployActivatesThePlannedPath(t *testing.T) {
 	host := AllHosts[1] // ro
 	host.K8sHealthCheck = false
 
-	const planPath = "/nix/store/stale123-nixos-system-test-25.11"
-
-	resps := []FakeResponse{
-		// The post-build eval disagrees with the precheck path.
-		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{Stdout: fakeSystemPath}},
-	}
-	resps = append(resps, buildOKResponses(fakeSystemPath)...)
-	fake := &FakeRunner{Responses: resps}
-
-	if !Deploy(testCtx(fake), host, ModeSafe, Plan{SystemPath: planPath}) {
-		t.Fatal("expected success using the built path")
+	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
+	if !Deploy(testCtx(fake), host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
+		t.Fatal("expected success")
 	}
 
 	for _, sub := range []string{"switch-to-configuration test", "switch-to-configuration boot", "nix-env --profile"} {
@@ -251,36 +237,18 @@ func TestSafeDeployPrefersBuiltPathOverPlanPath(t *testing.T) {
 			t.Fatalf("expected a %q call", sub)
 		}
 		for _, c := range calls {
-			joined := strings.Join(c, " ")
-			if !strings.Contains(joined, fakeSystemPath) {
-				t.Errorf("expected %q to use the built path, got %s", sub, CallString(c))
-			}
-			if strings.Contains(joined, planPath) {
-				t.Errorf("expected %q to drop the stale precheck path, got %s", sub, CallString(c))
+			if !strings.Contains(strings.Join(c, " "), fakeSystemPath) {
+				t.Errorf("expected %q to use the planned path, got %s", sub, CallString(c))
 			}
 		}
 	}
-}
 
-// A build that succeeds but whose system path cannot be determined must fail
-// before the watchdog is armed: there is no path to activate.
-func TestSafeDeployFailsWhenPathQueryFails(t *testing.T) {
-	host := AllHosts[1]
-	host.K8sHealthCheck = false
-
-	resps := []FakeResponse{
-		{Match: MatchContains("nix eval", "--raw"), Result: RunResult{ExitCode: 1}},
-	}
-	resps = append(resps, buildOKResponses(fakeSystemPath)...)
-	fake := &FakeRunner{Responses: resps}
-
-	if Deploy(testCtx(fake), host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
-		t.Fatal("expected failure when the system path cannot be determined")
-	}
-	if len(fake.CallsContaining("systemd-run")) > 0 {
-		t.Error("watchdog must not be armed without a known system path")
+	// No re-evaluation: the derivation was pinned up front.
+	if n := len(fake.CallsContaining("nix", "eval")); n != 0 {
+		t.Errorf("deploySafe must not evaluate anything, got %d eval calls", n)
 	}
 }
+
 func TestSafeDeployArmFailureAbortsEarly(t *testing.T) {
 	host := AllHosts[1]
 	host.K8sHealthCheck = false
@@ -449,26 +417,20 @@ func (p *probeFailRunner) Run(_ context.Context, argv []string, _ RunOpts) RunRe
 	return RunResult{}
 }
 
-// Every build runs on this machine, so no nixos-rebuild call may offload.
+// Every build runs on this machine, so nothing may offload it.
 func TestBuildsNeverOffload(t *testing.T) {
-	host := AllHosts[1] // ro
-	host.K8sHealthCheck = false
-
-	fake := &FakeRunner{Responses: buildOKResponses(fakeSystemPath)}
-	if !Deploy(testCtx(fake), host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
-		t.Fatal("expected success")
+	joined := strings.Join(BuildArgv([]string{"/nix/store/a.drv"}, BuildOpts{}), " ")
+	for _, forbidden := range []string{"--build-host", "--builders", "--builders-use-substitutes"} {
+		if strings.Contains(joined, forbidden) {
+			t.Errorf("build argv offloads via %s: %s", forbidden, joined)
+		}
 	}
 
-	buildFake := &FakeRunner{}
-	if !BuildOnly(buildFake, host) {
-		t.Fatal("expected success")
-	}
-
-	for _, f := range []*FakeRunner{fake, buildFake} {
-		for _, c := range f.CallsContaining("nixos-rebuild") {
-			if strings.Contains(strings.Join(c, " "), "--build-host") {
-				t.Errorf("call still offloads: %s", CallString(c))
-			}
+	// The copy is the only thing that may name a remote store.
+	copyJoined := strings.Join(CopyArgv(AllHosts[1], "/nix/store/a"), " ")
+	for _, forbidden := range []string{"--build-host", "--builders"} {
+		if strings.Contains(copyJoined, forbidden) {
+			t.Errorf("copy argv offloads via %s: %s", forbidden, copyJoined)
 		}
 	}
 }
@@ -540,17 +502,24 @@ func TestRebootDropsMasterAndPollsDirectly(t *testing.T) {
 	}
 }
 
-// The closure copy shares our master rather than opening its own.
-func TestBuildAndCopyPassesControlToNixosRebuild(t *testing.T) {
+// The closure copy shares our master rather than opening its own. nix spawns
+// its own ssh, so the control options have to reach it through NIX_SSHOPTS.
+func TestCopyPassesControlToNix(t *testing.T) {
 	fake := newDeployFake([]FakeResponse{
-		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: fakeSystemPath}},
 		{Match: func([]string) bool { return true }, Result: RunResult{}},
 	})
-	if _, ok := buildAndCopy(testCtx(fake), AllHosts[1]); !ok {
-		t.Fatal("expected build to succeed")
+	if !CopyClosure(fake, AllHosts[1], fakeSystemPath) {
+		t.Fatal("expected copy to succeed")
 	}
-	env := nixSSHOptsFor(fake)
+	env := copyEnv(fake)
 	if len(env) != 1 || !strings.Contains(env[0], "ControlPath=/tmp/deploy-ssh-test/%C") {
-		t.Errorf("nixos-rebuild must inherit our control path, got %v", env)
+		t.Errorf("nix copy must inherit our control path, got %v", env)
+	}
+	// nix supplies none of these itself; without them a copy to a host that has
+	// gone away blocks until the OS TCP timeout.
+	for _, want := range []string{"BatchMode=yes", "ConnectTimeout="} {
+		if !strings.Contains(env[0], want) {
+			t.Errorf("copy env missing %q: %v", want, env)
+		}
 	}
 }

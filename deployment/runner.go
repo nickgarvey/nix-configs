@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -25,6 +24,10 @@ type RunOpts struct {
 	// addition to capturing them. Used for nixos-rebuild build so the user
 	// sees live progress on a multi-minute operation.
 	Stream bool
+	// Out, when Stream is set, receives the tee instead of os.Stdout. The
+	// pipeline uses it to tag the build log, which streams while other stages
+	// are printing.
+	Out io.Writer
 }
 
 type RunResult struct {
@@ -57,7 +60,9 @@ func (r ExecRunner) SSHControl() *SSHControl { return r.Control }
 
 func (r ExecRunner) Run(ctx context.Context, argv []string, opts RunOpts) RunResult {
 	if !r.Quiet {
-		fmt.Printf("  Running: %s\n", strings.Join(echoArgv(argv), " "))
+		// Locked: the build log streams concurrently, and an unsynchronised
+		// Printf here would tear against its lines.
+		say("  Running: %s\n", strings.Join(echoArgv(argv), " "))
 	}
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	if len(opts.Env) > 0 {
@@ -65,8 +70,12 @@ func (r ExecRunner) Run(ctx context.Context, argv []string, opts RunOpts) RunRes
 	}
 	var stdout, stderr bytes.Buffer
 	if opts.Stream {
-		cmd.Stdout = io.MultiWriter(&stdout, os.Stdout)
-		cmd.Stderr = io.MultiWriter(&stderr, os.Stderr)
+		out, errOut := io.Writer(os.Stdout), io.Writer(os.Stderr)
+		if opts.Out != nil {
+			out, errOut = opts.Out, opts.Out
+		}
+		cmd.Stdout = io.MultiWriter(&stdout, out)
+		cmd.Stderr = io.MultiWriter(&stderr, errOut)
 	} else {
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
