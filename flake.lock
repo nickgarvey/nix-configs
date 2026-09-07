@@ -255,6 +255,28 @@
         "type": "sourcehut"
       }
     },
+    "lan-table": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "dir": "lan-table",
+        "lastModified": 1788791639,
+        "narHash": "sha256-SQZz4oUwm2og2+Qdz6no9kLhBzT6fSxGt0L2OtD9nOo=",
+        "owner": "nickgarvey",
+        "repo": "homelab-nixpkgs",
+        "rev": "f7e580cdddc3aa03f5f25ee11d526510a4bc23ab",
+        "type": "github"
+      },
+      "original": {
+        "dir": "lan-table",
+        "owner": "nickgarvey",
+        "repo": "homelab-nixpkgs",
+        "type": "github"
+      }
+    },
     "microvm": {
       "inputs": {
         "nixpkgs": [
@@ -408,6 +430,7 @@
         "disko": "disko",
         "helium-browser": "helium-browser",
         "home-manager": "home-manager",
+        "lan-table": "lan-table",
         "microvm": "microvm",
         "nixos-hardware": "nixos-hardware",
         "nixos-raspberrypi": "nixos-raspberrypi",

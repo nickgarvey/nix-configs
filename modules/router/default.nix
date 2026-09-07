@@ -7,6 +7,7 @@ in
   imports = [
     ./nftables.nix
     ./dhcp.nix
+    ./lan-table.nix
     ./blocky-dns.nix
     ./knot-resolver.nix
     ./he-tunnel.nix

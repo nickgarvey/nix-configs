@@ -65,6 +65,9 @@ in
             iifname "${cfg.lanInterface}" udp dport { 53, 67, 68 } accept
             iifname "${cfg.lanInterface}" tcp dport { 53 } accept
 
+            # LAN inventory page (modules/router/lan-table.nix)
+            iifname "${cfg.lanInterface}" tcp dport { 8080 } accept
+
             # TRMNL reverse proxy (nspawn container, host networking)
             iifname "${cfg.lanInterface}" tcp dport { 80 } ip daddr 10.28.0.2 accept
 

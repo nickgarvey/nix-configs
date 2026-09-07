@@ -53,6 +53,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # LAN inventory page, packaged in the homelab-nixpkgs repo.
+    lan-table = {
+      url = "github:nickgarvey/homelab-nixpkgs?dir=lan-table";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # ThinkRail, packaged in the homelab-nixpkgs repo.
     thinkrail = {
       url = "github:nickgarvey/homelab-nixpkgs?dir=thinkrail";
