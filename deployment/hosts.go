@@ -92,6 +92,11 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
+		Name: "guevenne", FlakeName: "guevenne",
+		Order: 41, Groups: []string{"media"}, Default: true,
+		ConnChecks: []ConnCheck{CheckSSH},
+	},
+	{
 		Name: "skyforge", FlakeName: "skyforge",
 		Order: 50, Groups: []string{"printer"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH},

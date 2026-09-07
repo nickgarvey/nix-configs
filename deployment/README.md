@@ -101,6 +101,7 @@ Summary:
 | talos | 21 | – | ✓ | SSH + gateway ping |
 | lydia | 30 | – | ✓ | SSH + gateway ping |
 | dovahkiin | 40 | – | opt-in | only deploys when named explicitly |
+| guevenne | 41 | – | ✓ | TV PC; SSH only |
 | skyforge | 50 | – | ✓ | aarch64; needs binfmt on the deploying machine; printer idle pre-check |
 | nelkir | 51 | – | ✓ | aarch64; needs binfmt on the deploying machine |
 | dragonsreach | 99 | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |

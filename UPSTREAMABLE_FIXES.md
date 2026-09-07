@@ -185,3 +185,50 @@ See `patches/orca-slicer-null-checks.patch`. Both hunks are minimal defensive
 null-checks; they don't try to recover or signal the user, just avoid the
 crash. A proper upstream fix would probably also surface a UI notification
 explaining the missing profile / missing GStreamer plugin.
+
+---
+
+## jellyfin-desktop: NativeShell never reaches the web client, killing input and mpv
+
+**Affected:** `pkgs/by-name/je/jellyfin-desktop/package.nix` (nixpkgs, currently v2.0.0)
+**Local workaround:** `modules/desktop/common-tv.nix` — `jellyfin-media-player.overrideAttrs`
+pins `src` to upstream commit `cabddc6`, guarded by an assertion that fails the
+build once nixpkgs packages anything other than 2.0.0.
+
+### Symptom
+
+On `guevenne`, every keypress and controller button in Jellyfin Media Player
+did nothing. The log showed, for each one:
+
+    Input received: source: "Keyboard" keycode: "Down"
+    No match for: "Down"
+    Web Client has not connected, handling input in host instead.
+
+and mpv never initialised: `vo/libmpv: No render context set`.
+
+### Cause
+
+2.0.0 registers its nativeshell bootstrap script on the WebEngineView
+(`web.userScripts`). Startup loads the bundled `qrc://` server picker and then
+navigates to the remote web client; that cross-origin navigation moves to a new
+renderer process and the view-level registration is not delivered to it. The
+web client document ends up with no `window.jmpInfo`, no `window.NativeShell`
+and no `QWebChannel`, so the handshake that carries input and playback never
+happens. Confirmed via `--remote-debugging-port`: those globals are present on
+the first (qrc) document and absent on the web client; completing the handshake
+by hand exposes all nine JMP objects, so only the injection is broken.
+
+### Upstream fix
+
+https://github.com/jellyfin/jellyfin-desktop/commit/cabddc6 — one line,
+`web.userScripts` -> `web.profile.userScripts`. It postdates the v2.0.0 tag, so
+nixpkgs just needs a version bump once upstream tags a release containing it.
+
+### Gotcha when testing this
+
+Qt caches compiled QML under `~/.cache/jellyfin-desktop/qmlcache`, keyed on the
+`qrc:` path, which does not change between builds. A stale unit therefore
+survives rebuilds and keeps running the old `webview.qml` no matter what you
+patch — it cost hours here. The launcher sets `QML_DISABLE_DISK_CACHE=1`. To
+spot it, compare the QML line numbers in the log (`@ 275`) against the file you
+think you built.
