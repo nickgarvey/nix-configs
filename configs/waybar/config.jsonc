@@ -50,8 +50,8 @@
     "pulseaudio": {
         "format": "VOL {volume}%",
         "format-muted": "muted",
-        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-        "on-click-right": "pwvucontrol"
+        "on-click": "pavucontrol",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
     },
 
     "tray": {

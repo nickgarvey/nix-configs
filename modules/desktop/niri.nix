@@ -30,7 +30,7 @@
       fuzzel              # application launcher (Mod+D)
       xwayland-satellite  # provides DISPLAY for X11 apps (e.g. Steam) under niri
       networkmanagerapplet # nm-applet (tray) + nm-connection-editor (GUI) for waybar
-      pwvucontrol         # PipeWire volume/mixer GUI (opened from waybar audio module)
+      pavucontrol         # PulseAudio volume/mixer GUI (opened from waybar audio module)
       brightnessctl       # backlight control (XF86MonBrightness keys in niri.kdl)
       gnome-themes-extra  # provides the Adwaita-dark GTK theme (dark mode)
     ];
