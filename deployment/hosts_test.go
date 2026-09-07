@@ -59,7 +59,7 @@ func TestSelectHosts(t *testing.T) {
 			want: []string{
 				"fus", "ro", "dah",
 				"wabbajack", "talos", "lydia",
-				"skyforge", "dragonsreach",
+				"skyforge", "nelkir", "dragonsreach",
 			},
 		},
 		{

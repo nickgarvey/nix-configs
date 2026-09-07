@@ -102,6 +102,7 @@ Summary:
 | lydia | 30 | – | ✓ | SSH + gateway ping |
 | dovahkiin | 40 | – | opt-in | only deploys when named explicitly |
 | skyforge | 50 | – | ✓ | aarch64; needs binfmt on the deploying machine; printer idle pre-check |
+| nelkir | 51 | – | ✓ | aarch64; needs binfmt on the deploying machine |
 | dragonsreach | 99 | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
 
 ### Printer pre-check (skyforge)

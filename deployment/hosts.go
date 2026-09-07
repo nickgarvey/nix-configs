@@ -97,6 +97,12 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
+		// aarch64; the closure comes from the binary cache, so this is cheap.
+		Name: "nelkir", FlakeName: "nelkir",
+		Order: 51, Groups: []string{"media"}, Default: true,
+		ConnChecks: []ConnCheck{CheckSSH},
+	},
+	{
 		Name: "dragonsreach", FlakeName: "dragonsreach",
 		SSHAddress: "10.28.0.1",
 		Order:      99,
