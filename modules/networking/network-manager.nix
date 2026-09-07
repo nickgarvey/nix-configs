@@ -10,9 +10,11 @@
 # profile that pins their static IPv6 and MAC-keyed DHCP, so their published
 # AAAA and DHCP reservation stay valid. Cluster routes (pods/LB/delegated /64s)
 # are learned from the router's RFC 4191 2001:470:482f::/48 route-info RA — see
-# modules/router/lan-ipv6.nix — so none are configured here. Hosts with no
-# lan-hosts entry (e.g. dovahkiin) just SLAAC + DHCP with no wired profile,
-# reachable via Tailscale.
+# modules/router/lan-ipv6.nix — so none are configured here. Wifi-only hosts
+# (e.g. dovahkiin) carry a lan-hosts entry with ipv6 = null: the MAC-keyed
+# DHCPv4 reservation and its A record still apply over wifi, but there is no
+# ethernet NIC for the wired profile to attach to, so a static AAAA would name
+# an address the host never configures.
 
 let
   inherit (import ./lan-hosts.nix) lanHosts;

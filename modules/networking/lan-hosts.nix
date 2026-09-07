@@ -26,6 +26,7 @@
     { hostname = "lg-device";     mac = "28:0f:eb:91:76:fa"; ipv4 = "10.28.1.8";     ipv6 = null; }
     { hostname = "skyforge";      mac = "2c:cf:67:0c:3c:08"; ipv4 = "10.28.1.4";     ipv6 = "2001:470:482f::4"; }
     { hostname = "nelkir";        mac = "e4:5f:01:a3:1b:20"; ipv4 = "10.28.1.5";     ipv6 = null; }              # wifi MAC; ethernet is e4:5f:01:a3:1b:1f
+    { hostname = "dovahkiin";     mac = "dc:56:7b:02:bd:a7"; ipv4 = "10.28.1.6";     ipv6 = null; }              # wifi MAC; no ethernet NIC, so no static AAAA
     { hostname = "camera";        mac = "c4:3c:b0:f9:df:19"; ipv4 = "10.28.4.2";     ipv6 = null; }
     { hostname = "pocketdmg";     mac = "00:03:7f:79:64:81"; ipv4 = "10.28.1.20";    ipv6 = null; }
     { hostname = "glkvm";         mac = "94:83:c4:bb:1c:0d"; ipv4 = "10.28.9.145";   ipv6 = "2001:470:482f::9683:c4ff:febb:1c0d"; }
