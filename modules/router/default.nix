@@ -6,7 +6,7 @@ in
 {
   imports = [
     ./nftables.nix
-    ./kea-dhcp.nix
+    ./dhcp.nix
     ./blocky-dns.nix
     ./knot-resolver.nix
     ./he-tunnel.nix
@@ -119,15 +119,13 @@ in
       networkConfig.Bridge = cfg.lanInterface;
     };
 
-    # LAN bridge — static address
+    # LAN bridge — static address. DHCP and RA settings for this same network
+    # live in dhcp.nix and lan-ipv6.nix.
     systemd.network.networks."10-lan" = {
       matchConfig.Name = cfg.lanInterface;
       address = [
         "${cfg.lanAddress}/${toString cfg.lanPrefixLength}"
       ];
-      networkConfig = {
-        DHCPServer = false; # kea handles DHCP
-      };
     };
   };
 }

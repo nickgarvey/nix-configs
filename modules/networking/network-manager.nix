@@ -35,7 +35,7 @@ in
       ethernet.mac-address = lib.toUpper hostEntry.mac;
       ipv4 = {
         method = "auto";
-        dhcp-client-id = "mac";       # match the kea MAC-keyed reservation
+        dhcp-client-id = "mac";       # match the MAC-keyed DHCP static lease
       };
       ipv6 = {
         method = "auto";              # SLAAC/RA (incl. RA /48 route-info)...

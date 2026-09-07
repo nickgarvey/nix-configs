@@ -16,9 +16,9 @@
 #   2. modules/networking/dns.nix — restore the A record in `records`:
 #          unifi = { v4 = [ "10.28.0.4" ]; v6 = []; };
 #      Keep it v4-only; see the sysctl note at the bottom of this file.
-#   3. modules/router/kea-dhcp.nix — restore the inform URL in subnet4's
-#      `option-data` (DHCP option 43, suboption 01, encoding 10.28.0.4):
-#          { name = "vendor-encapsulated-options"; data = "01:04:0a:1c:00:04"; csv-format = false; }
+#   3. modules/router/dhcp.nix — restore the inform URL in `dhcpServerConfig`
+#      (DHCP option 43, suboption 01, encoding 10.28.0.4):
+#          SendOption = "43:string:\\x01\\x04\\x0a\\x1c\\x00\\x04";
 #      Devices already adopted keep their inform URL in their own config; this
 #      option only matters for factory-reset or newly-added hardware.
 #   4. Resolve the mongodb build. It broke on a cheetah3 metadata check under

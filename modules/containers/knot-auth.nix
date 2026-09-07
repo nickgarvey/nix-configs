@@ -105,11 +105,11 @@ in
     # into the container -- so a config change is a store path change.
     config = { config, pkgs, ... }: {
       # The bind-mounted sops template is 0400 root:root on the host and must stay
-      # that way: the host's uid 999 is `kea`, not `knot`, so chowning it to the
-      # container's knot uid would hand the TSIG keys to the DHCP daemon. Instead
-      # root re-installs it as knot inside the container, where uid 999 really is
-      # knot. The `+` prefix runs this as root even though knot.service drops to
-      # the knot user.
+      # that way: host and container uids are separate namespaces, so chowning it
+      # to the container's knot uid would hand the TSIG keys to whichever host
+      # account happens to hold that id. Instead root re-installs it as knot inside
+      # the container, where the name resolves correctly. The `+` prefix runs this
+      # as root even though knot.service drops to the knot user.
       systemd.services.knot.serviceConfig.ExecStartPre = [
         "+${pkgs.coreutils}/bin/install -o knot -g knot -m 0400 /run/knot-acme-tsig.conf /run/knot/acme-tsig.conf"
       ];

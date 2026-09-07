@@ -1,5 +1,5 @@
 # Canonical source of static LAN host assignments (physical hosts with MACs).
-# Consumed by: kea DHCP (reservations), blocky DNS (A/AAAA records),
+# Consumed by: networkd DHCP server (static leases), blocky DNS (A/AAAA records),
 # networkd.nix (static IPv6), k3s-common.nix (node-ip).
 #
 # Non-host DNS (service aliases, VIPs, CNAMEs) lives in dns.nix.
