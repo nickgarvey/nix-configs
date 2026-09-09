@@ -60,6 +60,47 @@ by hand is a minute's work; generating it is not worth the fight.
 Steam assigns each shortcut a fresh `appid`, so any `steam://rungameid/...` links you
 had written down are invalidated. Nothing in the config depends on them.
 
+### Tile artwork
+
+Without artwork both shortcuts render as blank grey rectangles among the game capsules.
+Steam reads artwork from `~/.local/share/Steam/userdata/<account>/config/grid/`, keyed by
+each shortcut's `appid` — no edit to the binary `shortcuts.vdf` is needed:
+
+| File | Purpose |
+|---|---|
+| `<appid>p.png` | portrait capsule, 600x900 — the tile you actually see |
+| `<appid>.png` | landscape capsule, 920x430 |
+| `<appid>_hero.png` | detail-page banner, 1920x620 |
+| `<appid>_logo.png` | transparent logo Steam draws over the hero |
+
+The appids change every time the shortcuts are recreated. Read the current ones out of
+`shortcuts.vdf` — they are little-endian int32s following each `appid` key — or just look
+at a running shortcut's `reaper SteamLaunch AppId=...` in `ps`.
+
+`jellyfin-desktop` ships its own logo (`share/icons/hicolor/scalable/apps/*.svg`); the
+YouTube wrapper ships none, so its tile is drawn from primitives. To regenerate, with
+`nix shell nixpkgs#imagemagick`:
+
+```sh
+GRID=~/.local/share/Steam/userdata/<account>/config/grid; mkdir -p "$GRID"
+FONT=$(find /nix/store -name DejaVuSans-Bold.ttf | head -1)
+SVG=$(find /nix/store/*jellyfin-desktop*/share/icons -name '*.svg' | head -1)
+magick -background none -density 900 "$SVG" -resize 620x620 /tmp/jf_logo.png
+magick -size 620x440 xc:none -fill '#FF0000' \
+  -draw 'roundrectangle 0,0 619,439 100,100' \
+  -fill white -draw 'polygon 245,120 245,320 415,220' /tmp/yt_logo.png
+# then per app, with its own appid, logo, gradient and label:
+magick -size 600x900 gradient:'#5c2d91'-'#0b1622' \
+  \( /tmp/jf_logo.png -resize 340x340 \) -gravity center -geometry +0-60 -composite \
+  -gravity south -font "$FONT" -pointsize 54 -fill white -annotate +0+90 'Jellyfin' \
+  "$GRID/<appid>p.png"
+```
+
+Jellyfin uses `#5c2d91`→`#0b1622`, YouTube `#2a0d0d`→`#0b0b0b`.
+
+**Steam caches artwork at startup**, so new files do not appear until it restarts — and
+see the warning below about how to restart it.
+
 ## 3. Sign in to Jellyfin and set the TV layout
 
 Launch the Jellyfin tile. Server is `https://jellyfin.garvey.sh` — LAN resolution is
@@ -146,8 +187,71 @@ eyes and hands:
 NativeShell bridge is down and *all* input is dead — see `UPSTREAMABLE_FIXES.md`, and
 note the Qt QML disk-cache trap documented there before you conclude a patch didn't work.
 
+## TV power control, and the missing "Switch to Desktop"
+
+guevenne can turn the TV itself off. An AMD HDMI output exposes no `/dev/cec*`,
+so it cannot speak CEC; nelkir is wired to the same TV and does it on guevenne's
+behalf. From a shell:
+
+```sh
+tv status      # on | standby | unknown
+tv standby
+tv on
+```
+
+That opens a plain TCP connection to nelkir on port 5555, one verb per
+connection, handled by a systemd socket unit (`modules/services/cec-control.nix`)
+that shells out to `cec-ctl`. nelkir only accepts commands from guevenne's
+addresses, taken from `lan-hosts.nix`. No secrets, nothing in `~` -- unlike the
+items above, this survives a rebuild with no manual steps.
+
+**In Steam, the Power menu's "Switch to Desktop" entry is gone, replaced by
+"Turn Off TV".** That is deliberate, not damage: greetd offers no desktop
+session on this host, so the original entry only ever stranded you. It is done
+at runtime by `steam-tv-menu`, a systemd *user* service that drives Steam's
+Chromium UI over its CEF debugging port. It repurposes that row rather than
+adding one because Steam's controller navigation only visits rows in its own
+React registry -- an appended row renders but the controller walks straight past
+it.
+
+Two consequences worth knowing before debugging it:
+
+- **A Steam update can break it at any time.** It depends on Steam's DOM and an
+  undocumented debug port. `tv standby` from a shell is unaffected; only the
+  menu entry is at risk. If the entry vanishes, check
+  `journalctl --user -u steam-tv-menu`.
+- **`nixos-rebuild switch` does not restart systemd user services.** After
+  changing that service you need `systemctl --user restart steam-tv-menu` or a
+  reboot, or you will be testing the old code and concluding your change did
+  nothing. It starts from the current package on boot, so this only bites live
+  updates.
+
+`tv status` returns `unknown` for a few seconds after any power transition --
+the TV does not answer the CEC power query immediately. It settles.
+
 ## If the hardware changed
 
 `modules/networking/lan-hosts.nix` pins guevenne's identity to the USB ethernet dongle's
 MAC (`00:e0:4c:68:19:5d`), not the laptop. A different dongle means editing that entry,
 or the box loses its static AAAA and Jellyfin becomes unreachable on the LAN.
+
+## Restarting the Steam session
+
+**`systemctl restart greetd` does not bring Steam back — it drops you at a login
+prompt.** greetd runs `initial_session` (the ngarvey autologin that launches
+`steam-gamescope`) only on its *first* start after boot. On any later start it runs
+`default_session`, which is tuigreet. With no keyboard reachable from the couch that
+leaves the TV stuck at a greeter.
+
+To restart the session, reboot:
+
+```sh
+ssh guevenne sudo systemctl reboot
+```
+
+The session is back about 20 seconds after boot. Confirm with
+`pgrep -c gamescope` (expect a non-zero count) and `pgrep -f 'steam.*-tenfoot'`.
+
+Do **not** try to refresh Steam's UI with a CDP `Page.reload` on the Big Picture
+target — it knocks Steam into desktop mode and blanks the TV, and recovery is a
+reboot anyway.

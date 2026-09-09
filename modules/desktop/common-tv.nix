@@ -84,6 +84,67 @@ let
     };
   });
 
+  # This host has no CEC adapter of its own -- an AMD HDMI output exposes no
+  # /dev/cec* -- so TV power goes through nelkir, which is wired to the same
+  # TV and runs the CEC command socket (modules/services/cec-control.nix).
+  tv = pkgs.writeShellScriptBin "tv" ''
+    ${fromSteamShortcut}
+    send() {
+      # bash's /dev/tcp rather than a netcat dependency.
+      exec 3<>/dev/tcp/nelkir/5555 || { echo "cannot reach nelkir"; return 1; }
+      printf '%s\n' "$*" >&3
+      cat <&3
+      exec 3>&-
+    }
+
+    # The TV writes each port's CEC physical address into the EDID it serves on
+    # that port, so this host can discover which input it is plugged into
+    # instead of having it hardcoded -- move the cable and it still works.
+    mypa() {
+      for c in /sys/class/drm/card*-HDMI-*; do
+        [ "$(cat "$c/status" 2>/dev/null)" = connected ] || continue
+        ${pkgs.edid-decode}/bin/edid-decode "$c/edid" 2>/dev/null \
+          | ${pkgs.gawk}/bin/awk '/Source physical address/ { print $NF; exit }'
+        return
+      done
+    }
+
+    case "''${1:-status}" in
+      standby)
+        # Pass our input along so the TV sleeps -- and later wakes -- here.
+        send standby "$(mypa)"
+        ;;
+      wake)
+        pa=$(mypa)
+        send on
+        # The TV ignores a route request while it is still waking, so give it
+        # a moment before asking for our input.
+        sleep 3
+        [ -n "$pa" ] && send source "$pa" || echo "ERR no phys-addr in EDID"
+        ;;
+      *)
+        send "''${1:-status}"
+        ;;
+    esac
+  '';
+
+  # Turns Steam's "Switch to Desktop" row in the Power menu into "Turn Off TV",
+  # which runs `tv standby`. Steam's Big Picture UI is Chromium, so this goes
+  # over the CEF debugging port; the click cannot run a command itself, so it
+  # calls a CDP Runtime binding that this service listens for.
+  #
+  # It repurposes an existing row rather than adding one because Steam's
+  # controller navigation only visits rows in its own React registry -- an
+  # appended row renders but is unreachable. "Switch to Desktop" is dead weight
+  # here anyway: greetd offers no desktop session to switch to.
+  #
+  # This is unsupported by Valve and leans on Steam's DOM, so treat a Steam
+  # update breaking it as expected rather than surprising.
+  steam-tv-menu = pkgs.writers.writePython3Bin "steam-tv-menu" {
+    libraries = [ pkgs.python3Packages.websockets ];
+    flakeIgnore = [ "E501" ];
+  } (builtins.readFile ../../pkgs/steam-tv-menu/steam-tv-menu.py);
+
   # Jellyfin Media Player, nested in a cage compositor. JMP is Qt+QtWebEngine
   # with mpv embedded as a render target; run directly under gamescope its
   # window never gets a GL context ("vo/libmpv: No render context set") and
@@ -190,10 +251,48 @@ in
   # under the Steam account's userdata, which is per-account home state Nix does
   # not manage; what this module guarantees is that the binaries and desktop
   # entries exist for those tiles to point at.
-  environment.systemPackages = jellyfinApp ++ youtubeApp ++ (with pkgs; [
+  environment.systemPackages = [ tv ] ++ jellyfinApp ++ youtubeApp ++ (with pkgs; [
     chromium
     mpv
   ]);
+
+  # Steam Input materialises a virtual xbox pad via uinput when the Steam
+  # Controller connects, and removes it when the controller powers off. That
+  # add event is the only signal that the controller woke up -- the USB
+  # receiver itself is always present.
+  #
+  # Deliberately not wired to the remove event: the controller sleeps after a
+  # few idle minutes, so turning the TV off there would kill the picture
+  # mid-film.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="input", ACTION=="add", KERNEL=="js*", ATTRS{name}=="Microsoft X-Box 360 pad*", TAG+="systemd", ENV{SYSTEMD_WANTS}="tv-wake.service"
+  '';
+
+  systemd.services.tv-wake = {
+    description = "Wake the TV and switch it to this input when a controller connects";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${tv}/bin/tv wake";
+    };
+  };
+
+  # Steam only opens the CEF debugging port when this file exists. It is
+  # localhost-only, but it does let anything running as this user drive the
+  # Steam client, which is the price of the menu entry.
+  systemd.tmpfiles.rules = [
+    "f /home/ngarvey/.local/share/Steam/.cef-enable-remote-debugging 0644 ngarvey users -"
+  ];
+
+  systemd.user.services.steam-tv-menu = {
+    description = "Add a 'Turn Off TV' entry to Steam's Power menu";
+    wantedBy = [ "default.target" ];
+    path = [ tv ];
+    serviceConfig = {
+      ExecStart = "${steam-tv-menu}/bin/steam-tv-menu";
+      Restart = "always";
+      RestartSec = 10;
+    };
+  };
 
   # resolved is the NetworkManager DNS backend, so the LAN's split-horizon
   # jellyfin.garvey.sh override resolves to the cluster LoadBalancer.

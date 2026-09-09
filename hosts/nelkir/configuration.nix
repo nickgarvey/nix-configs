@@ -1,10 +1,19 @@
 { config, lib, pkgs, modulesPath, ... }:
+
+let
+  # guevenne's addresses come from the canonical LAN inventory rather than
+  # being repeated here, so moving that host cannot silently break the TV
+  # power control.
+  inherit (import ../../modules/networking/lan-hosts.nix) lanHosts;
+  guevenne = lib.findFirst (h: h.hostname == "guevenne") null lanHosts;
+in
 {
   imports = [
     ./hardware-configuration.nix
     "${modulesPath}/installer/sd-card/sd-image-aarch64.nix"
     ../../modules/core/nixos-common.nix
     ../../modules/networking/network-manager.nix
+    ../../modules/services/cec-control.nix
   ];
 
   networking.hostName = "nelkir";
@@ -20,6 +29,13 @@
   # option of its own. Host metrics are not worth a Vector process on a Pi that
   # does one thing.
   services.vector.enable = lib.mkForce false;
+
+  # guevenne (the TV box) drives the same TV but its AMD HDMI output exposes no
+  # /dev/cec*, so it sends power commands here instead.
+  homelab.cecControl = {
+    enable = true;
+    allowedSources = lib.filter (a: a != null) [ guevenne.ipv4 guevenne.ipv6 ];
+  };
 
   # The CEC userspace. cec-ctl/cec-follower/cec-compliance come from v4l-utils;
   # libcec's cec-client drives the same /dev/cec* Linux CEC framework devices.
@@ -58,18 +74,12 @@
         set -u
         PATH=${lib.makeBinPath [ pkgs.v4l-utils pkgs.gnugrep pkgs.gawk pkgs.coreutils ]}
 
-        # cec node numbering follows the HDMI controller, so it moves if the
-        # cable moves ports. Pick whichever has negotiated a real physical
-        # address (f.f.f.f means no EDID / nothing plugged in).
-        DEV=""
-        for d in /dev/cec*; do
-          pa=$(cec-ctl -d "$d" 2>/dev/null | awk '/Physical Address/ { print $NF; exit }')
-          if [ -n "$pa" ] && [ "$pa" != "f.f.f.f" ]; then DEV="$d"; break; fi
-        done
-        if [ -z "$DEV" ]; then
+        # Shared with the CEC command socket so both agree on which node is
+        # the TV; see modules/services/cec-control.nix for why it is a search.
+        DEV=$(${config.homelab.cecControl.pickDevice}) || {
           echo "no cec device with a physical address; is the TV connected?" >&2
           exit 1
-        fi
+        }
         echo "using $DEV"
 
         # Claim a logical address once; later polls inherit it.
@@ -92,7 +102,17 @@
               # the soundbar for a TV that someone deliberately turned off.
               tv=$(cec-ctl -d "$DEV" --to 0 --give-device-power-status 2>/dev/null \
                      | awk '/pwr-state/ { print $2; exit }')
-              if [ "$tv" = "on" ]; then
+              # Skip if something just asked the TV to sleep: it keeps
+              # reporting "on" for several seconds afterwards, and reasserting
+              # here makes the soundbar broadcast SET_SYSTEM_AUDIO_MODE, which
+              # wakes the TV straight back up. Written by the CEC command
+              # socket; see modules/services/cec-control.nix.
+              inhibit=0
+              if [ -r /run/cec-control/standby-at ]; then
+                age=$(( $(date +%s) - $(cat /run/cec-control/standby-at 2>/dev/null || echo 0) ))
+                [ "$age" -ge 0 ] && [ "$age" -lt 45 ] && inhibit=1
+              fi
+              if [ "$tv" = "on" ] && [ "$inhibit" = 0 ]; then
                 echo "system audio off while TV is on -- reasserting soundbar"
                 cec-ctl -d "$DEV" --to 5 --system-audio-mode-request phys-addr=0.0.0.0 >/dev/null 2>&1
               fi
