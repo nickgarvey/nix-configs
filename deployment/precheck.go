@@ -90,6 +90,6 @@ func precheckHost(r Runner, host Host, top Toplevel, force bool) PrecheckResult 
 		}
 	}
 
-	res.Plan.UpToDate = hostAtPath(r, host, systemPath)
+	res.Plan.UpToDate, _ = hostAtPath(r, host, systemPath)
 	return res
 }

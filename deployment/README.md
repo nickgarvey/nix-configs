@@ -225,6 +225,7 @@ Per host, once its closure is already on the target:
 3. switch-to-configuration test                    │
 4. Verify connectivity (per-host checks, 3 retries)│ at-risk window
 5. Verify /run/current-system == built path        │ (only fast SSH RPCs)
+   — released here if the switch simply didn't take│
 6. Persist: nix-env --set + switch-to-config boot  │
 7. Disarm watchdog                                ─┘
 
@@ -239,6 +240,25 @@ may still owe a reboot from an earlier run.
 The target reboots to its previous boot generation. The run reports the host as
 failed and moves on according to `--on-failure`; a k3s node always hard-stops the
 remaining rollout, for cluster stability.
+
+### When the watchdog is released early
+
+Step 6 is what changes the boot default, so up to that point a watchdog reboot
+can only land the host back on the generation it is already running. Two failure
+paths therefore stop the timer instead of letting it fire:
+
+- **Step 5, host still on its pre-deploy generation.** Step 4 has just proved it
+  reachable, and `/run/current-system` still names what it came up on, so the
+  activation did not take effect and the reboot would restore the config already
+  live. The host is reported failed; investigate the activation failure and
+  re-run for that host. An unreadable path, or a third generation we can't
+  account for, still leaves the watchdog armed.
+- **Step 2, arm reported failure.** The arm is deliberately not retried, so a
+  failure may still have armed the timer before the connection died. Nothing has
+  been activated at that point, so the timer is stopped before aborting.
+
+Steps 3 and 4 keep the watchdog: there the host may be unreachable, and the
+reboot to its persisted boot generation is the only recovery.
 
 ### Why we don't use `nixos-rebuild test` / `nixos-rebuild boot` under the watchdog
 

@@ -95,7 +95,8 @@ func Deploy(ctx *DeployContext, host Host, mode Mode, plan Plan) bool {
 func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
 	systemPath := plan.SystemPath
 
-	if alreadyDeployed(ctx, host, systemPath) {
+	upToDate, priorPath := alreadyDeployed(ctx, host, systemPath)
+	if upToDate {
 		// Config is already active and persisted as boot default, so the
 		// watchdog/activate/persist steps are no-ops. But the host may still
 		// owe a reboot (e.g. a prior deploy changed the kernel and the box was
@@ -116,6 +117,11 @@ func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
 	fmt.Printf("\n  [2/8] Arming watchdog (%s)...\n", watchdogTimeout)
 	unit, ok := armWatchdog(ctx, host, watchdogTimeout)
 	if !ok {
+		// The arm is not retried, so a "failure" here may still have armed the
+		// timer before the connection died. Nothing has been activated yet, so
+		// a reboot would be pure downtime — take the unit name armWatchdog
+		// built and stop it. Harmless if it was never created.
+		disarmWatchdog(ctx, host, unit)
 		fmt.Println("  FATAL: cannot proceed without watchdog protection")
 		return false
 	}
@@ -136,7 +142,22 @@ func deploySafe(ctx *DeployContext, host Host, plan Plan) bool {
 	}
 
 	fmt.Println("\n  [5/8] Verifying active system path matches build...")
-	if !verifyActivePath(ctx, host, systemPath) {
+	if ok, got := verifyActivePath(ctx, host, systemPath); !ok {
+		// Step 6 has not run, so the boot default is still the one the host
+		// came up on. A watchdog reboot can therefore only land it back on the
+		// generation named by priorPath. Where we can see that is exactly where
+		// the host already is, the reboot buys nothing but downtime — release
+		// it. An unreadable or unrecognised path is a state we can't account
+		// for, so there the watchdog stays.
+		if got != "" && got == priorPath {
+			fmt.Printf("  Activation did not take effect; %s is still on its previous\n"+
+				"  generation and reachable. Nothing was persisted — releasing the\n"+
+				"  watchdog rather than rebooting to the config it already runs.\n"+
+				"  Investigate the activation failure, then re-run: deploy --hosts %s\n",
+				host.Name, host.Name)
+			disarmWatchdog(ctx, host, unit)
+			return false
+		}
 		fmt.Printf("  Watchdog will reboot %s in <=%s\n", host.Name, watchdogTimeout)
 		return false
 	}
@@ -246,12 +267,13 @@ func armWatchdog(ctx *DeployContext, host Host, timeout time.Duration) (string, 
 		unit, int(timeout.Seconds()))
 	// Deliberately not retried: if the first attempt armed the timer before the
 	// connection died, a second would fail with "unit already exists" and abort
-	// a deploy whose watchdog is live. cleanupStaleUnits sweeps the leftover on
-	// the next run.
+	// a deploy whose watchdog is live. The unit name is returned either way so
+	// the caller can stop such a timer rather than leave it to the next run's
+	// cleanupStaleUnits.
 	res := SSHRunOnce(ctx.Runner, host, cmd, 30*time.Second)
 	if res.Failed() {
 		fmt.Printf("  ✗ could not arm watchdog: %s\n", strings.TrimSpace(res.Stderr))
-		return "", false
+		return unit, false
 	}
 	fmt.Printf("  ✓ watchdog armed [unit=%s]\n", unit)
 	return unit, true
@@ -302,13 +324,15 @@ func activate(ctx *DeployContext, host Host, systemPath, sub string, timedOut *b
 }
 
 // alreadyDeployed reports whether the host's active system AND boot default
-// both already point at systemPath, meaning there is nothing to deploy.
+// both already point at systemPath, meaning there is nothing to deploy. It also
+// returns the active path, which deploySafe keeps as the generation to compare
+// against if activation later turns out not to have taken effect.
 //
 // /run/current-system is a direct symlink to the toplevel store path (matching
 // what verifyActivePath relies on). /nix/var/nix/profiles/system points at a
 // system-N-link generation, so we resolve it with `readlink -f` to reach the
 // toplevel for comparison.
-func alreadyDeployed(ctx *DeployContext, host Host, systemPath string) bool {
+func alreadyDeployed(ctx *DeployContext, host Host, systemPath string) (bool, string) {
 	return hostAtPath(ctx.Runner, host, systemPath)
 }
 
@@ -317,29 +341,37 @@ func alreadyDeployed(ctx *DeployContext, host Host, systemPath string) bool {
 //
 // An empty systemPath is never a match: two failed readlinks both trim to ""
 // and would otherwise look like agreement.
-func hostAtPath(r Runner, host Host, systemPath string) bool {
-	if systemPath == "" {
-		return false
-	}
-	active := SSHRun(r, host, "readlink /run/current-system", 15*time.Second)
+func hostAtPath(r Runner, host Host, systemPath string) (bool, string) {
+	active := activeSystemPath(r, host)
 	boot := SSHRun(r, host, "readlink -f /nix/var/nix/profiles/system", 15*time.Second)
-	return strings.TrimSpace(active.Stdout) == systemPath &&
-		strings.TrimSpace(boot.Stdout) == systemPath
+	if systemPath == "" {
+		return false, active
+	}
+	return active == systemPath && strings.TrimSpace(boot.Stdout) == systemPath, active
 }
 
-func verifyActivePath(ctx *DeployContext, host Host, expected string) bool {
-	res := SSHRun(ctx.Runner, host, "readlink /run/current-system", 15*time.Second)
-	got := strings.TrimSpace(res.Stdout)
+// activeSystemPath reads the host's live toplevel, or "" if it can't be read.
+func activeSystemPath(r Runner, host Host) string {
+	res := SSHRun(r, host, "readlink /run/current-system", 15*time.Second)
+	return strings.TrimSpace(res.Stdout)
+}
+
+// verifyActivePath reports whether the host is running expected, along with the
+// path it is actually running. The caller needs that path, not just the bool:
+// whether a mismatch warrants leaving the watchdog armed depends on which other
+// generation the host landed on.
+func verifyActivePath(ctx *DeployContext, host Host, expected string) (bool, string) {
+	got := activeSystemPath(ctx.Runner, host)
 	if got == "" {
 		fmt.Println("  ✗ could not read /run/current-system")
-		return false
+		return false, ""
 	}
 	if got != expected {
-		fmt.Printf("  ✗ active path %s != expected %s (watchdog mid-reboot?)\n", got, expected)
-		return false
+		fmt.Printf("  ✗ active path %s != expected %s\n", got, expected)
+		return false, got
 	}
 	fmt.Println("  ✓ active path matches build")
-	return true
+	return true, got
 }
 
 func persistBoot(ctx *DeployContext, host Host, systemPath string) bool {

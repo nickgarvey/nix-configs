@@ -194,28 +194,85 @@ func TestSafeDeployActivationFailNotReachable(t *testing.T) {
 	}
 }
 
-func TestSafeDeployPathMismatchAborts(t *testing.T) {
-	host := AllHosts[1]
-	host.K8sHealthCheck = false
+const fakePriorPath = "/nix/store/prior123-nixos-system-test-25.11"
 
-	resps := []FakeResponse{
-		// readlink returns a DIFFERENT path
-		{Match: MatchContains("readlink"), Result: RunResult{Stdout: "/nix/store/wrong-path\n"}},
+// readlinkSeq scripts successive answers to `readlink /run/current-system`. The
+// first is the generation the host ran before the deploy (what deploySafe keeps
+// as priorPath); later ones are what step 5 observes. The last answer sticks for
+// any further reads. FakeRunner responses are never consumed, so the sequencing
+// has to live in the matchers.
+func readlinkSeq(paths ...string) []FakeResponse {
+	n := 0
+	out := make([]FakeResponse, 0, len(paths))
+	for i, p := range paths {
+		idx, last := i, i == len(paths)-1
+		out = append(out, FakeResponse{
+			Match: func(argv []string) bool {
+				if !MatchContains("readlink /run/current-system")(argv) {
+					return false
+				}
+				if n != idx && !(last && n > idx) {
+					return false
+				}
+				n++
+				return true
+			},
+			Result: RunResult{Stdout: p + "\n"},
+		})
 	}
+	return out
+}
+
+func pathMismatchFake(t *testing.T, observed string) *FakeRunner {
+	t.Helper()
+	resps := readlinkSeq(fakePriorPath, observed)
 	resps = append(resps, buildOKResponses(fakeSystemPath)...)
 	fake := &FakeRunner{Responses: resps}
-	ctx := testCtx(fake)
-
-	if Deploy(ctx, host, ModeSafe, Plan{SystemPath: fakeSystemPath}) {
+	if Deploy(testCtx(fake), pathMismatchHost(), ModeSafe, Plan{SystemPath: fakeSystemPath}) {
 		t.Fatal("expected failure due to path mismatch")
 	}
-	// Must NOT have persisted or disarmed.
 	for _, c := range joinedCalls(fake) {
-		if strings.Contains(c, "switch-to-configuration boot") {
+		if strings.Contains(c, "switch-to-configuration boot") || strings.Contains(c, "nix-env --profile") {
 			t.Errorf("should not have persisted: %s", c)
 		}
+	}
+	return fake
+}
+
+func pathMismatchHost() Host {
+	host := AllHosts[1]
+	host.K8sHealthCheck = false
+	return host
+}
+
+// The switch did not take effect and the host is still on the generation it
+// came up on, verified reachable by step 4. Nothing has been persisted, so a
+// watchdog reboot would only restore the config already running — release it.
+func TestSafeDeployPathMismatchOnPriorGenerationDisarms(t *testing.T) {
+	fake := pathMismatchFake(t, fakePriorPath)
+	if len(fake.CallsContaining("systemctl stop deploy-watchdog")) == 0 {
+		t.Error("watchdog should be disarmed when the host is still on its previous generation")
+	}
+}
+
+// A third path is a state we cannot account for (the existing "watchdog
+// mid-reboot?" reading), so the watchdog stays armed.
+func TestSafeDeployPathMismatchUnknownGenerationKeepsWatchdog(t *testing.T) {
+	fake := pathMismatchFake(t, "/nix/store/wrong-path")
+	for _, c := range joinedCalls(fake) {
 		if strings.Contains(c, "systemctl stop deploy-watchdog") {
-			t.Errorf("should not have disarmed: %s", c)
+			t.Errorf("should not have disarmed on an unrecognised generation: %s", c)
+		}
+	}
+}
+
+// Step 4 said the host is reachable but /run/current-system won't read: also
+// unaccounted for, so the watchdog stays armed.
+func TestSafeDeployUnreadableActivePathKeepsWatchdog(t *testing.T) {
+	fake := pathMismatchFake(t, "")
+	for _, c := range joinedCalls(fake) {
+		if strings.Contains(c, "systemctl stop deploy-watchdog") {
+			t.Errorf("should not have disarmed on an unreadable path: %s", c)
 		}
 	}
 }
@@ -269,6 +326,12 @@ func TestSafeDeployArmFailureAbortsEarly(t *testing.T) {
 		if strings.Contains(c, "/bin/switch-to-configuration") {
 			t.Errorf("should not have attempted activation: %s", c)
 		}
+	}
+	// The arm is not retried, so it may have armed the timer before the
+	// connection died. Nothing was activated, so that timer must not be left
+	// to reboot the host.
+	if len(fake.CallsContaining("systemctl stop deploy-watchdog-1700000000")) == 0 {
+		t.Error("a failed arm should still attempt a disarm")
 	}
 }
 
