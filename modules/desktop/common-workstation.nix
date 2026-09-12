@@ -99,6 +99,7 @@ in
       # SYNC_ENDPOINT is ignored by the desktop client).
       (anki.withAddons (with ankiAddons; [ anki-connect ]))
       atop
+      beads
       claude-code
       codex
       dig
