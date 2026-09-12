@@ -1,8 +1,17 @@
 { pkgs, helium-browser-pkg }:
 
+let
+  # Helium resolves its install dir via `readlink -f`, so WidevineCdm must sit
+  # beside the real binary; the symlinkJoin below cannot place it there.
+  helium-with-widevine = helium-browser-pkg.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      ln -s ${pkgs.widevine-cdm}/share/google/chrome/WidevineCdm "$libExecPath/WidevineCdm"
+    '';
+  });
+in
 pkgs.symlinkJoin {
   name = "helium-browser-with-desktop";
-  paths = [ helium-browser-pkg ];
+  paths = [ helium-with-widevine ];
 
   buildInputs = [ pkgs.makeWrapper ];
 
