@@ -490,6 +490,10 @@ binds {
     Ctrl+Print { screenshot-screen; }
     Alt+Print { screenshot-window; }
 
+    // Hyper+S (kanata homerow R/U) for interactive screenshot, Meh+S for window.
+    Ctrl+Alt+Shift+Super+S { screenshot; }
+    Ctrl+Alt+Shift+S { screenshot-window; }
+
     // Clipboard history: pick a past entry via fuzzel (backed by cliphist,
     // enabled in home-manager) and copy it back to the clipboard.
     Ctrl+Shift+C { spawn-sh "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"; }
