@@ -7,6 +7,7 @@
     ../../modules/desktop/niri.nix
     ../../modules/networking/network-manager.nix
     ../../modules/nix/nix-remote-builder-client.nix
+    ../../modules/desktop/proton-ge-wc3.nix
   ];
 
   networking = {
