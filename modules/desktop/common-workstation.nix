@@ -7,6 +7,7 @@ let
   claude-code = inputs.claude-code-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
   codex = inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
   thinkrail = inputs.thinkrail.packages.${pkgs.stdenv.hostPlatform.system}.thinkrail;
+  agent-issue-tracker = pkgs.callPackage ../../pkgs/agent-issue-tracker { };
 in
 {
   imports = [
@@ -94,6 +95,7 @@ in
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "render" "dialout" "tty" "input" "docker" ];
     packages = with pkgs; [
+      agent-issue-tracker # `ait`, a local-first issue tracker for coding agents
       android-tools # adb/fastboot for Android debugging
       # Sync server: https://anki.home.garvey.sh/ (enter in Preferences → Syncing;
       # SYNC_ENDPOINT is ignored by the desktop client).
