@@ -1,4 +1,4 @@
-{ config, lib, pkgs, inputs, ... }:
+{ config, lib, inputs, ... }:
 
 # pi, a terminal coding agent, wired end to end for the ngarvey user: the
 # package, its settings.json, its hosted-LLM credentials and — on a host that
@@ -31,23 +31,6 @@
 
 let
   cfg = config.homelab.pi;
-
-  # nixpkgs merged typescript-go into typescript on 2026-09-08 and left a
-  # throwing alias in its place. pi.nix's coding-agent/package.nix still takes
-  # typescript-go as a separate nativeBuildInput, so its default package no
-  # longer evaluates. Point that argument at the merged package.
-  #
-  # Temporary: expires so it can't rot in the tree. builtins.currentTime is
-  # unavailable under flake pure eval and a check derivation would be cached
-  # after its first success, so key off the flake's own timestamp instead.
-  codingAgent =
-    inputs.pi-nix.packages.${pkgs.stdenv.hostPlatform.system}.coding-agent.override
-      {
-        typescript-go = pkgs.typescript;
-      };
-
-  deadline = 1798761600; # 2026-12-31T00:00:00Z
-  flakeTime = lib.max inputs.self.lastModified inputs.nixpkgs.lastModified;
 in
 {
   options.homelab.pi = {
@@ -68,19 +51,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = flakeTime < deadline;
-        message = ''
-          modules/llms/pi.nix still overrides pi.nix's typescript-go build input
-          to work around nixpkgs' typescript-go -> typescript merge. Check
-          whether pi.nix has dropped the argument (coding-agent/package.nix): if
-          so, delete codingAgent and this assertion; if not, push the deadline
-          out.
-        '';
-      }
-    ];
-
     # pi reads its env file as the ngarvey user, so the secrets must be owned by
     # it.
     sops.secrets.deepseek-api-key = {
@@ -102,7 +72,6 @@ in
 
     home-manager.users.ngarvey.programs.pi.coding-agent = {
       enable = true;
-      package = codingAgent;
 
       environment.DEEPSEEK_API_KEY.file = config.sops.secrets.deepseek-api-key.path;
       environment.FIREWORKS_API_KEY.file = config.sops.secrets.fireworks-api-key.path;
