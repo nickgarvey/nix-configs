@@ -1,4 +1,4 @@
-# Adds the GE-Proton11-5-WC3 Steam compatibility tool, whose patched crypt32 lets Warcraft III: Reforged 3.0 log in.
+# Adds the GE-Proton11-6-WC3 Steam compatibility tool, whose patched crypt32 lets Warcraft III: Reforged 3.0 log in.
 { config, lib, pkgs, inputs, ... }:
 
 let

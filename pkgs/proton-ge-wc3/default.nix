@@ -1,4 +1,4 @@
-# GE-Proton11-5 with crypt32 rebuilt to accept the 88-byte CERT_CHAIN_ENGINE_CONFIG used by Warcraft III: Reforged 3.0.
+# GE-Proton11-6 with crypt32 rebuilt to accept the 88-byte CERT_CHAIN_ENGINE_CONFIG used by Warcraft III: Reforged 3.0.
 #
 # WC3 3.0's ClientSdk validates Battle.net's certificate chain with the newer
 # CERT_CHAIN_ENGINE_CONFIG layout. Proton's Wine 11.0 rejects that size with
@@ -24,8 +24,8 @@
   proton-ge-bin,
 }:
 
-assert lib.assertMsg (proton-ge-bin.version == "GE-Proton11-5") ''
-  pkgs/proton-ge-wc3 builds crypt32 from GE-Proton11-5's Wine tree, but
+assert lib.assertMsg (proton-ge-bin.version == "GE-Proton11-6") ''
+  pkgs/proton-ge-wc3 builds crypt32 from GE-Proton11-6's Wine tree, but
   nixpkgs' proton-ge-bin is now ${proton-ge-bin.version}. If that release
   includes the crypt32 CERT_CHAIN_ENGINE_CONFIG fix, delete this package.
   Otherwise update the Wine rev and wine-staging rev below to that release's
@@ -37,12 +37,12 @@ let
     pname = "proton-ge-wc3-crypt32";
     version = proton-ge-bin.version;
 
-    # ValveSoftware/wine at GE-Proton11-5's `wine` submodule.
+    # ValveSoftware/wine at GE-Proton11-6's `wine` submodule.
     src = fetchFromGitHub {
       owner = "ValveSoftware";
       repo = "wine";
-      rev = "36078f5f947532885a596dabbc7893c048133660";
-      hash = "sha256-US/ts2HLhKr+xHMCUWIFlpmQdJ3CDkYeMUB2EAzOblU=";
+      rev = "9358696fe9a2261329f4a83aa6a65fd436106154";
+      hash = "sha256-ko5a4f9tDIpeGjRtkHEaYLpLx2C5S4cz+TA920uyCxY=";
     };
 
     patches = [
@@ -67,7 +67,7 @@ let
         url = "https://gitlab.winehq.org/wine/wine/-/commit/c7cc9be89613cbe21e1af9ffc7b7e8352feac488.patch";
         hash = "sha256-d42wPdp++vMvSjPavvnkkvvTVTvTANnRKNYtdqY6dQk=";
       })
-      # The one wine-staging patchset GE-Proton11-5 applies to crypt32, from its
+      # The one wine-staging patchset GE-Proton11-6 applies to crypt32, from its
       # `wine-staging` submodule. Omitting it would drop that fix from the DLL.
       (fetchpatch {
         name = "crypt32-skip-unknown-CMS-certificate-item.patch";
@@ -151,7 +151,7 @@ stdenvNoCC.mkDerivation {
 
     # A distinct internal name keeps it alongside the plain GE-Proton entry.
     substituteInPlace $steamcompattool/compatibilitytool.vdf \
-      --replace-fail "GE-Proton11-5-x86_64" "GE-Proton11-5-WC3"
+      --replace-fail "GE-Proton11-6-x86_64" "GE-Proton11-6-WC3"
 
     runHook postInstall
   '';
@@ -159,7 +159,7 @@ stdenvNoCC.mkDerivation {
   passthru = { inherit crypt32; };
 
   meta = {
-    description = "GE-Proton11-5 with crypt32 patched for Warcraft III: Reforged 3.0 login";
+    description = "GE-Proton11-6 with crypt32 patched for Warcraft III: Reforged 3.0 login";
     license = lib.licenses.bsd3;
     platforms = [ "x86_64-linux" ];
   };
