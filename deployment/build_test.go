@@ -14,27 +14,50 @@ func evalHosts() []Host {
 	}
 }
 
-const evalJSON = `{"fus":{"drv":"/nix/store/aaa-fus.drv","out":"/nix/store/aaa-fus"},` +
-	`"dragonsreach":{"drv":"/nix/store/bbb-dr.drv","out":"/nix/store/bbb-dr"}}`
+const (
+	fusJSON = `{"drv":"/nix/store/aaa-fus.drv","out":"/nix/store/aaa-fus"}`
+	drJSON  = `{"drv":"/nix/store/bbb-dr.drv","out":"/nix/store/bbb-dr"}`
+)
 
-func evalRunner(stdout string) *FakeRunner {
+// evalRunner answers each host's eval with that host's JSON, matched on the
+// flake attribute in its argv. One response per host, because the resolve now
+// runs one eval per host rather than a single batched one.
+func evalRunner(fus, dragonsreach string) *FakeRunner {
 	return &FakeRunner{Responses: []FakeResponse{
-		{Match: MatchContains("nix", "eval"), Result: RunResult{Stdout: stdout}},
+		{Match: MatchContains("nix", "eval", "nixosConfigurations.fus."), Result: RunResult{Stdout: fus}},
+		{Match: MatchContains("nix", "eval", "nixosConfigurations.dragonsreach."), Result: RunResult{Stdout: dragonsreach}},
 	}}
 }
 
-func TestResolveToplevelsUsesOneCallListingEveryHost(t *testing.T) {
-	fake := evalRunner(evalJSON)
+func TestResolveToplevelsEvalsEachHostSeparately(t *testing.T) {
+	fake := evalRunner(fusJSON, drJSON)
 	if _, err := ResolveToplevels(fake, evalHosts()); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(fake.Calls) != 1 {
-		t.Fatalf("want exactly 1 nix invocation for the whole fleet, got %d:\n%s",
+	// One eval per host is the point: nix evaluation is single-threaded, so a
+	// batched eval costs the sum of the hosts rather than the slowest one.
+	if len(fake.Calls) != 2 {
+		t.Fatalf("want one nix invocation per host, got %d:\n%s",
 			len(fake.Calls), strings.Join(joinedCalls(fake), "\n"))
 	}
-	argv := strings.Join(fake.Calls[0], " ")
-	for _, want := range []string{"nix eval", "--json", ".#nixosConfigurations", `"fus"`, `"dragonsreach"`, "drvPath", "outPath"} {
+	for _, attr := range []string{"nixosConfigurations.fus.", "nixosConfigurations.dragonsreach."} {
+		if len(fake.CallsContaining("nix eval", attr)) != 1 {
+			t.Errorf("want exactly one eval naming %s, got:\n%s", attr, strings.Join(joinedCalls(fake), "\n"))
+		}
+	}
+}
+
+func TestEvalArgv(t *testing.T) {
+	argv := strings.Join(EvalArgv(Host{Name: "router", FlakeName: "dragonsreach"}), " ")
+	for _, want := range []string{
+		"nix eval", "--json",
+		".#nixosConfigurations.dragonsreach.config.system.build.toplevel",
+		"drvPath", "outPath",
+		// The eval cache cannot serve this query, and leaving it on makes the
+		// concurrent evals contend on its sqlite lock.
+		"--option eval-cache false",
+	} {
 		if !strings.Contains(argv, want) {
 			t.Errorf("argv missing %q: %s", want, argv)
 		}
@@ -42,7 +65,7 @@ func TestResolveToplevelsUsesOneCallListingEveryHost(t *testing.T) {
 }
 
 func TestResolveToplevelsKeysByHostNameNotFlakeName(t *testing.T) {
-	tops, err := ResolveToplevels(evalRunner(evalJSON), evalHosts())
+	tops, err := ResolveToplevels(evalRunner(fusJSON, drJSON), evalHosts())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -62,12 +85,12 @@ func TestResolveToplevelsKeysByHostNameNotFlakeName(t *testing.T) {
 // path, so both fields must be present.
 func TestResolveToplevelsErrorsOnPartialEntry(t *testing.T) {
 	for _, tc := range []struct{ name, json string }{
-		{"missing host", `{"fus":{"drv":"/nix/store/aaa-fus.drv","out":"/nix/store/aaa-fus"}}`},
-		{"missing drv", evalJSON[:strings.Index(evalJSON, `"dragonsreach"`)] + `"dragonsreach":{"out":"/nix/store/bbb-dr"}}`},
-		{"missing out", evalJSON[:strings.Index(evalJSON, `"dragonsreach"`)] + `"dragonsreach":{"drv":"/nix/store/bbb-dr.drv"}}`},
+		{"empty", `{}`},
+		{"missing drv", `{"out":"/nix/store/bbb-dr"}`},
+		{"missing out", `{"drv":"/nix/store/bbb-dr.drv"}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := ResolveToplevels(evalRunner(tc.json), evalHosts())
+			_, err := ResolveToplevels(evalRunner(fusJSON, tc.json), evalHosts())
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -80,6 +103,7 @@ func TestResolveToplevelsErrorsOnPartialEntry(t *testing.T) {
 
 func TestResolveToplevelsErrorsOnEvalFailure(t *testing.T) {
 	fake := &FakeRunner{Responses: []FakeResponse{
+		{Match: MatchContains("nix", "eval", "nixosConfigurations.fus."), Result: RunResult{Stdout: fusJSON}},
 		{Match: MatchContains("nix", "eval"), Result: RunResult{
 			ExitCode: 1, Stderr: "progress\nerror: attribute 'nope' missing",
 		}},
@@ -91,10 +115,32 @@ func TestResolveToplevelsErrorsOnEvalFailure(t *testing.T) {
 	if !strings.Contains(err.Error(), "attribute 'nope' missing") {
 		t.Errorf("error should carry nix's message, got: %v", err)
 	}
+	// The evals run concurrently, so the message has to say which host failed.
+	if !strings.Contains(err.Error(), "router") {
+		t.Errorf("error should name the failing host, got: %v", err)
+	}
+}
+
+// Each host's eval is its own process, so one failure must not hide another.
+func TestResolveToplevelsReportsEveryFailingHost(t *testing.T) {
+	fake := &FakeRunner{Responses: []FakeResponse{
+		{Match: MatchContains("nix", "eval"), Result: RunResult{
+			ExitCode: 1, Stderr: "error: something broke",
+		}},
+	}}
+	_, err := ResolveToplevels(fake, evalHosts())
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	for _, host := range []string{"fus", "router"} {
+		if !strings.Contains(err.Error(), host) {
+			t.Errorf("error should name every failing host, missing %q: %v", host, err)
+		}
+	}
 }
 
 func TestResolveToplevelsErrorsOnGarbageOutput(t *testing.T) {
-	if _, err := ResolveToplevels(evalRunner("not json"), evalHosts()); err == nil {
+	if _, err := ResolveToplevels(evalRunner(fusJSON, "not json"), evalHosts()); err == nil {
 		t.Fatal("expected an error on unparseable output")
 	}
 }

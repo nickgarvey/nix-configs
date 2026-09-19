@@ -175,10 +175,11 @@ func run() int {
 	fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
 	fmt.Printf("Mode: %s, Reboot: %s\n", args.Mode, args.Reboot)
 
-	// Precheck: resolve every toplevel in one eval, then probe all hosts at
-	// once. Everything decided here — unreachable, mid-print, already up to
-	// date — is decided before the first build instead of after it.
-	fmt.Printf("\nResolving system paths for %d host(s) (single nix eval)...\n", len(hosts))
+	// Precheck: resolve every toplevel (one eval per host, in parallel), then
+	// probe all hosts at once. Everything decided here — unreachable,
+	// mid-print, already up to date — is decided before the first build
+	// instead of after it.
+	fmt.Printf("\nResolving system paths for %d host(s) (parallel nix eval)...\n", len(hosts))
 	paths, err := ResolveToplevels(quiet, hosts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
