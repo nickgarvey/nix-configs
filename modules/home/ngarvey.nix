@@ -20,7 +20,7 @@
   # instead of aborting activation when HM first takes them over.
   home-manager.backupFileExtension = "hmbak";
 
-  home-manager.users.ngarvey = { pkgs, ... }: lib.mkMerge [
+  home-manager.users.ngarvey = { pkgs, lib, ... }: lib.mkMerge [
     {
       home.stateVersion = "25.11";
 
@@ -79,6 +79,22 @@
         [Service]
         MemoryHigh=200M
         MemoryMax=300M
+      '';
+
+      # Waybar only reads its config at startup. After a deploy relinks the
+      # config, restart the bar, but only when the config or style changed and
+      # only if the unit is running (try-restart does nothing otherwise). Restart
+      # rather than SIGUSR2 reload, which has a history of crashes in waybar.
+      # XDG_RUNTIME_DIR is set explicitly because activation runs from the
+      # home-manager-ngarvey system service, and `|| true` keeps a failed
+      # restart from failing activation (and tripping the deploy watchdog).
+      home.activation.restartWaybar = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        if [ -z "''${oldGenPath:-}" ] || \
+           ! ${pkgs.diffutils}/bin/cmp -s "$oldGenPath/home-files/.config/waybar/config.jsonc" "$newGenPath/home-files/.config/waybar/config.jsonc" || \
+           ! ${pkgs.diffutils}/bin/cmp -s "$oldGenPath/home-files/.config/waybar/style.css" "$newGenPath/home-files/.config/waybar/style.css"; then
+          run env XDG_RUNTIME_DIR=/run/user/$(id -u) \
+            ${pkgs.systemd}/bin/systemctl --user try-restart waybar.service || true
+        fi
       '';
 
       # Notification daemon. NOTE: this module only installs+configures mako; it

@@ -6,7 +6,7 @@
 
     "modules-left": ["niri/workspaces", "niri/window"],
     "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "cpu", "memory", "custom/juicefs", "network", "tray"],
+    "modules-right": ["pulseaudio", "cpu", "memory", "custom/juicefs", "custom/kanata", "network", "tray"],
 
     "niri/workspaces": {
         "format": "{index}"
@@ -38,6 +38,15 @@
         "return-type": "json",
         "interval": 5,
         "tooltip": true
+    },
+
+    "custom/kanata": {
+        "exec": "kanata-waybar-status",
+        "return-type": "json",
+        "interval": 5,
+        "signal": 8,
+        "tooltip": true,
+        "on-click": "kanata-restart"
     },
 
     "network": {

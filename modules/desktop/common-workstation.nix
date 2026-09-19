@@ -8,6 +8,46 @@ let
   codex = inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
   thinkrail = inputs.thinkrail.packages.${pkgs.stdenv.hostPlatform.system}.thinkrail;
   agent-issue-tracker = pkgs.callPackage ../../pkgs/agent-issue-tracker { };
+
+  # Waybar kanata button (configs/waybar/config.jsonc, custom/kanata). The
+  # status script prints the button state; the restart script marks the button
+  # "restarting" (yellow) and pokes waybar via SIGRTMIN+8 (the module's
+  # "signal": 8) so the colour changes immediately rather than on the next poll.
+  kanataRestartMarker = ''"''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/kanata-restarting"'';
+  kanata-waybar-status = pkgs.writeShellApplication {
+    name = "kanata-waybar-status";
+    runtimeInputs = [ pkgs.systemd pkgs.coreutils ];
+    text = ''
+      state=$(systemctl is-active kanata-keyboard.service || true)
+      if [ -e ${kanataRestartMarker} ] || [[ $state =~ ^(activating|deactivating|reloading)$ ]]; then
+        class=restarting tooltip="kanata restarting…"
+      elif [ "$state" = active ]; then
+        class=active tooltip="kanata running (click to restart)"
+      else
+        class=failed tooltip="kanata $state (click to restart)"
+      fi
+      printf '{"text": "⌨", "class": "%s", "tooltip": "%s"}\n' "$class" "$tooltip"
+    '';
+  };
+  kanata-restart = pkgs.writeShellApplication {
+    name = "kanata-restart";
+    runtimeInputs = [ pkgs.systemd pkgs.procps pkgs.coreutils ];
+    text = ''
+      marker=${kanataRestartMarker}
+      refresh() { pkill -RTMIN+8 waybar || true; }
+      trap 'rm -f "$marker"; refresh' EXIT
+      touch "$marker"
+      refresh
+      /run/wrappers/bin/sudo -n ${pkgs.systemd}/bin/systemctl restart kanata-keyboard.service
+      # Wait for kanata to come back up (up to 10s), and keep the button
+      # yellow for at least a second so a fast restart is still visible.
+      sleep 1
+      for _ in $(seq 18); do
+        systemctl is-active --quiet kanata-keyboard.service && break
+        sleep 0.5
+      done
+    '';
+  };
 in
 {
   imports = [
@@ -168,6 +208,8 @@ in
       extraDefCfg = "process-unmapped-keys yes";
     };
   };
+
+  environment.systemPackages = [ kanata-waybar-status kanata-restart ];
 
   systemd.services.kanata-keyboard.serviceConfig = {
     Restart = "on-failure";

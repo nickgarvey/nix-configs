@@ -37,6 +37,7 @@ window#waybar {
 #memory,
 #network,
 #custom-juicefs,
+#custom-kanata,
 #pulseaudio,
 #battery,
 #tray {
@@ -82,3 +83,17 @@ window#waybar {
     color: #ff6b6b;
 }
 
+/* DejaVu's ⌨ glyph is tiny (12x7 px at 20px); Noto Sans Symbols 2 draws it
+   roughly 19x15. */
+#custom-kanata {
+    font-family: "Noto Sans Symbols 2", "DejaVu Sans Mono", monospace;
+    font-size: 20px;
+}
+
+#custom-kanata.restarting {
+    color: #ffd166;
+}
+
+#custom-kanata.failed {
+    color: #ff6b6b;
+}
