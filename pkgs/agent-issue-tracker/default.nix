@@ -2,13 +2,15 @@
 
 buildGoModule rec {
   pname = "agent-issue-tracker";
-  version = "1.15.0";
+  # Our fork is untagged; version follows the nixpkgs unstable convention,
+  # base version from the last upstream release we forked past.
+  version = "1.15.0-unstable-2026-09-20";
 
   src = fetchFromGitHub {
-    owner = "ohnotnow";
+    owner = "nickgarvey";
     repo = "agent-issue-tracker";
-    rev = "v${version}";
-    hash = "sha256-ICvDvPtYXq+Q647UbUvN1UhhH7BSaKkkrK/QOn6yFnE=";
+    rev = "f8cca3624c44027faa2ae8acf737bec0393ceebf";
+    hash = "sha256-SdXcY5gCVms87hD0hPh8NoszvzqosqmIFzDOv+79O+M=";
   };
 
   vendorHash = "sha256-+jdz9R40HGu2sS2RCN+Q2qh/8FskscJZz5Jo3NlAxbA=";
@@ -17,14 +19,14 @@ buildGoModule rec {
   subPackages = [ "cmd/ait" ];
 
   # Same stamping as upstream's release workflow, so `ait version` reports a
-  # real version instead of "dev".
+  # real version instead of "dev". The module path still says ohnotnow.
   ldflags = [
     "-X github.com/ohnotnow/agent-issue-tracker/internal/ait.Version=${version}"
   ];
 
   meta = with lib; {
-    description = "Local-first issue tracker for coding agents";
-    homepage = "https://github.com/ohnotnow/agent-issue-tracker";
+    description = "Local-first issue tracker for coding agents (personal fork)";
+    homepage = "https://github.com/nickgarvey/agent-issue-tracker";
     license = licenses.mit;
     mainProgram = "ait";
   };
