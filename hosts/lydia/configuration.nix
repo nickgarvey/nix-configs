@@ -11,6 +11,7 @@
     ../../modules/virtualisation/incus.nix
     ../../modules/nix/nix-remote-builder-client.nix
     ../../modules/services/fancontrol.nix
+    ../../modules/services/netboot-server.nix
   ];
 
   homelab.network.enable = true;

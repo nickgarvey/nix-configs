@@ -225,6 +225,14 @@
           ./hosts/live-iso/configuration.nix
         ];
       };
+
+      # Same live system, as PXE netboot artifacts served from lydia
+      live-netboot = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [
+          ./hosts/live-iso/netboot.nix
+        ];
+      };
     }
     # K3s nodes
     // k3sNodes;

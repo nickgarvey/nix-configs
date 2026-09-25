@@ -1,49 +1,9 @@
-{ config, lib, pkgs, inputs, modulesPath, ... }:
+# The live environment as a bootable ISO image.
+{ modulesPath, ... }:
 
 {
   imports = [
     "${modulesPath}/installer/cd-dvd/installation-cd-minimal.nix"
-    ../../modules/core/nixos-common.nix
+    ./common.nix
   ];
-
-  nixpkgs.hostPlatform = "x86_64-linux";
-
-  networking.hostName = "nixos-live";
-
-  nixpkgs.config.allowUnfree = true;
-
-  # Ensure sshd starts immediately (the ISO module may set startWhenNeeded)
-  services.openssh = {
-    enable = lib.mkForce true;
-    settings.PermitRootLogin = "yes";
-  };
-
-  # Passwordless root console access (standard for installer ISOs)
-  users.users.root = {
-    initialHashedPassword = "";
-    openssh.authorizedKeys.keys = config.users.users.ngarvey.openssh.authorizedKeys.keys;
-  };
-
-  environment.systemPackages = with pkgs; [
-    parted
-    gptfdisk
-    dosfstools
-    e2fsprogs
-    btrfs-progs
-    ntfs3g
-    cryptsetup
-    rsync
-    curl
-    smartmontools
-    lshw
-    inputs.disko.packages.${pkgs.stdenv.hostPlatform.system}.disko
-  ];
-
-  # Ephemeral live system — no point running GC or optimise timers
-  networking.firewall.enable = false;
-
-  nix.gc.automatic = lib.mkForce false;
-  nix.optimise.automatic = lib.mkForce false;
-
-  system.stateVersion = "25.05";
 }

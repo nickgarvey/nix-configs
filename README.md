@@ -49,3 +49,8 @@ Services running on that cluster are found in the [k8s-gitops](https://github.co
 ### Router
 TopTon fanless PC with an Intel N150. 4x 2.5G NICs but I only use two of them (WAN/LAN).
 
+## Installing a new host
+
+Machines PXE-boot the live rescue/install environment off the LAN — `lydia`
+serves it, no USB stick needed. See [`docs/netboot.md`](docs/netboot.md).
+
