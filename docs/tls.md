@@ -15,7 +15,7 @@ owns cert-manager, acme-dns, and the services themselves.
 | Path | Names | Issued by | Config |
 |---|---|---|---|
 | cert-manager + acme-dns | `*.garvey.sh` | Let's Encrypt, DNS-01 | `k8s-gitops/manifests/cert-manager/cluster-issuer-acmedns-{prod,staging}.yaml` |
-| On-box ACME | `homeassistant.home.garvey.sh`, `garage.home.garvey.sh`, `storj-gateway.home.garvey.sh` | Let's Encrypt, DNS-01 via RFC2136 | HAOS itself / `security.acme` on lydia + wabbajack / `security.acme` on dragonsreach; TSIG ACLs in `modules/containers/knot-auth.nix` |
+| On-box ACME | `homeassistant.home.garvey.sh`, `garage.home.garvey.sh`, `storj-gateway.home.garvey.sh`, `rgw.home.garvey.sh` | Let's Encrypt, DNS-01 via RFC2136 | HAOS itself / `security.acme` on lydia + wabbajack / `security.acme` on dragonsreach / `security.acme` on joor + zah + frul (Ceph RGW); TSIG ACLs in `modules/containers/knot-auth.nix` |
 | Tailscale | `*.bigeye-turtle.ts.net` | Tailscale | `ingressClassName: tailscale` on the Ingress |
 
 Kubernetes' own internal PKI (apiserver, kubelet, etcd, Cilium) is separate from all of

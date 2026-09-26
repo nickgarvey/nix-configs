@@ -27,6 +27,10 @@ let
   #   acme-storj         -> lego on dragonsreach, for the S3 gateway container
   #                         running on that same host
   #                         (modules/containers/storj-gateway.nix)
+  #   acme-rgw           -> lego on joor, zah and frul, one cert per node for
+  #                         the shared name rgw.home.garvey.sh (Ceph RGW,
+  #                         modules/services/ceph.nix). They are IPv6-only and
+  #                         reach Knot through NAT64.
   acmeKeys = [
     {
       name = "acme-homeassistant";
@@ -48,6 +52,13 @@ let
       sopsName = "storj-acme-tsig";
       sopsFile = ../../secrets/dragonsreach.yaml;
       sopsKey = "storj-acme-tsig";
+    }
+    {
+      name = "acme-rgw";
+      owner = "_acme-challenge.rgw.${domain}.";
+      sopsName = "rgw-acme-tsig";
+      sopsFile = ../../secrets/rgw-acme.yaml;
+      sopsKey = "acme_tsig_secret";
     }
   ];
 

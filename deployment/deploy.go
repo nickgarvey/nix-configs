@@ -70,15 +70,27 @@ func Deploy(ctx *DeployContext, host Host, mode Mode, plan Plan) bool {
 		return false
 	}
 
+	if host.CephHealthCheck && !CephBeforeDeploy(ctx.Runner, host) {
+		return false
+	}
+	ok := false
 	switch mode {
 	case ModeSafe:
-		return deploySafe(ctx, host, plan)
+		ok = deploySafe(ctx, host, plan)
 	case ModeSwitch:
-		return deployUnsafe(ctx, host, "switch")
+		ok = deployUnsafe(ctx, host, "switch")
 	case ModeBoot:
-		return deployUnsafe(ctx, host, "boot")
+		ok = deployUnsafe(ctx, host, "boot")
 	}
-	return false
+	if host.CephHealthCheck {
+		if ok {
+			ok = CephAfterDeploy(ctx.Runner, host, ctx.Sleeper)
+		}
+		if !ok {
+			ctx.appendWarning(cephNooutLeftSet(host))
+		}
+	}
+	return ok
 }
 
 // deploySafe is the watchdog-protected flow. It begins with the closure already

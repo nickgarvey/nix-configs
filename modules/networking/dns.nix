@@ -25,6 +25,9 @@ in rec {
     garage        = { v4 = []; v6 = [ "2001:470:482f:200::2" "2001:470:482f:202::2" ]; };
     storj-gateway = { v4 = [ "10.28.0.3" ]; v6 = [ "2001:470:482f:300::2" ]; };
     k3s-api       = { v4 = []; v6 = map hostV6 [ "fus" "ro" "dah" ]; };
+    # The three Ceph RGW gateways (S3 on port 7480). Clients round-robin; any
+    # gateway serves the whole S3 API. See modules/services/ceph.nix.
+    rgw           = { v4 = []; v6 = map hostV6 [ "joor" "zah" "frul" ]; };
     # trmnl-display keeps A+AAAA: the ESP32 client is IPv4-only and hits an
     # IPv4→IPv6 proxy at 10.28.0.2. The AAAA is for dual-stack clients.
     trmnl-display = { v4 = [ "10.28.0.2" ]; v6 = [ "2001:470:482f:2::5" ]; };

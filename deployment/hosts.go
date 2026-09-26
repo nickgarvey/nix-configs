@@ -26,9 +26,11 @@ type Host struct {
 	SSHAddress     string // overrides FQDN if set (used by dragonsreach)
 	Order          int
 	K8sHealthCheck bool
-	Groups         []string
-	Default        bool // false = opt-in only (dovahkiin)
-	ConnChecks     []ConnCheck
+	// CephHealthCheck gates the deploy on the Ceph cluster: see ceph.go.
+	CephHealthCheck bool
+	Groups          []string
+	Default         bool // false = opt-in only (dovahkiin)
+	ConnChecks      []ConnCheck
 }
 
 func (h Host) FQDN() string {
@@ -68,6 +70,24 @@ var AllHosts = []Host{
 	{
 		Name: "dah", FlakeName: "dah",
 		Order: 12, K8sHealthCheck: true,
+		Groups: []string{"k3s", "infra"}, Default: true,
+		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
+	},
+	{
+		Name: "joor", FlakeName: "joor",
+		Order: 13, K8sHealthCheck: true, CephHealthCheck: true,
+		Groups: []string{"k3s", "infra"}, Default: true,
+		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
+	},
+	{
+		Name: "zah", FlakeName: "zah",
+		Order: 14, K8sHealthCheck: true, CephHealthCheck: true,
+		Groups: []string{"k3s", "infra"}, Default: true,
+		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
+	},
+	{
+		Name: "frul", FlakeName: "frul",
+		Order: 15, K8sHealthCheck: true, CephHealthCheck: true,
 		Groups: []string{"k3s", "infra"}, Default: true,
 		ConnChecks: []ConnCheck{CheckSSH, CheckPing6Gateway},
 	},

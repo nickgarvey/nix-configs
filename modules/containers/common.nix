@@ -173,7 +173,12 @@ let
         networking = lib.mkMerge [
           {
             firewall.enable = lib.mkDefault false;
-            useHostResolvConf = false;
+            # A host-attached container shares the host netns, so the host's
+            # resolv.conf (copied in at container start) works as-is. Setting
+            # nameservers instead would not: they are applied by
+            # network-local-commands, which needs CAP_NET_ADMIN, and a
+            # host-attached container does not get it.
+            useHostResolvConf = net.attachment == "host";
           }
           (lib.mkIf (isBridge && hasV4) {
             defaultGateway = net.ipv4Gateway;

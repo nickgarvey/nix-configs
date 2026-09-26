@@ -22,6 +22,9 @@ This is a mono-repo for all my nix settings. Here are the sections:
 | [`fus`](hosts/fus) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`ro`](hosts/ro) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
 | [`dah`](hosts/dah) | Beelink EQ14 Mini PC | Intel N150 | 16 GB | iGPU (Alder Lake-N) | Crucial P3 500 GB NVMe |
+| [`joor`](hosts/joor) | Beelink EQi Mini PC | Intel Core 3 304 (Wildcat Lake) | 32 GB | iGPU (Xe, Wildcat Lake) | YMTC 512 GB UFS + WD Blue SN5100 4 TB NVMe |
+| [`zah`](hosts/zah) | Beelink EQi Mini PC | Intel Core 3 304 (Wildcat Lake) | 32 GB | iGPU (Xe, Wildcat Lake) | YMTC 512 GB UFS + WD Blue SN5100 4 TB NVMe |
+| [`frul`](hosts/frul) | Beelink EQi Mini PC | Intel Core 3 304 (Wildcat Lake) | 32 GB | iGPU (Xe, Wildcat Lake) | YMTC 512 GB UFS + WD Blue SN5100 4 TB NVMe |
 | [`wabbajack`](hosts/wabbajack) | Framework Desktop | AMD Ryzen AI Max+ 395 (Strix Halo) | 128 GB | Radeon 8060S iGPU | WD_BLACK SN850X 2 TB NVMe + WD_BLACK SN7100 2 TB NVMe |
 | [`dovahkiin`](hosts/dovahkiin) | Framework Laptop 13 | AMD Ryzen AI 7 350 | 64 GB | Radeon 860M iGPU | KIOXIA 2 TB NVMe |
 | [`guevenne`](hosts/guevenne) | ASUS Zenbook S 16 (UM5606WA) | AMD Ryzen AI 9 365 | 22 GB | Radeon 880M iGPU | Micron 2400 1 TB NVMe |
@@ -29,7 +32,9 @@ This is a mono-repo for all my nix settings. Here are the sections:
 
 ### Kubernetes Hosts
 
-`fus`, `ro` and `dah` are the three nodes of the Kubernetes cluster.
+`fus`, `ro` and `dah` are the control-plane nodes of the Kubernetes cluster.
+`joor`, `zah` and `frul` join as workers (`services.k3s.role = "agent"`) and also
+run the Ceph storage cluster on their 4 TB drives.
 
 [`modules/k3s-common.nix`](modules/k3s-common.nix) contain the main configuration for those hosts.
 

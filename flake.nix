@@ -2,6 +2,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # Stable release for packages whose version should only move deliberately.
+    # Currently Ceph (modules/services/ceph.nix).
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
+
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -82,7 +86,7 @@
     k3sHelpers = import ./lib/k3s-nodes.nix { inherit nixpkgs disko sops-nix inputs; };
     # Generate the k3s nodes
     # Actual configs for these nodes are in hosts/
-    k3sNodes = k3sHelpers.generateK3sNodes [ "fus" "ro" "dah" ];
+    k3sNodes = k3sHelpers.generateK3sNodes [ "fus" "ro" "dah" "joor" "zah" "frul" ];
 
     pkgs = import nixpkgs { system = "x86_64-linux"; };
 

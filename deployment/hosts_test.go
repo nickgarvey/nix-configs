@@ -57,7 +57,7 @@ func TestSelectHosts(t *testing.T) {
 			name:  "empty selects default hosts in order",
 			input: nil,
 			want: []string{
-				"fus", "ro", "dah",
+				"fus", "ro", "dah", "joor", "zah", "frul",
 				"wabbajack", "talos", "lydia",
 				"guevenne", "skyforge", "nelkir", "dragonsreach",
 			},

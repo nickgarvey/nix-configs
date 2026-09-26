@@ -3,3 +3,4 @@ result/
 result
 scripts/__pycache__
 .claude/
+.ait

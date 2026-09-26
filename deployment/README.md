@@ -96,7 +96,8 @@ Summary:
 
 | Host | Order | k8s health | Default | Notes |
 |---|---|---|---|---|
-| fus / ro / dah | 10–12 | ✓ | ✓ | SSH + IPv6 gateway ping |
+| fus / ro / dah | 10–12 | ✓ | ✓ | control plane; SSH + IPv6 gateway ping |
+| joor / zah / frul | 13–15 | ✓ | ✓ | k3s agents + Ceph nodes (Ceph gate, below); SSH + IPv6 gateway ping |
 | wabbajack | 20 | – | ✓ | SSH + gateway ping + IPv6 gateway ping |
 | talos | 21 | – | ✓ | SSH + gateway ping |
 | lydia | 30 | – | ✓ | SSH + gateway ping |
@@ -105,6 +106,24 @@ Summary:
 | skyforge | 50 | – | ✓ | aarch64; needs binfmt on the deploying machine; printer idle pre-check |
 | nelkir | 51 | – | ✓ | aarch64; needs binfmt on the deploying machine |
 | dragonsreach | 99 | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
+
+### Ceph gate (joor / zah / frul)
+
+Hosts with `CephHealthCheck` (`ceph.go`) wrap the whole per-host deploy, in
+every mode:
+
+- **Before:** refuse if an OSD on any *other* host is down. Taking a second
+  node's OSD down would leave placement groups below `min_size` and stall I/O.
+  The host's own OSD may already be down, since a deploy is often the fix.
+  Then `ceph osd set-group noout <host>`, so the OSD restarting (or a reboot)
+  does not start re-replication.
+- **After** (including any reboot): wait up to 5 min for every OSD up and every
+  PG `active+clean`, then clear the host's `noout`.
+- **On failure** `noout` stays set, and the run's warnings say how to clear it.
+  Left set, Ceph would not re-replicate if the node later died for real.
+
+The queries run over SSH on the host itself; each storage node holds the admin
+keyring. Serial activation (below) is what makes this a rolling gate.
 
 ### Printer pre-check (skyforge)
 
@@ -189,7 +208,8 @@ success is then decided by `nix path-info`, not by parsing the build log.
 **Activation stays serial** — exactly one host is ever inside a watchdog window.
 Everything that depended on that still holds for free: the k3s rolling gate
 (`WaitForK8sReady` runs inside the activation, so the next node cannot start
-until the previous one is Ready) and the `--reboot ask` prompt.
+until the previous one is Ready), the Ceph gate (likewise, until every PG is
+active+clean again) and the `--reboot ask` prompt.
 
 Ordering is otherwise first-ready-first-served rather than fixed by `Order`;
 `Order` survives only as the tiebreak between hosts that become ready in the same
