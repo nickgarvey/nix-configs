@@ -14,7 +14,7 @@ let
   ];
 in
 {
-  imports = [ ../networking/networkd.nix ];
+  imports = [ ../core/server-base.nix ];
 
   options.k3sConfig = {
     isFirstNode = lib.mkOption {
@@ -31,12 +31,7 @@ in
       nfs-utils  # Required by Longhorn for NFS backup targets
     ];
 
-    boot.loader.systemd-boot.enable = true;
-    boot.loader.efi.canTouchEfiVariables = true;
-
     sops.defaultSopsFile = ../../secrets/k3s.yaml;
-    sops.defaultSopsFormat = "yaml";
-    sops.age.keyFile = "/root/.config/sops/age/keys.txt";
     sops.secrets.cluster_token = { };
 
     # KUBECONFIG only exists on server nodes
@@ -77,7 +72,6 @@ in
       ] ++ nodeIpFlags;
     };
 
-    homelab.network.enable = true;
     homelab.network.ipv6Only = true;
     homelab.network.ipv4Forward = false;
     homelab.network.ipv6Forward = true;

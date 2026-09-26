@@ -4,17 +4,14 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/core/nixos-common.nix
-    ../../modules/networking/networkd.nix
+    ../../modules/core/server-base.nix
     ../../modules/containers/garage.nix
   ];
 
   networking.hostName = "wabbajack";
-  homelab.network.enable = true;
   # Required so the garage container (on vmbr0) can route to its peer's
   # delegated /64 — crosses interfaces, needs IPv6 forwarding.
   homelab.network.ipv6Forward = true;
-
-  sops.defaultSopsFormat = "yaml";
 
   # Bridge for the garage nspawn container to get LAN access (IPv6 auto-derived
   # from lan-hosts.nix). Mirrors lydia's setup.
@@ -55,9 +52,6 @@
     tls.enable = true;
     peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@[2001:470:482f:200::2]:3901" ];
   };
-
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
 
   boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 

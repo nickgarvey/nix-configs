@@ -4,7 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/core/nixos-common.nix
-    ../../modules/networking/networkd.nix
+    ../../modules/core/server-base.nix
     ../../modules/containers/frigate.nix
     ../../modules/containers/garage.nix
     ../../modules/microvm/smb.nix
@@ -14,18 +14,13 @@
     ../../modules/services/netboot-server.nix
   ];
 
-  homelab.network.enable = true;
   # Required so the garage container (on vmbr0) can route to its peer's
   # delegated /64 — crosses interfaces, needs IPv6 forwarding.
   homelab.network.ipv6Forward = true;
 
   networking.hostName = "lydia";
 
-  sops.defaultSopsFormat = "yaml";
   sops.age.keyFile = "/root/.config/sops/age/keys.txt";
-
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
 
   boot.kernelParams = [
     "intel_iommu=on"

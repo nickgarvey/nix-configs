@@ -7,7 +7,7 @@ narrowest matching subdir; create a new one only when you have ≥2 related file
 
 | Subdir | What belongs here |
 |---|---|
-| `core/` | Baseline config applied to virtually every host (NixOS defaults, SSH, locale, CA certs). Currently: `nixos-common`, `nspawn-cleanup`. |
+| `core/` | Baseline config applied to virtually every host (NixOS defaults, SSH, locale, CA certs). Currently: `nixos-common`, `nspawn-cleanup`, `server-base` (networkd + systemd-boot + sops defaults for LAN servers; k3s-common builds on it). |
 | `networking/` | Network configuration and shared host-address data. Currently: `networkd`, `network-manager`, `dns`, `lan-hosts`, `ipv6-accept-ra-routes`. |
 | `desktop/` | Workstation/desktop features (Wayland compositors, audio, packages, udev rules for peripherals). Currently: `common-workstation`, `common-tv`, `niri`, `steam`, `upower-overlay`, `printer`, `orca-slicer`, `mic-mute`, `rtl-sdr`. |
 | `nix/` | Nix-daemon tooling: binary caches, remote builders, flake checks. Currently: `nix-binary-cache`, `nix-remote-builder-client`, `flake-build-check`. |
