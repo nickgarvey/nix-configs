@@ -10,13 +10,12 @@ owns cert-manager, acme-dns, and the services themselves.
 
 ---
 
-## The three ways a cert gets issued
+## The two ways a cert gets issued
 
 | Path | Names | Issued by | Config |
 |---|---|---|---|
 | cert-manager + acme-dns | `*.garvey.sh` | Let's Encrypt, DNS-01 | `k8s-gitops/manifests/cert-manager/cluster-issuer-acmedns-{prod,staging}.yaml` |
 | On-box ACME | `homeassistant.home.garvey.sh`, `garage.home.garvey.sh`, `storj-gateway.home.garvey.sh`, `rgw.home.garvey.sh` | Let's Encrypt, DNS-01 via RFC2136 | HAOS itself / `security.acme` on lydia + wabbajack / `security.acme` on dragonsreach / `security.acme` on joor + zah + frul (Ceph RGW); TSIG ACLs in `modules/containers/knot-auth.nix` |
-| Tailscale | `*.bigeye-turtle.ts.net` | Tailscale | `ingressClassName: tailscale` on the Ingress |
 
 Kubernetes' own internal PKI (apiserver, kubelet, etcd, Cilium) is separate from all of
 this — k3s manages it, nothing here touches it, and it never appears on the LAN.
@@ -139,13 +138,6 @@ is committed before lego proceeds, so there is no propagation to await; Let's En
 validates from the public internet, where the DNAT does apply. Any future on-box ACME
 client on this network needs the same setting.
 
-### 3. Tailscale Ingress
-
-The default for HTTP UIs that don't need a public name: `couchdb`,
-`authentik`, `grafana`, and jellyfin's UI. Tailscale terminates TLS with its own cert for
-`*.bigeye-turtle.ts.net` and the name is tailnet-only. Nothing in this repo manages those
-certs.
-
 ---
 
 ## How TLS is terminated
@@ -161,8 +153,7 @@ Secret is mounted into the pod and the app reads it.
 ```
 
 Keeping the listener on 443 means the public URL needs no port suffix and the LB mapping
-stays a straight 443→443, which is one less thing to get wrong when a service also has a
-Tailscale Ingress in front of a different port.
+stays a straight 443→443.
 
 ## Split-horizon DNS keeps the cert name honest
 

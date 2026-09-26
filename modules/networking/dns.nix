@@ -18,7 +18,7 @@ in rec {
   records = {
     router        = { v4 = [ "10.28.0.1" ];    v6 = [ "2001:470:482f::1" ]; };
     dragonsreach  = { v4 = [ "10.28.0.1" ];    v6 = [ "2001:470:482f::1" ]; };
-    frigate       = { v4 = [ "10.28.12.109" ]; v6 = []; };
+    frigate       = { v4 = [ "10.28.12.109" ]; v6 = [ "2001:470:482f:200::3" ]; };
     smb           = { v4 = [ "10.28.12.110" ]; v6 = [ "2001:470:482f::14" ]; };
     # Both garage nodes. Clients round-robin; any node serves the whole S3 API.
     # Peer-to-peer RPC does not use this — see modules/containers/garage.nix.
@@ -33,11 +33,17 @@ in rec {
     trmnl-display = { v4 = [ "10.28.0.2" ]; v6 = [ "2001:470:482f:2::5" ]; };
     # A Caddy sidecar in the anki pod terminates TLS on 443 off this LB IP.
     anki          = { v4 = []; v6 = [ "2001:470:482f:2::5003" ]; };
+    # CouchDB for Obsidian LiveSync, and Grafana: Caddy sidecars terminate TLS
+    # on 443 off these LB IPs (k8s-gitops manifests/couchdb, manifests/grafana).
+    obsidian-livesync = { v4 = []; v6 = [ "2001:470:482f:2::5004" ]; };
+    grafana       = { v4 = []; v6 = [ "2001:470:482f:2::5006" ]; };
   };
 
   # CNAMEs (targets are FQDNs with trailing dot).
   cnames = {
     "_acme-challenge.anki" = "0a95fd7d-b7d2-4827-96df-65575900f9ac.acme.garvey.sh.";
+    "_acme-challenge.obsidian-livesync" = "7d13302c-3155-4fc2-99e8-c3c053b4236b.acme.garvey.sh.";
+    "_acme-challenge.grafana" = "32622e22-227e-41f0-becf-674c8192c9f1.acme.garvey.sh.";
   };
 
   # Split-horizon overrides: public (garvey.sh) names answered internally with

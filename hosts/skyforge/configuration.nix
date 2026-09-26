@@ -174,7 +174,8 @@
       # Omitting [authorization] does NOT disable auth — moonraker loads
       # the authorization component by default and defaults trusted_clients
       # to []. Result: every request 401s. Explicitly trust everything
-      # since this is LAN/Tailscale-only with no public exposure.
+      # since this is LAN-only with no public exposure (tailnet devices reach
+      # it through dragonsreach's advertised IPv6 route).
       authorization = {
         cors_domains = [ "*" ];
         trusted_clients = [ "0.0.0.0/0" "::/0" ];
@@ -235,8 +236,6 @@
   services.nginx.clientMaxBodySize = "2G";
 
   networking.firewall.allowedTCPPorts = [ 80 7125 8080 ];
-
-  services.tailscale.enable = true;
 
   security.polkit.enable = true;
 

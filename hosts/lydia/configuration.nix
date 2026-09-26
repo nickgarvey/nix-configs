@@ -54,9 +54,6 @@
     # (modules/router/lan-ipv6.nix) NDP-resolves to us.
     ipv6.extraAddresses = [ "2001:470:482f:200::1/64" ];
   };
-  # Tailscale
-  services.tailscale.enable = true;
-
   # SATA mirror (2x 6TB WDC) — slow/bulk storage.
   fileSystems."/slow/backups" = {
     device = "/dev/disk/by-label/slow";
@@ -164,6 +161,10 @@
   nspawn.frigate = {
     hostBridge = "vmbr0";
     localAddress = "10.28.12.109/16";
+    # In the delegated /64 next to garage (::2), so tailnet devices reach it
+    # through dragonsreach's advertised 2001:470:482f::/48 route.
+    localAddress6 = "2001:470:482f:200::3/64";
+    hostBridgeAddress = "2001:470:482f:200::1";
     dataPath = "/fast/frigate/data";
     cachePath = "/fast/frigate/cache";
   };

@@ -18,6 +18,12 @@ in
       description = "IPv6 address with prefix length for the frigate container.";
     };
 
+    hostBridgeAddress = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Host bridge IPv6 address in the same /64 as localAddress6: the container's next hop for the intra-site /48 (see containers/common.nix). Required with localAddress6.";
+    };
+
     hostBridge = lib.mkOption {
       type = lib.types.str;
       description = "Host bridge interface for the container network.";
@@ -58,17 +64,12 @@ in
       FRIGATE_RTSP_PASSWORD=${config.sops.placeholder.frigate-rtsp-password}
     '';
 
-    # Tailscale auth key for first-boot login inside the container.
-    sops.secrets.frigate-tailscale-authkey = {
-      sopsFile = ../../secrets/frigate.yaml;
-      key = "tailscale_auth_key";
-    };
-
     nspawn.network.frigate = {
       attachment = "bridge";
       hostBridge = cfg.hostBridge;
       localAddress = cfg.localAddress;
       localAddress6 = cfg.localAddress6;
+      hostBridgeAddress = cfg.hostBridgeAddress;
       ipv4Gateway = "10.28.0.1";
       ipv4Nameservers = [ "10.28.0.1" ];
     };
@@ -87,19 +88,12 @@ in
           hostPath = config.sops.templates."frigate-rtsp.env".path;
           isReadOnly = true;
         };
-        "/run/tailscale-authkey" = {
-          hostPath = config.sops.secrets.frigate-tailscale-authkey.path;
-          isReadOnly = true;
-        };
       };
 
       allowedDevices = [
         { node = "/dev/apex_0"; modifier = "rwm"; }
-        { node = "/dev/net/tun"; modifier = "rwm"; }
       ];
-      # NET_ADMIN is required for tailscaled to bring up the tun interface.
-      additionalCapabilities = [ "CAP_NET_ADMIN" ];
-      extraFlags = [ "--bind=/dev/apex_0" "--bind=/dev/net/tun" ];
+      extraFlags = [ "--bind=/dev/apex_0" ];
 
       config = { config, pkgs, lib, ... }: let
         # Frigate's UI log tab reads /dev/shm/logs/<svc>/current, populated by
@@ -219,14 +213,10 @@ in
           };
         };
 
-        services.tailscale = {
-          enable = true;
-          authKeyFile = "/run/tailscale-authkey";
-        };
-
         # Defense in depth over the go2rtc loopback binds: only the
         # authenticated nginx front (80) and WebRTC media (8555, DTLS-SRTP)
-        # are reachable — LAN and tailnet alike.
+        # are reachable, from the LAN and from tailnet devices (which arrive via
+        # dragonsreach's subnet route).
         networking.firewall = {
           enable = true;
           allowedTCPPorts = [ 80 8555 ];

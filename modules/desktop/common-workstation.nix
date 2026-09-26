@@ -163,8 +163,8 @@ in
     ];
   };
 
-  # resolved handles split-DNS: Tailscale pushes its nameservers for ts.net
-  # domains, while DHCP-provided DNS is used for everything else.
+  # Tailscale DNS is off (--accept-dns=false below): home names resolve from
+  # public DNS, and LAN DNS keeps working when the tailnet does not.
   services.resolved = {
     enable = true;
     settings.Resolve.DNSSEC = "false";
@@ -175,7 +175,7 @@ in
     enable = true;
     useRoutingFeatures = "client";
     extraSetFlags = [
-      "--accept-dns"
+      "--accept-dns=false"
       "--operator=ngarvey"
       "--exit-node-allow-lan-access"
     ];
