@@ -61,6 +61,14 @@ in
         "--write-kubeconfig-mode=600"
         "--disable=servicelb"
         "--disable=traefik"
+        # local-path's StorageClass would be (re-)marked default on every k3s
+        # start; ceph-rbd is the default (k8s-gitops), and nothing uses it.
+        "--disable=local-storage"
+        # fus/ro/dah run only the control plane, cluster services and monitoring
+        # (pinned there in k8s-gitops); apps go to the storage nodes. k3s
+        # applies this only when a node registers: existing servers were
+        # tainted with kubectl.
+        "--node-taint=node-role.kubernetes.io/control-plane=true:NoSchedule"
         "--flannel-backend=none"
         "--disable-network-policy"
         "--disable-kube-proxy"
@@ -90,6 +98,11 @@ in
     # firewall drops pod return traffic as unsolicited.  Disable iptables
     # and rely on Cilium Host Firewall (eBPF) instead.
     networking.firewall.enable = false;
+
+    # ceph-csi maps RBD volumes with the kernel client. Its node plugin would
+    # modprobe rbd itself, but it looks in /lib/modules, which NixOS does not
+    # have, so load it at boot instead.
+    boot.kernelModules = [ "rbd" ];
 
     # Longhorn settings
     services.openiscsi = {
