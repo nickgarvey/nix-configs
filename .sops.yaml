@@ -91,6 +91,15 @@ creation_rules:
     key_groups:
     - age:
       - *ngarvey
+  # ceph-backup: the Garage key for the `ceph-backup` bucket and the Kopia
+  # repository password. joor runs the backups (modules/services/ceph-backup.nix);
+  # ngarvey is here so the backups can be restored from any machine if joor is
+  # gone: without the password the repository is unreadable.
+  - path_regex: secrets/ceph-backup.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *joor
   # llm-api-keys: the hosted-LLM API keys pi uses. `workstation` is the identity
   # both workstations present, so one recipient covers talos and dovahkiin.
   - path_regex: secrets/llm-api-keys.yaml

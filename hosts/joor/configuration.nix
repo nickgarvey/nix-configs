@@ -7,6 +7,8 @@
     ../../modules/core/nixos-common.nix
     ../../modules/networking/thunderbolt-mesh.nix
     ../../modules/services/ceph.nix
+    # Backs up every Ceph RBD volume; one node is enough.
+    ../../modules/services/ceph-backup.nix
   ];
 
   networking.hostName = "joor";

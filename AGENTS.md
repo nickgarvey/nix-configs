@@ -11,7 +11,7 @@ narrowest matching subdir; create a new one only when you have ≥2 related file
 | `networking/` | Network configuration and shared host-address data. Currently: `networkd`, `network-manager`, `dns`, `lan-hosts`, `ipv6-accept-ra-routes`, `thunderbolt-mesh` (FRR-routed Thunderbolt mesh between the storage nodes). |
 | `desktop/` | Workstation/desktop features (Wayland compositors, audio, packages, udev rules for peripherals). Currently: `common-workstation`, `common-tv`, `niri`, `steam`, `upower-overlay`, `printer`, `orca-slicer`, `mic-mute`, `rtl-sdr`. |
 | `nix/` | Nix-daemon tooling: binary caches, remote builders, flake checks. Currently: `nix-binary-cache`, `nix-remote-builder-client`, `flake-build-check`. |
-| `services/` | Host services that don't fit a tighter category. Currently: `smb-automount`, `fancontrol`, `ceph` (mon/mgr/OSD/RGW on joor/zah/frul, no Rook). |
+| `services/` | Host services that don't fit a tighter category. Currently: `smb-automount`, `fancontrol`, `ceph` (mon/mgr/OSD/RGW on joor/zah/frul, no Rook), `ceph-backup` (daily Kopia backups of RBD volumes to Garage). |
 | `k3s/` | Kubernetes cluster node configuration. Currently: `k3s-common`. |
 | `router/` | Router subsystem (nftables, DHCP, DNS, IPv6 tunnel, NAT64). Exposes a `default.nix` — import the directory. |
 | `containers/` | systemd-nspawn container definitions. Common networking lives in `common.nix`. |
