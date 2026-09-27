@@ -25,10 +25,13 @@ in
   # We dd the image directly; no need to spend build time on zstd compression.
   sdImage.compressImage = false;
 
-  # vector-agent.nix arrives transitively via nixos-common.nix and has no enable
-  # option of its own. Host metrics are not worth a Vector process on a Pi that
-  # does one thing.
-  services.vector.enable = lib.mkForce false;
+  # The onboard brcmfmac WiFi does not survive a live wpa_supplicant restart:
+  # NetworkManager loses the supplicant, and every reassociation after that
+  # times out until a reboot. A switch that changes either unit would therefore
+  # cut the deploy's SSH session and trip its rollback. Leave both running on
+  # switch; changes to them take effect at the next boot.
+  systemd.services.wpa_supplicant.restartIfChanged = false;
+  systemd.services.NetworkManager.restartIfChanged = false;
 
   # guevenne (the TV box) drives the same TV but its AMD HDMI output exposes no
   # /dev/cec*, so it sends power commands here instead.

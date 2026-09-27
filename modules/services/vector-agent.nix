@@ -33,12 +33,42 @@
         transforms = config.homelab.metrics.transforms;
         sinks.prometheus_remote_write = {
           type = "prometheus_remote_write";
-          inputs = builtins.attrNames (
+          inputs = [ "disk_usage" ] ++ builtins.attrNames (
             lib.filterAttrs (_: t: t.type == "log_to_metric") config.homelab.metrics.transforms
           );
           endpoint = "http://prometheus.prometheus.k8s.home.garvey.sh:9090/api/v1/write";
         };
       };
+    };
+
+    # Disk usage for every block-device-backed mount, as
+    # host_filesystem_used_ratio{hostname,device,mountpoint,filesystem}. The
+    # /dev/* match keeps out tmpfs, overlays, network filesystems and virtual
+    # mounts; kubelet volume mounts are left out because Prometheus already gets
+    # those from kubelet_volume_stats_*. btrfs subvolumes of one filesystem show
+    # up once per mountpoint with the same ratio; the alert rule dedupes by device.
+    homelab.metrics.sources.disk = {
+      type = "host_metrics";
+      collectors = [ "filesystem" ];
+      scrape_interval_secs = 60;
+      filesystem = {
+        devices.includes = [ "/dev/*" ];
+        mountpoints.excludes = [ "/var/lib/kubelet/*" ];
+      };
+    };
+
+    # The metric events feed the sink directly (there is no log_to_metric step),
+    # so this remap is wired to it by name above. It keeps only the ratio and
+    # renames the `host` tag to the `hostname` label the other metrics use.
+    homelab.metrics.transforms.disk_usage = {
+      type = "remap";
+      inputs = [ "disk" ];
+      drop_on_abort = true;
+      source = ''
+        if .name != "filesystem_used_ratio" { abort }
+        .tags.hostname = del(.tags.host)
+        del(.tags.collector)
+      '';
     };
 
     homelab.metrics.sources.kernel_version = {
