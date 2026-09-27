@@ -33,10 +33,6 @@ in rec {
     trmnl-display = { v4 = [ "10.28.0.2" ]; v6 = [ "2001:470:482f:2::5" ]; };
     # A Caddy sidecar in the anki pod terminates TLS on 443 off this LB IP.
     anki          = { v4 = []; v6 = [ "2001:470:482f:2::5003" ]; };
-    # PD, the JuiceFS metadata cluster's placement driver. Plain HTTP on
-    # 2379 with no certificate, so unlike the services above it needs no
-    # acme challenge record.
-    juicefs-pd    = { v4 = []; v6 = [ "2001:470:482f:2::5005" ]; };
   };
 
   # CNAMEs (targets are FQDNs with trailing dot).

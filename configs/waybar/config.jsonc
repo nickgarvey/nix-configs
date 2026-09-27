@@ -6,7 +6,7 @@
 
     "modules-left": ["niri/workspaces", "niri/window"],
     "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "cpu", "memory", "custom/juicefs", "custom/kanata", "network", "tray"],
+    "modules-right": ["pulseaudio", "cpu", "memory", "custom/kanata", "network", "tray"],
 
     "niri/workspaces": {
         "format": "{index}"
@@ -31,13 +31,6 @@
     "memory": {
         "format": "RAM {percentage}%",
         "interval": 5
-    },
-
-    "custom/juicefs": {
-        "exec": "juicefs-status --waybar",
-        "return-type": "json",
-        "interval": 5,
-        "tooltip": true
     },
 
     "custom/kanata": {

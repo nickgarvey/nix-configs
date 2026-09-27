@@ -105,17 +105,6 @@ creation_rules:
     - age:
       - *ngarvey
       - *workstation
-  # juicefs: the garage S3 key backing the JuiceFS data blocks. One shared
-  # credential, not one per host: every client mounts the same filesystem, so
-  # there is no per-machine identity to revoke independently. `workstation` is
-  # the identity both talos and dovahkiin present. The TiKV metadata engine
-  # needs no secret at all -- it is unauthenticated on the LAN, see
-  # modules/services/juicefs.nix.
-  - path_regex: secrets/juicefs.yaml
-    key_groups:
-    - age:
-      - *ngarvey
-      - *workstation
   - path_regex: secrets/smb-credentials.yaml
     key_groups:
     - age:

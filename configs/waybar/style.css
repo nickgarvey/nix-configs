@@ -36,7 +36,6 @@ window#waybar {
 #cpu,
 #memory,
 #network,
-#custom-juicefs,
 #custom-kanata,
 #pulseaudio,
 #battery,
@@ -68,19 +67,6 @@ window#waybar {
 
 #battery.charging {
     color: #7fc8ff;
-}
-
-#custom-juicefs.idle {
-    color: #909090;
-}
-
-#custom-juicefs.syncing {
-    color: #7fc8ff;
-}
-
-#custom-juicefs.error,
-#custom-juicefs.stopped {
-    color: #ff6b6b;
 }
 
 /* DejaVu's ⌨ glyph is tiny (12x7 px at 20px); Noto Sans Symbols 2 draws it
