@@ -38,8 +38,8 @@
     # joor/zah/frul: k3s workers + Ceph storage nodes. The MAC is the Intel I226-V
     # 2.5G port, not the Realtek RTL8127 10GbE one these boxes also have —
     # the 10G NIC is left unconfigured.
-    { hostname = "joor";          mac = "78:55:36:0c:3b:f0"; ipv4 = "10.28.15.4";    ipv6 = "2001:470:482f::24"; podCIDR = "2001:470:482f:101::/64"; }
-    { hostname = "zah";           mac = "78:55:36:0c:3c:c8"; ipv4 = "10.28.15.5";    ipv6 = "2001:470:482f::25"; podCIDR = "2001:470:482f:102::/64"; }
-    { hostname = "frul";          mac = "78:55:36:0c:3c:60"; ipv4 = "10.28.15.6";    ipv6 = "2001:470:482f::26"; podCIDR = "2001:470:482f:105::/64"; }
+    { hostname = "joor";          mac = "78:55:36:0c:3b:ef"; ipv4 = "10.28.15.4";    ipv6 = "2001:470:482f::24"; podCIDR = "2001:470:482f:101::/64"; }
+    { hostname = "zah";           mac = "78:55:36:0c:3c:c7"; ipv4 = "10.28.15.5";    ipv6 = "2001:470:482f::25"; podCIDR = "2001:470:482f:102::/64"; }
+    { hostname = "frul";          mac = "78:55:36:0c:3c:5f"; ipv4 = "10.28.15.6";    ipv6 = "2001:470:482f::26"; podCIDR = "2001:470:482f:105::/64"; }
   ];
 }

@@ -49,9 +49,9 @@ in
     path = [ pkgs.kmod ];
     script = ''
       # A peer shows up as 0-N (N > 0) only after its lane bonding and
-      # property exchange finish. Give up waiting after 30s so a node with a
-      # cable out still loads the module.
-      for _ in $(seq 60); do
+      # property exchange finish. Give up waiting after 60s so a node with a
+      # cable out still loads the module (discovery has taken over 30s on 7.2).
+      for _ in $(seq 120); do
         peers=$(ls -d /sys/bus/thunderbolt/devices/0-[1-9] 2>/dev/null | wc -l)
         [ "$peers" -ge ${toString (builtins.length nodes - 1)} ] && break
         sleep 0.5
