@@ -29,8 +29,10 @@ type Host struct {
 	// CephHealthCheck gates the deploy on the Ceph cluster: see ceph.go.
 	CephHealthCheck bool
 	Groups          []string
-	Default         bool // false = opt-in only (dovahkiin)
-	ConnChecks      []ConnCheck
+	// Default hosts are deployed when --hosts is not given. The rest are still
+	// built on such a run, and deployed only when named in --hosts.
+	Default    bool
+	ConnChecks []ConnCheck
 }
 
 func (h Host) FQDN() string {
@@ -112,8 +114,9 @@ var AllHosts = []Host{
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
+		// Unplugged: built on every run, deployed only when named.
 		Name: "guevenne", FlakeName: "guevenne",
-		Order: 41, Groups: []string{"media"}, Default: true,
+		Order: 41, Groups: []string{"media"}, Default: false,
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
@@ -123,8 +126,9 @@ var AllHosts = []Host{
 	},
 	{
 		// aarch64; the closure comes from the binary cache, so this is cheap.
+		// Unplugged: built on every run, deployed only when named.
 		Name: "nelkir", FlakeName: "nelkir",
-		Order: 51, Groups: []string{"media"}, Default: true,
+		Order: 51, Groups: []string{"media"}, Default: false,
 		ConnChecks: []ConnCheck{CheckSSH},
 	},
 	{
@@ -150,6 +154,23 @@ func HostNames(all []Host, pred func(Host) bool) []string {
 		}
 	}
 	return names
+}
+
+// BuildOnlyHosts returns the hosts a run builds without deploying: with no
+// --hosts, the non-Default ones, so that a plain run builds every
+// configuration. Named hosts are selected exactly, so then it returns nil.
+func BuildOnlyHosts(all []Host, names []string) []Host {
+	if len(names) > 0 {
+		return nil
+	}
+	var out []Host
+	for _, h := range all {
+		if !h.Default {
+			out = append(out, h)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Order < out[j].Order })
+	return out
 }
 
 // SelectHosts filters AllHosts by the --hosts flag. Empty selector returns all

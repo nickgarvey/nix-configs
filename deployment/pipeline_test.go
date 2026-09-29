@@ -195,13 +195,17 @@ func pipeCtx(f *pipeFake) *DeployContext {
 }
 
 func runPipe(f *pipeFake, todo []PrecheckResult, opts PipelineOpts) []HostResult {
+	return runPipeExtra(f, todo, nil, opts)
+}
+
+func runPipeExtra(f *pipeFake, todo []PrecheckResult, extraDrvs []string, opts PipelineOpts) []HostResult {
 	if opts.CopyJobs == 0 {
 		opts.CopyJobs = 4
 	}
 	if opts.OnFailure == "" {
 		opts.OnFailure = OnFailureContinue
 	}
-	return RunPipeline(pipeCtx(f), f, todo, opts)
+	return RunPipeline(pipeCtx(f), f, todo, extraDrvs, opts)
 }
 
 func statusOf(res []HostResult, name string) HostStatus {
@@ -400,6 +404,49 @@ func TestPipelineEmptyTodoDoesNothing(t *testing.T) {
 	}
 	if len(f.calls) != 0 {
 		t.Errorf("want no calls, got %v", f.calls)
+	}
+}
+
+// Build-only hosts join the one fleet build and are never copied or activated.
+func TestPipelineExtraDrvsBuiltButNotDeployed(t *testing.T) {
+	f := newPipeFake()
+	todo := pipeHosts("lydia")
+	f.buildMakes["lydia"] = true
+
+	res := runPipeExtra(f, todo, []string{"/nix/store/guevenne.drv"}, PipelineOpts{})
+
+	if got := statusOf(res, "lydia"); got != StatusDeployed {
+		t.Errorf("lydia: want StatusDeployed, got %v", got)
+	}
+	if len(res) != 1 {
+		t.Errorf("build-only hosts must not get a result, got %v", res)
+	}
+	if n := f.callsContaining("nix build"); n != 1 {
+		t.Errorf("want one fleet build, got %d", n)
+	}
+	if n := f.callsContaining("/nix/store/guevenne.drv^out"); n != 1 {
+		t.Errorf("build-only drv missing from the fleet build: %v", f.calls)
+	}
+	for _, c := range f.calls {
+		if strings.Contains(c, "guevenne") && !strings.Contains(c, "nix build") {
+			t.Errorf("a build-only host must not be touched after the build: %s", c)
+		}
+	}
+}
+
+// With every deploy host up to date there is nothing of theirs to build, but
+// the build-only hosts still are.
+func TestPipelineExtraDrvsBuiltWhenNothingToDeploy(t *testing.T) {
+	f := newPipeFake()
+	upToDate := pipeHosts("lydia")
+	upToDate[0].Plan.UpToDate = true
+
+	for _, todo := range [][]PrecheckResult{nil, upToDate} {
+		f.calls = nil
+		runPipeExtra(f, todo, []string{"/nix/store/guevenne.drv"}, PipelineOpts{})
+		if n := f.callsContaining("/nix/store/guevenne.drv^out"); n != 1 {
+			t.Errorf("todo=%d host(s): want the build-only drv built once, calls %v", len(todo), f.calls)
+		}
 	}
 }
 

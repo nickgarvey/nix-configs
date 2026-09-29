@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"syscall"
 )
@@ -32,7 +33,7 @@ func hostsFlagUsage(all []Host) string {
 	optIn := HostNames(all, func(h Host) bool { return !h.Default })
 	s := "Comma-separated host names (default: " + strings.Join(def, ",") + ")"
 	if len(optIn) > 0 {
-		s += "; opt-in only: " + strings.Join(optIn, ",")
+		s += "; built only unless named: " + strings.Join(optIn, ",")
 	}
 	return s
 }
@@ -122,13 +123,16 @@ func run() int {
 		return 1
 	}
 
-	names := make([]string, len(hosts))
-	for i, h := range hosts {
-		names[i] = h.Name
-	}
+	// Hosts built on this run but not deployed: see BuildOnlyHosts.
+	buildOnly := BuildOnlyHosts(AllHosts, args.Hosts)
+	every := func(Host) bool { return true }
+	names := HostNames(hosts, every)
 
 	// Build-only never touches a target, so it needs no control directory.
 	if args.Build {
+		hosts = append(append([]Host(nil), hosts...), buildOnly...)
+		sort.SliceStable(hosts, func(i, j int) bool { return hosts[i].Order < hosts[j].Order })
+		names = HostNames(hosts, every)
 		fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
 		fmt.Println("Mode: build-only (no deploy)")
 		runner := ExecRunner{}
@@ -173,22 +177,30 @@ func run() int {
 	defer installSSHCleanup(ctl, quiet)()
 
 	fmt.Printf("Hosts (%d): %v\n", len(hosts), names)
+	if len(buildOnly) > 0 {
+		fmt.Printf("Build only (%d): %v\n", len(buildOnly), HostNames(buildOnly, every))
+	}
 	fmt.Printf("Mode: %s, Reboot: %s\n", args.Mode, args.Reboot)
 
 	// Precheck: resolve every toplevel (one eval per host, in parallel), then
 	// probe all hosts at once. Everything decided here — unreachable,
 	// mid-print, already up to date — is decided before the first build
-	// instead of after it.
-	fmt.Printf("\nResolving system paths for %d host(s) (parallel nix eval)...\n", len(hosts))
-	paths, err := ResolveToplevels(quiet, hosts)
+	// instead of after it. Build-only hosts are evaluated but never probed.
+	evalHosts := append(append([]Host(nil), hosts...), buildOnly...)
+	fmt.Printf("\nResolving system paths for %d host(s) (parallel nix eval)...\n", len(evalHosts))
+	paths, err := ResolveToplevels(quiet, evalHosts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	extraDrvs := make([]string, 0, len(buildOnly))
+	for _, h := range buildOnly {
+		extraDrvs = append(extraDrvs, paths[h.Name].Drv)
+	}
 
 	fmt.Printf("Probing %d host(s)...\n", len(hosts))
 	pre := PrecheckAll(quiet, hosts, paths, args.Force)
-	printPlan(pre)
+	printPlan(pre, buildOnly)
 
 	var warnings []string
 	ctx := &DeployContext{
@@ -220,7 +232,7 @@ func run() int {
 			fmt.Printf("\n✗ K3s node %s failed the precheck (%s) — not deploying anything.\n",
 				p.Host.Name, p.Reason)
 			fmt.Printf("  Rolling the remaining k3s nodes with one already down would risk quorum.\n")
-			printSummary(warnings, skipped, failed)
+			printSummary(warnings, skipped, failed, nil)
 			return 1
 		}
 	}
@@ -228,7 +240,7 @@ func run() int {
 	if args.Mode == ModeSafe {
 		// safe mode is pipelined: build, copy and activate overlap across
 		// hosts, with activation kept to one host at a time.
-		for _, r := range RunPipeline(ctx, quiet, todo, args.pipelineOpts()) {
+		for _, r := range RunPipeline(ctx, quiet, todo, extraDrvs, args.pipelineOpts()) {
 			if r.Status.failed() {
 				failed = append(failed, r.Host.Name)
 			}
@@ -252,10 +264,21 @@ func run() int {
 				break
 			}
 		}
+		if len(extraDrvs) > 0 {
+			fmt.Printf("\n[build] building %d build-only host(s)...\n", len(extraDrvs))
+			BuildAll(runner, extraDrvs, args.buildOpts())
+		}
 	}
 
-	printSummary(warnings, skipped, failed)
-	if len(failed) > 0 {
+	var buildFailed []string
+	for _, h := range buildOnly {
+		if !BuiltOK(quiet, paths[h.Name].Out) {
+			buildFailed = append(buildFailed, h.Name)
+		}
+	}
+
+	printSummary(warnings, skipped, failed, buildFailed)
+	if len(failed) > 0 || len(buildFailed) > 0 {
 		return 1
 	}
 	fmt.Println("\nAll hosts processed successfully!")
@@ -287,7 +310,7 @@ func installSSHCleanup(ctl *SSHControl, r Runner) func() {
 // printPlan reports what the precheck pass decided, in host order. The probes
 // themselves run concurrently, so printing here rather than inside them is what
 // keeps the output deterministic.
-func printPlan(pre []PrecheckResult) {
+func printPlan(pre []PrecheckResult, buildOnly []Host) {
 	fmt.Printf("\n%s\nPlan\n%s\n", strings.Repeat("=", 60), strings.Repeat("=", 60))
 	for _, p := range pre {
 		switch {
@@ -301,9 +324,12 @@ func printPlan(pre []PrecheckResult) {
 			fmt.Printf("  → %-13s deploy %s\n", p.Host.Name, p.Plan.SystemPath)
 		}
 	}
+	for _, h := range buildOnly {
+		fmt.Printf("  ⚒ %-13s build only (not deployed)\n", h.Name)
+	}
 }
 
-func printSummary(warnings, skipped, failed []string) {
+func printSummary(warnings, skipped, failed, buildFailed []string) {
 	fmt.Printf("\n%s\nSummary\n%s\n", strings.Repeat("=", 60), strings.Repeat("=", 60))
 	if len(warnings) > 0 {
 		fmt.Println("\nWarnings:")
@@ -317,6 +343,9 @@ func printSummary(warnings, skipped, failed []string) {
 	if len(failed) > 0 {
 		fmt.Printf("\nFailed hosts: %v\n", failed)
 	}
+	if len(buildFailed) > 0 {
+		fmt.Printf("\nFailed builds (not deployed): %v\n", buildFailed)
+	}
 }
 
 func stdinPrompter(prompt string) bool {
@@ -328,7 +357,6 @@ func stdinPrompter(prompt string) bool {
 	}
 	return strings.EqualFold(strings.TrimSpace(line), "y")
 }
-
 
 // defaultCopyJobs bounds concurrent closure transfers. Separate from the build
 // bound because a copy is ssh plus sender-side compression, not a nix build job.

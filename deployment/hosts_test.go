@@ -59,7 +59,7 @@ func TestSelectHosts(t *testing.T) {
 			want: []string{
 				"fus", "ro", "dah", "joor", "zah", "frul",
 				"wabbajack", "talos", "lydia",
-				"guevenne", "skyforge", "nelkir", "dragonsreach",
+				"skyforge", "dragonsreach",
 			},
 		},
 		{
@@ -123,6 +123,19 @@ func TestSelectHostsResultIsSorted(t *testing.T) {
 	}
 	if !sort.SliceIsSorted(got, func(i, j int) bool { return got[i].Order < got[j].Order }) {
 		t.Fatalf("result not sorted by Order: %v", got)
+	}
+}
+
+func TestBuildOnlyHosts(t *testing.T) {
+	var got []string
+	for _, h := range BuildOnlyHosts(AllHosts, nil) {
+		got = append(got, h.Name)
+	}
+	if want := "dovahkiin,guevenne,nelkir"; strings.Join(got, ",") != want {
+		t.Errorf("no --hosts: got %v, want %s", got, want)
+	}
+	if got := BuildOnlyHosts(AllHosts, []string{"talos"}); got != nil {
+		t.Errorf("named hosts: want nil, got %v", got)
 	}
 }
 

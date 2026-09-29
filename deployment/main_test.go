@@ -125,7 +125,7 @@ func TestHostsFlagUsage(t *testing.T) {
 		{Name: "first", Order: 10, Default: true},
 	}
 	got := hostsFlagUsage(hosts)
-	want := "Comma-separated host names (default: first,second); opt-in only: optin"
+	want := "Comma-separated host names (default: first,second); built only unless named: optin"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}

@@ -71,8 +71,15 @@ func (s HostStatus) failed() bool { return s != StatusDeployed }
 // activation as soon as its own copy lands, regardless of what the other hosts
 // are doing; Host.Order survives only as the tiebreak between hosts that become
 // ready in the same poll tick, which keeps runs reproducible.
-func RunPipeline(ctx *DeployContext, quiet Runner, todo []PrecheckResult, opts PipelineOpts) []HostResult {
+//
+// extraDrvs are built-only hosts' derivations. They join the one fleet build and
+// go no further; the caller checks whether they were built.
+func RunPipeline(ctx *DeployContext, quiet Runner, todo []PrecheckResult, extraDrvs []string, opts PipelineOpts) []HostResult {
 	if len(todo) == 0 {
+		if len(extraDrvs) > 0 {
+			say("\n[build] building %d host(s)...\n", len(extraDrvs))
+			BuildAll(ctx.Runner, extraDrvs, opts.Build)
+		}
 		return nil
 	}
 	if opts.CopyJobs < 1 {
@@ -102,10 +109,11 @@ func RunPipeline(ctx *DeployContext, quiet Runner, todo []PrecheckResult, opts P
 		needBuild = append(needBuild, p)
 	}
 
-	drvs := make([]string, 0, len(needBuild))
+	drvs := make([]string, 0, len(needBuild)+len(extraDrvs))
 	for _, p := range needBuild {
 		drvs = append(drvs, p.Plan.DrvPath)
 	}
+	drvs = append(drvs, extraDrvs...)
 
 	buildDone := make(chan struct{})
 	go func() {

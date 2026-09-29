@@ -26,7 +26,7 @@ The flake's devShell builds the binary and puts `deploy` on your PATH:
 
 ```sh
 nix develop -c deploy --hosts ro
-nix develop -c deploy                              # all default hosts
+nix develop -c deploy                              # deploy the default hosts, build every host
 nix develop -c deploy --hosts dragonsreach,talos
 ```
 
@@ -47,7 +47,8 @@ nix run .#deploy -- --hosts ro
 
 | Flag | Values | Default | Notes |
 |---|---|---|---|
-| `--hosts` | comma list | (all default hosts) | Named hosts deploy even if `Default=false` (e.g. `dovahkiin`). |
+| `--hosts` | comma list | (all default hosts) | Named hosts deploy even if `Default=false` (e.g. `dovahkiin`). Without `--hosts`, the `Default=false` hosts are built but not deployed. |
+| `--build` | flag | false | Build only; deploy nothing. Without `--hosts` it builds every host. |
 | `--mode` | `safe` \| `switch` \| `boot` | `safe` | See modes below. |
 | `--reboot` | `never` \| `auto` \| `always` \| `ask` | `never` | See reboot table below. `--mode boot` accepts only `never` and `always`. |
 | `--force` | flag | false | Skip safety pre-checks (e.g. active print on printer hosts). |
@@ -94,17 +95,17 @@ deployed — in `safe` mode that is decided by readiness — it only orders this
 table, the precheck report, and hosts that become ready in the same poll tick.
 Summary:
 
-| Host | Order | k8s health | Default | Notes |
+| Host | Order | k8s health | Plain `deploy` | Notes |
 |---|---|---|---|---|
 | fus / ro / dah | 10–12 | ✓ | ✓ | control plane; SSH + IPv6 gateway ping |
 | joor / zah / frul | 13–15 | ✓ | ✓ | k3s agents + Ceph nodes (Ceph gate, below); SSH + IPv6 gateway ping |
 | wabbajack | 20 | – | ✓ | SSH + gateway ping + IPv6 gateway ping |
 | talos | 21 | – | ✓ | SSH + gateway ping |
 | lydia | 30 | – | ✓ | SSH + gateway ping |
-| dovahkiin | 40 | – | opt-in | only deploys when named explicitly |
-| guevenne | 41 | – | ✓ | TV PC; SSH only |
+| dovahkiin | 40 | – | build only | deploys only when named explicitly |
+| guevenne | 41 | – | build only | TV PC, unplugged; deploys only when named; SSH only |
 | skyforge | 50 | – | ✓ | aarch64; needs binfmt on the deploying machine; printer idle pre-check |
-| nelkir | 51 | – | ✓ | aarch64; needs binfmt on the deploying machine |
+| nelkir | 51 | – | build only | TV CEC Pi, unplugged; deploys only when named; aarch64; needs binfmt on the deploying machine |
 | dragonsreach | 99 | – | ✓ | SSH + internet ping + DNS + IPv6 tunnel + IPv6 internet |
 
 ### Ceph gate (joor / zah / frul)
