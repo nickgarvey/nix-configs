@@ -37,6 +37,9 @@ in rec {
     # on 443 off these LB IPs (k8s-gitops manifests/couchdb, manifests/grafana).
     obsidian-livesync = { v4 = []; v6 = [ "2001:470:482f:2::5004" ]; };
     grafana       = { v4 = []; v6 = [ "2001:470:482f:2::5006" ]; };
+    # Authelia (OIDC login for Grafana); Caddy sidecar terminates TLS on 443
+    # (k8s-gitops manifests/authelia).
+    auth          = { v4 = []; v6 = [ "2001:470:482f:2::5005" ]; };
   };
 
   # CNAMEs (targets are FQDNs with trailing dot).
@@ -44,6 +47,7 @@ in rec {
     "_acme-challenge.anki" = "0a95fd7d-b7d2-4827-96df-65575900f9ac.acme.garvey.sh.";
     "_acme-challenge.obsidian-livesync" = "7d13302c-3155-4fc2-99e8-c3c053b4236b.acme.garvey.sh.";
     "_acme-challenge.grafana" = "32622e22-227e-41f0-becf-674c8192c9f1.acme.garvey.sh.";
+    "_acme-challenge.auth" = "bfeb451a-9409-4da5-a44e-f1b80354a075.acme.garvey.sh.";
   };
 
   # Split-horizon overrides: public (garvey.sh) names answered internally with
