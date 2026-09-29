@@ -58,3 +58,21 @@ one. Example: `../../patches/my-fix.patch`.
 The first non-blank line of each module should be a `#` comment describing its
 purpose in one sentence, so `ls` + skimming the top of a file is enough to
 understand what it does.
+
+## Commit messages
+
+Use this shape, with the subject on the first line:
+
+```
+<subject>
+
+Human Text:
+None
+
+LLM Text:
+<body: what changed and why>
+```
+
+Leave `Human Text:` as `None`; the human fills it in later. Put your
+explanation under `LLM Text:` (leave it empty if the subject says it all). Do
+not add a `Co-Authored-By:` trailer.
