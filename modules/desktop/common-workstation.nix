@@ -59,6 +59,7 @@ in
     ../home/ngarvey.nix
     ../llms/hf-to-garage.nix
     ../llms/pi.nix
+    ./zot-push.nix
     inputs.sops-nix.nixosModules.sops
   ];
 

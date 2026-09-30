@@ -105,6 +105,15 @@ creation_rules:
     - age:
       - *ngarvey
       - *workstation
+  # zot-push: the `auth` value (base64 of user:password) for pushing to the
+  # oci.garvey.sh registry. `workstation` lets talos and dovahkiin install it as
+  # ~/.config/containers/auth.json (modules/desktop/zot-push.nix). zot itself
+  # holds only the bcrypt hash (k8s-gitops manifests/zot/secret.yaml).
+  - path_regex: secrets/zot-push.yaml
+    key_groups:
+    - age:
+      - *ngarvey
+      - *workstation
   - path_regex: secrets/smb-credentials.yaml
     key_groups:
     - age:
