@@ -495,8 +495,9 @@ binds {
     Ctrl+Alt+Shift+S { screenshot-window; }
 
     // Clipboard history: pick a past entry via fuzzel (backed by cliphist,
-    // enabled in home-manager) and copy it back to the clipboard.
-    Ctrl+Shift+C { spawn-sh "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"; }
+    // enabled in home-manager) and copy it back to the clipboard. Kept off
+    // Ctrl+Shift+C so that key still reaches apps (Ghostty copies with it).
+    Mod+V { spawn-sh "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"; }
 
     // Applications such as remote-desktop clients and software KVM switches may
     // request that niri stops processing the keyboard shortcuts defined here

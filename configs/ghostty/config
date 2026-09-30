@@ -1,0 +1,4 @@
+# Ghostty terminal config, deployed to ~/.config/ghostty/config by home-manager.
+
+# Selecting text copies it to the clipboard, not just the PRIMARY selection.
+copy-on-select = clipboard

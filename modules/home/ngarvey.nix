@@ -25,6 +25,7 @@
       home.stateVersion = "25.11";
 
       xdg.configFile."nvim/init.lua".source = ../../configs/nvim/init.lua;
+      xdg.configFile."ghostty/config".source = ../../configs/ghostty/config;
     }
 
     # niri-specific home config, only on hosts that run niri (talos, dovahkiin).
