@@ -59,6 +59,14 @@ The first non-blank line of each module should be a `#` comment describing its
 purpose in one sentence, so `ls` + skimming the top of a file is enough to
 understand what it does.
 
+## Deploys and reboots
+
+The deploy tool warns "needs reboot" whenever a host's running kernel differs
+from its new generation. Treat that as informational: do not relay it, suggest
+a reboot, or list it as a follow-up. The human decides when hosts reboot. Only
+raise a reboot when the task itself cannot finish without one (e.g. a kernel
+module or kernel parameter the change depends on).
+
 ## Commit messages
 
 Use this shape, with the subject on the first line:
