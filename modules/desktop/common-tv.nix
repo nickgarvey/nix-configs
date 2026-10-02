@@ -15,6 +15,10 @@ let
   #     chromium zygote handshake outright ("Check failed: ReceiveFixedMessage
   #     ... zygote_host_impl_linux.cc"), killing Jellyfin Media Player before it
   #     draws. The overlay is no loss on a media app.
+  #   * WAYLAND_DISPLAY is set but empty: gamescope blanks it so libwayland's
+  #     wayland-0 fallback cannot reach a parent compositor. wlroots treats any
+  #     set value as "use the wayland backend", so cage dies at startup
+  #     ("Could not connect to remote display") instead of opening on X11.
   #
   # DISPLAY is deliberately left alone. The session runs gamescope with
   # --xwayland-count 2, so Steam puts each launched app on its own Xwayland
@@ -22,7 +26,7 @@ let
   # Forcing a wayland connection to gamescope's own socket instead makes the
   # app render into a surface gamescope never shows.
   fromSteamShortcut = ''
-    unset LD_LIBRARY_PATH LD_PRELOAD
+    unset LD_LIBRARY_PATH LD_PRELOAD WAYLAND_DISPLAY
   '';
   mkChromiumApp = { name, desktopName, url, extraArgs ? [ ] }:
     let
