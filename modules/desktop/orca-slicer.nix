@@ -10,11 +10,18 @@
   # version from a GLX context -> "Unable to init glew library, Error: Missing GL
   # version", so the 3D build-plate (grid) never renders and the app crashes.
   # Rebuild glew without EGL. Mirrors nixpkgs PR #531346.
+  #
+  # orca-slicer-thumbnail-glcontext.patch: under Wayland, plate-thumbnail
+  # rendering runs in GDK's paint GL context instead of orca's, segfaulting in
+  # libnvidia-eglcore right after slicing. See the patch header.
   environment.systemPackages = with pkgs; [
     ((orca-slicer.override {
       glew = glew.override { enableEGL = false; };
     }).overrideAttrs (old: {
-      patches = (old.patches or []) ++ [ ../../patches/orca-slicer-null-checks.patch ];
+      patches = (old.patches or []) ++ [
+        ../../patches/orca-slicer-null-checks.patch
+        ../../patches/orca-slicer-thumbnail-glcontext.patch
+      ];
       preFixup = (old.preFixup or "") + ''
         gappsWrapperArgs+=(
           --set GST_PLUGIN_SCANNER "${gst_all_1.gstreamer}/libexec/gstreamer-1.0/gst-plugin-scanner"

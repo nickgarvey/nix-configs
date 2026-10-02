@@ -1,0 +1,38 @@
+Make the shared GL context current before rendering plate thumbnails.
+
+GLCanvas3D::render_thumbnail never calls _set_current(). Under Wayland, WebKit
+(the home page and other web views) makes GDK create its own paint GL context,
+and GDK makes that context current on the main thread while drawing. When the
+Preview canvas gains focus after slicing, on_set_focus ->
+update_all_plate_thumbnails renders the 3D scene in GDK's context, where none of
+the GLModel VAO/VBO/IBO names exist: the binds fail, glDrawElements reads the
+index "pointer" as client memory at address 0, and libnvidia-eglcore segfaults.
+
+--- a/src/slic3r/GUI/GLCanvas3D.cpp
++++ b/src/slic3r/GUI/GLCanvas3D.cpp
+@@ -2248,6 +2248,12 @@
+                                   bool                      for_picking,
+                                   bool                      ban_light)
+ {
++    // The shared context is not guaranteed to be current here: on Wayland, GDK
++    // makes its own paint context current while drawing other widgets (e.g. the
++    // WebKit views), and this canvas's VAOs/VBOs do not exist in that context.
++    if (!_set_current())
++        return;
++
+     GLShaderProgram* shader = nullptr;
+     if (for_picking)
+         shader = wxGetApp().get_shader("flat");
+@@ -2286,6 +2292,12 @@
+                                   bool                               for_picking,
+                                   bool                               ban_light)
+ {
++    // The shared context is not guaranteed to be current here: on Wayland, GDK
++    // makes its own paint context current while drawing other widgets (e.g. the
++    // WebKit views), and this canvas's VAOs/VBOs do not exist in that context.
++    if (!_set_current())
++        return;
++
+     GLShaderProgram *shader = wxGetApp().get_shader("thumbnail");
+     switch (OpenGLManager::get_framebuffers_type()) {
+         case OpenGLManager::EFramebufferType::Arb: {
