@@ -15,6 +15,7 @@ in
     ./lan-ipv6.nix
     ./nat64.nix
     ./tailscale.nix
+    ./agents.nix
   ];
 
   options.routerConfig = {

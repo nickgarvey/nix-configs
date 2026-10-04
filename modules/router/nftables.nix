@@ -149,6 +149,11 @@ in
             # LAN -> WAN: allow all outbound
             iifname "${cfg.lanInterface}" oifname "${cfg.wanInterface}" accept
 
+            # Agent VMs (modules/router/agents.nix) -> WAN only. There is no
+            # rule to br-lan, jool0, he-ipv6 or tailscale0, so the policy drop
+            # keeps them off everything internal.
+            iifname "agents" oifname "${cfg.wanInterface}" accept
+
             # LAN <-> NAT64 namespace (Jool via jool0 veth)
             iifname "${cfg.lanInterface}" oifname "jool0" accept
             iifname "jool0" oifname "${cfg.wanInterface}" accept
