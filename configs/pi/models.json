@@ -34,6 +34,41 @@
           }
         }
       ]
+    },
+    "wabbajack": {
+      "baseUrl": "http://wabbajack.home.garvey.sh:8080/v1",
+      "api": "openai-completions",
+      "apiKey": "wabbajack",
+      "compat": {
+        "supportsReasoningEffort": true
+      },
+      "models": [
+        {
+          "id": "qwen3.8-flash-next",
+          "name": "Qwen3.8 Flash Next (wabbajack)",
+          "reasoning": true,
+          "input": [
+            "text"
+          ],
+          "contextWindow": 262144,
+          "maxTokens": 32768,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "thinkingLevelMap": {
+            "off": "none",
+            "minimal": null,
+            "low": "low",
+            "medium": "medium",
+            "high": "xhigh",
+            "xhigh": null,
+            "max": null
+          }
+        }
+      ]
     }
   }
 }

@@ -53,6 +53,51 @@
     peers = [ "1f19395c7b916da44c6acff1a831ddbf7fc294a020b071704f04b6d17a0277dc@[2001:470:482f:200::2]:3901" ];
   };
 
+  # --- llama.cpp (Vulkan on the iGPU) ---
+  # The amdgpu GTT limit defaults to about half of RAM (~62 GB), too small for
+  # the ~90 GB weights plus KV cache. Raise it to ~124 GiB.
+  boot.kernelParams = [
+    "amdgpu.gttsize=126976"
+    "ttm.pages_limit=32505856"
+    "ttm.page_pool_size=32505856"
+  ];
+
+  # Qwen3.8-Flash-Next (125B MoE, 6B active). llama-server pulls the split GGUF
+  # from HuggingFace into /var/cache/llama-cpp on first start.
+  services.llama-cpp = {
+    enable = true;
+    package = pkgs.llama-cpp-vulkan;
+    openFirewall = true;
+    settings = {
+      host = "::";
+      port = 8080;
+      hf-repo = "unsloth/Qwen3.8-Flash-Next-GGUF:UD-Q3_K_XL";
+      alias = "qwen3.8-flash-next";
+      ctx-size = 262144;
+      n-gpu-layers = 999;
+      flash-attn = "on";
+      # Unified memory: with mmap the weights would sit in both page cache and GTT.
+      load-mode = "none";
+      parallel = 1;
+      jinja = true;
+      metrics = true;
+      # Qwen's recommended thinking-mode sampling (model card).
+      temp = 1.0;
+      top-p = 0.95;
+      top-k = 20;
+      min-p = 0.0;
+    };
+  };
+  systemd.services.llama-cpp = {
+    # The first start downloads the model.
+    wants = [ "network-online.target" ];
+    after = [ "network-online.target" ];
+    # Mesa writes its shader cache under $XDG_CACHE_HOME; $HOME is unwritable.
+    environment.XDG_CACHE_HOME = "/var/cache/llama-cpp";
+    # DynamicUser needs the render group to open /dev/dri/renderD128.
+    serviceConfig.SupplementaryGroups = [ "render" "video" ];
+  };
+
   boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
 
   systemd.targets.sleep.enable = false;

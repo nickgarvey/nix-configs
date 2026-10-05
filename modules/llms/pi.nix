@@ -1,9 +1,9 @@
-{ config, lib, inputs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 
 # pi, a terminal coding agent, wired end to end for the ngarvey user: the
-# package, its settings.json, its hosted-LLM credentials and — on a host that
-# runs a local inference server — the model list that makes that server
-# selectable.
+# package, its settings.json, its hosted-LLM credentials and the model list for
+# the self-hosted inference servers: wabbajack's llama.cpp on every workstation,
+# plus the local ninfer server on a host that runs one.
 #
 # Wired in via modules/desktop/common-workstation.nix, so every workstation gets
 # it. The only per-host knob is homelab.pi.ninfer.enable. The home-manager NixOS
@@ -31,6 +31,13 @@
 
 let
   cfg = config.homelab.pi;
+
+  # configs/pi/models.json lists every self-hosted provider; ninfer is dropped
+  # on hosts that do not run it.
+  models = lib.importJSON ../../configs/pi/models.json;
+  hostModels = models // {
+    providers = lib.filterAttrs (name: _: name != "ninfer" || cfg.ninfer.enable) models.providers;
+  };
 in
 {
   options.homelab.pi = {
@@ -42,10 +49,10 @@ in
       description = ''
         Whether this host runs the local ninfer inference server that the
         `ninfer` provider in configs/pi/models.json points at
-        (http://127.0.0.1:8080/v1). When true the provider is installed, so it
-        can be picked from pi's model list; when false it is left out entirely
-        rather than offering a model that can never answer. Either way the
-        default model stays DeepSeek Flash.
+        (http://127.0.0.1:8080/v1). When true the provider is included in the
+        installed models.json, so it can be picked from pi's model list; when
+        false it is left out rather than offering a model that can never
+        answer. Either way the default model stays DeepSeek Flash.
       '';
     };
   };
@@ -77,7 +84,7 @@ in
       environment.FIREWORKS_API_KEY.file = config.sops.secrets.fireworks-api-key.path;
       environment.OPENAI_API_KEY.file = config.sops.secrets.openai-api-key.path;
 
-      models = lib.mkIf cfg.ninfer.enable ../../configs/pi/models.json;
+      models = pkgs.writeText "pi-models.json" (builtins.toJSON hostModels);
 
       settings = {
         theme = "dark";
