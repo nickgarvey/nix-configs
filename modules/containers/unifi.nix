@@ -2,30 +2,17 @@
 
 # UniFi Network Application controller (nspawn container, br-lan veth).
 #
-# CURRENTLY DISABLED and fully unwired. `homelab.unifi.enable = false` in
-# hosts/dragonsreach/configuration.nix (mongodb fails to build on the current
-# nixpkgs pin). The DNS record and the DHCP advertisement that pointed clients
-# here were removed on 2026-08-10, because they were telling every AP and switch
-# on the LAN to adopt against 10.28.0.4, where nothing had been listening.
+# MongoDB is nixpkgs' mongodb-ce, MongoDB's prebuilt community binary. The
+# default mongodb-7_0 is unfree, so it is never in the binary cache and
+# compiles from source whenever a nixpkgs bump touches its inputs.
 #
-# To bring it back, all four of these are required — the first three are what
-# was removed, and the fourth is why it is off:
-#
-#   1. hosts/dragonsreach/configuration.nix — drop `homelab.unifi.enable = false`
-#      (this module defaults to enabled).
-#   2. modules/networking/dns.nix — restore the A record in `records`:
-#          unifi = { v4 = [ "10.28.0.4" ]; v6 = []; };
-#      Keep it v4-only; see the sysctl note at the bottom of this file.
-#   3. modules/router/dhcp.nix — restore the inform URL in `dhcpServerConfig`
-#      (DHCP option 43, suboption 01, encoding 10.28.0.4):
-#          SendOption = "43:string:\\x01\\x04\\x0a\\x1c\\x00\\x04";
-#      Devices already adopted keep their inform URL in their own config; this
-#      option only matters for factory-reset or newly-added hardware.
-#   4. Resolve the mongodb build. It broke on a cheetah3 metadata check under
-#      python 3.14; a flake update that picks up the upstream fix should clear it.
-#
-# Steps 2 and 3 are only needed if you want adoption to work again — the
-# controller itself runs fine without them.
+# Adopted devices inform to http://10.28.0.4:8080/inform by IP. New or
+# factory-reset hardware finds the controller by looking up "unifi", which
+# modules/networking/dns.nix points at 10.28.0.4 (v4-only; see the sysctl note
+# at the bottom of this file). DHCP option 43 would be a second way to find it,
+# and it is not set. It would go in `dhcpServerConfig` in
+# modules/router/dhcp.nix (suboption 01, encoding 10.28.0.4):
+#     SendOption = [ "43:string:\\x01\\x04\\x0a\\x1c\\x00\\x04" ];
 #
 # Switches and APs adopt over IPv4 — the container is IPv4-only on purpose.
 #
@@ -63,11 +50,12 @@ in
 
     containers.unifi.config = { config, pkgs, lib, ... }: {
       nixpkgs.config.allowUnfreePredicate = pkg:
-        builtins.elem (lib.getName pkg) [ "unifi-controller" "mongodb" ];
+        builtins.elem (lib.getName pkg) [ "unifi-controller" "mongodb-ce" ];
 
       services.unifi = {
         enable = true;
         openFirewall = false;
+        mongodbPackage = pkgs.mongodb-ce;
       };
 
       # Container picks up a SLAAC IPv6 from the LAN bridge but has no v6

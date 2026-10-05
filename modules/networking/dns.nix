@@ -24,6 +24,9 @@ in rec {
     # Peer-to-peer RPC does not use this — see modules/containers/garage.nix.
     garage        = { v4 = []; v6 = [ "2001:470:482f:200::2" "2001:470:482f:202::2" ]; };
     storj-gateway = { v4 = [ "10.28.0.3" ]; v6 = [ "2001:470:482f:300::2" ]; };
+    # UniFi controller. New or factory-reset devices look up "unifi" to find it.
+    # v4-only: the container has IPv6 disabled (modules/containers/unifi.nix).
+    unifi         = { v4 = [ "10.28.0.4" ]; v6 = []; };
     k3s-api       = { v4 = []; v6 = map hostV6 [ "fus" "ro" "dah" ]; };
     # The three Ceph RGW gateways (S3 on port 7480). Clients round-robin; any
     # gateway serves the whole S3 API. See modules/services/ceph.nix.
